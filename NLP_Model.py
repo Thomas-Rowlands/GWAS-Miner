@@ -14,11 +14,12 @@ import pandas
 from DataPreparation import PreProcessing
 from Study import Study
 import numpy as np
+import config
 import sys
 
 
 ontology = OntologyMap
-connection = DB.Connection("localhost", "root", "", "ontology_partial")
+connection = DB.Connection(config.server, config.user, config.password, config.database)
 meshTerms = None
 hpoTerms = None
 hpoSyns = None
