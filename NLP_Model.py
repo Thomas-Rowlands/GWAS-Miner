@@ -8,25 +8,25 @@ Based on the tutorial by Sowmya Vivek
 Found here: https://medium.com/analytics-vidhya/automated-keyword-extraction-from-articles-using-nlp-bfd864f41b34
 
 """
+import os
+
 import DB
 from Ontology import OntologyMap
-import pandas
 from DataPreparation import PreProcessing
 from Study import Study
 import numpy as np
 import config
 import sys
 
-
 ontology = OntologyMap
-connection = DB.Connection(config.server, config.user, config.password, config.database)
+connection = DB.Connection(config.user, config.password, config.database, config.server, config.port)
 meshTerms = None
 hpoTerms = None
 hpoSyns = None
 hpo2Mesh = None
 
 
-def get_ontology_terms():
+def old_get_ontology_terms():
     global meshTerms, hpoTerms, hpoSyns, hpo2Mesh
     # Retrieve MeSH terms
     query_string = """SELECT meshID, termID, termName
@@ -57,24 +57,64 @@ def get_ontology_terms():
     hpo2Mesh = ontology.get_hpo_2_mesh(connection.query(query_string))
 
 
-get_ontology_terms()
+def get_ontology_terms():
+    global meshTerms, hpoTerms, hpoSyns, hpo2Mesh
+    # Retrieve MeSH terms
 
-# Get Abstracts from data set
-queryString = """SELECT identifier, Title, StudyAbstract,  
-	FROM Study
-    WHERE StudyAbstract NOT IN ("", "Not supplied")"""
-resultCursor = connection.query(queryString)
+    # meshTerms = ontology.get_mesh()
 
-# add header row
-tmp = []
-Studies = []
-for (identifier, Title, studyAbstract) in resultCursor:
-    tmp.append([identifier, Title, studyAbstract])
-    study = Study(gwas_id=identifier, title=Title, abstract=studyAbstract)
-    Studies.append(study)
-resultCursor.close()
+    # Retrieve HPO terms
+    hpoTerms = ontology.get_hpo()  # Array of lists (id, label string literal)
 
-pre_processor = PreProcessing(np.array(tmp))
-dataset = pre_processor.study_data
+    # Retrieve HPO synonyms
+    # hpoSyns = ontology.get_hpo_synonyms()
+
+    # Retrieve HPO to Mesh mappings
+    query_string = """SELECT hpoID, meshID
+                FROM hpo2mesh
+                            """
+
+    # hpo2Mesh = ontology.get_hpo_2_mesh(connection.query(query_string))
 
 
+def process_studies(directory):
+    # Load study data
+    file_data = []
+    for filename in os.listdir(directory):
+        with open(directory + "/" + filename, 'r') as file:
+            file_data.append([filename, file.read()])
+
+    studies = []
+    for (pmid, xmlText) in file_data:
+        studies.append(PreProcessing.strip_xml(None, pmid, xmlText))
+
+    get_ontology_terms()
+
+    #  Retrieve ontology terms for tagging
+
+    tagging_data = {}
+    for (id, term) in hpoTerms:
+        tagging_data[term] = "HP"
+    print(tagging_data)
+    # for (id, term) in hpoSyns:
+    #    tagging_data[term] = "HPS"
+
+    #  Create array of text from main body of study
+    for study in studies:
+        data = []
+        for section in study.sections:
+            data.append(section[1])
+        pre_processor = PreProcessing(np.array(data), tagging_data)
+        print(pre_processor.tagged_text)
+        for (word, tag) in pre_processor.tagged_text:
+            if 'HP' in tag:
+                print((word, tag))
+    # dataset = pre_processor.study_data
+
+
+def main(directory="study_data"):
+    process_studies(directory)
+
+
+if __name__ == '__main__':
+    main()

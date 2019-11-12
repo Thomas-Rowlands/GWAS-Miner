@@ -2,18 +2,15 @@ import mysql.connector
 
 
 class Connection:
-    user = ""
-    password = ""
-    db = ""
-    server = ""
-    con = None
-    cursor = None
 
-    def __init__(self, user, password, db, server):
+    def __init__(self, user, password, db, server, port):
         self.user = user
         self.password = password
         self.db = db
         self.server = server
+        self.cursor = None
+        self.con = None
+        self.port = port
 
     def connect(self):
         """
@@ -21,8 +18,13 @@ class Connection:
         :return:
         """
         try:
-            self.con = mysql.connector.connect(host=self.server, user=self.user, passwd=self.password, database=self.db)
+            self.con = mysql.connector.connect(host=self.server, user=self.user, passwd=self.password, database=self.db,
+                                               port=self.port)
+            self.cursor = self.con.cursor()
             return True
+        except mysql.connector.Error as err:
+            print(err.msg)
+            return False
         except:
             return False
 
@@ -33,6 +35,7 @@ class Connection:
         """
         try:
             self.con.close()
+            self.cursor = None
             return True
         except:
             return False
@@ -43,12 +46,18 @@ class Connection:
         :param querystring: String containing the SQL query.
         :return: Cursor object containing results.
         """
-        self.cursor = self.con.cursor()
-        try:
-            self.cursor.execute(querystring)
-        except:
+        if self.connect():
+            try:
+                self.cursor.execute(querystring)
+                result_cursor = self.cursor
+                self.disconnect()
+                return result_cursor
+            except mysql.connector.Error as err:
+                print(err.msg)
+                return None
+        else:
+            print("Failed to connect to DB")
             return None
-        return self.cursor
 
     def insert(self, table, cols, vals):
         """
@@ -67,15 +76,13 @@ class Connection:
                 columns = columns + col + ", "
         columns = columns[:-1]
         for val in vals:
-            if type(val) == str:
-                values = values + "'" + str(val) + "',"
-            else:
-                values = values + val + ", "
+            values = values + "%s,"
         values = values[:-1]
         query_string = "INSERT INTO " + table + " (" + columns + ") VALUES (" + values + ")"
-        self.cursor = self.con.cursor()
-        self.cursor.execute(query_string)
-        self.cursor.commit()
+        cursor = self.con.cursor(prepared=True)
+        cursor.execute(query_string, vals)
+        self.con.commit()
+        self.disconnect()
 
     def set_db(self, database):
         """

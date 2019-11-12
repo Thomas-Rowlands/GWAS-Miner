@@ -1,31 +1,39 @@
+import rdflib
+import owlready2
+import config
+
+
 class OntologyMap:
-    @staticmethod
-    def get_mesh(cursor):
-        test_mesh = {"meshID": [], "termID": [], "termName": []}
-        for (meshID, termID, termName) in cursor:
-            test_mesh["meshID"].append(meshID)
-            test_mesh["termName"].append(termName)
-            test_mesh["termID"].append(termID)
-        cursor.close()
-        return test_mesh
+    mesh_namespace = rdflib.namespace.Namespace("http://id.nlm.nih.gov/mesh/vocab#")
+    hp_namespaces = {"owl": rdflib.namespace.OWL, "rdf": rdflib.namespace.RDF, "rdfs": rdflib.namespace.RDFS}
+    mesh_namespaces = {"owl": rdflib.namespace.OWL, "rdf": rdflib.namespace.RDF, "rdfs": rdflib.namespace.RDFS,
+                       "meshv": mesh_namespace}
 
     @staticmethod
-    def get_hpo(cursor):
-        test_hpo = {"hpoID": [], "name": []}
-        for (hpoID, name) in cursor:
-            test_hpo["hpoID"].append(hpoID)
-            test_hpo["name"].append(name)
-        cursor.close()
-        return test_hpo
+    def get_mesh():
+        g = rdflib.Graph()
+        g.parse(config.mesh_file, format="nt")
+        mesh_ontology_terms = g.query(config.mesh_statement, initNs=OntologyMap.mesh_namespaces)
+        g.close()
+        return mesh_ontology_terms
 
     @staticmethod
-    def get_hpo_synonyms(cursor):
-        test_hpo_syns = {"hpoID": [], "synText": []}
-        for (hpoID, synText) in cursor:
-            test_hpo_syns["hpoID"].append(hpoID)
-            test_hpo_syns["synText"].append(synText)
-        cursor.close()
-        return test_hpo_syns
+    def get_hpo():
+        ont = owlready2.get_ontology(config.hpo_file)
+        ont.load()
+        g = owlready2.default_world.as_rdflib_graph()
+        hpo_ontology_terms = g.query(config.hpo_statement, initNs=OntologyMap.hp_namespaces)
+        g.close()
+        results = [[id, term.toPython().lower()] for (id, term) in hpo_ontology_terms]
+        return results
+
+    @staticmethod
+    def get_hpo_synonyms():
+        g = rdflib.Graph()
+        g.parse(config.hpo_file, format="owl")
+        hpo_ontology_syns = g.query(config.hpo_syns_statement, initNs=OntologyMap.namespaces)
+        g.close()
+        return hpo_ontology_syns
 
     @staticmethod
     def get_hpo_2_mesh(cursor):
