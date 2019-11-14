@@ -80,4 +80,3 @@ class Extraction:
             # now store the results
             results.append([doc, [keywords]])
         return results
-

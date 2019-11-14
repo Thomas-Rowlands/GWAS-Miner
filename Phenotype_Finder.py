@@ -17,6 +17,7 @@ from Study import Study
 import numpy as np
 import config
 import sys
+import pprint
 
 ontology = OntologyMap
 connection = DB.Connection(config.user, config.password, config.database, config.server, config.port)
@@ -78,6 +79,13 @@ def get_ontology_terms():
 
 
 def process_studies(directory):
+    #  Retrieve ontology terms for tagging
+    get_ontology_terms()
+    tagging_data = {}
+    for (id, term) in hpoTerms:
+        tagging_data[term] = "HP"
+    # print(tagging_data)
+
     # Load study data
     file_data = []
     for filename in os.listdir(directory):
@@ -88,32 +96,48 @@ def process_studies(directory):
     for (pmid, xmlText) in file_data:
         studies.append(PreProcessing.strip_xml(None, pmid, xmlText))
 
-    get_ontology_terms()
 
-    #  Retrieve ontology terms for tagging
 
-    tagging_data = {}
-    for (id, term) in hpoTerms:
-        tagging_data[term] = "HP"
-    print(tagging_data)
     # for (id, term) in hpoSyns:
     #    tagging_data[term] = "HPS"
 
     #  Create array of text from main body of study
     for study in studies:
         data = []
+        #test = ""
         for section in study.sections:
-            data.append(section[1])
+            data.append(section[:][1])
+            #test = test + str(study.sections[:][1])
+        #import SpaceJam
+        #SpaceJam.process_text(test, tagging_data)
+        #sys.exit()
         pre_processor = PreProcessing(np.array(data), tagging_data)
-        print(pre_processor.tagged_text)
+        tmp = []
+        snps = []
+        snp_count = 0
         for (word, tag) in pre_processor.tagged_text:
-            if 'HP' in tag:
-                print((word, tag))
-    # dataset = pre_processor.study_data
+            if tag == 'RSID':
+                snps.append(word)
+            if tag in ['HP', 'TEST']:
+                tmp.append((word, tag))
+        snps = list(dict.fromkeys(snps))
+        snp_count = len(snps)
+        print("PMID " + study.pmid + " contains " + str(snp_count) + " unique SNP identifiers")
+        print(tmp)
+        pprint.pprint(pre_processor.chunked_text)
+        sys.exit("Stopping after 1st study")
 
 
-def main(directory="study_data"):
-    process_studies(directory)
+def main():
+    args = sys.argv[1:]
+    cores = 1
+    docs = "study_data"
+    for i in range(len(args)):
+        if args[i] == "-cores":
+            args[i + 1] = cores
+        if args[i] == "-docs":
+            args[i + 1] = docs
+    process_studies(docs)
 
 
 if __name__ == '__main__':

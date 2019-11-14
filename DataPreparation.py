@@ -10,6 +10,7 @@ from nltk.corpus import stopwords
 import nltk.tag
 import nltk.data
 import nltk.chunk
+
 nltk.download('stopwords')
 nltk.download('wordnet')
 nltk.download('punkt')
@@ -36,7 +37,6 @@ class PreProcessing:
         self.common_words = self.pandas.Series(''.join(self.study_data["content"]).split()).value_counts()[:20]
         self.uncommon_words = self.pandas.Series(''.join(self.study_data["content"]).split()).value_counts()[-20:]
         self.stop_words = nltk.corpus.stopwords
-        self.stem = nltk.PorterStemmer()  # Not currently used but may be soon
         self.lem = nltk.WordNetLemmatizer()
         self.stop_words = set(nltk.corpus.stopwords.words('english') + list(self.punctuation))
         self.corpus = self.prepare_corpus()
@@ -44,6 +44,7 @@ class PreProcessing:
         self.tagging_data = tagging_data
         self.phenotype_tagger = self.build_semantic_taggers()
         self.tagged_text = self.tag_text()
+        self.chunked_text = self.chunk_text()
 
     def add_stop_words(self, new_words):
         """
@@ -61,16 +62,16 @@ class PreProcessing:
         corpus = []
         for i in range(len(self.study_data.index)):
             # Remove punctuations
-            text = self.re.sub('[^a-zA-Z]', ' ', self.study_data['content'][i])
+            # text = self.re.sub('[^a-zA-Z0-9]', ' ', self.study_data['content'][i])
             # Convert to lowercase
-            text = text.lower()
+            text = self.study_data['content'][i].lower()
             # remove tags
-            text = self.re.sub("&lt;/?.*?&gt;", " &lt;&gt; ", text)
-            # remove special characters and digits <---------Separate processing of numeric data?
-            text = self.re.sub("(\\d|\\W)+", " ", text)
+            # text = self.re.sub("&lt;/?.*?&gt;", " &lt;&gt; ", text)
+            # remove special characters
+            text = self.re.sub("(\\W)+", " ", text)
             # Convert to list from string
             text = text.split()
-            text = [self.lem.lemmatize(word) for word in text] #if word not in self.stop_words]
+            text = [self.lem.lemmatize(word) for word in text]  # if word not in self.stop_words]
             text = " ".join(text)
             corpus.append(text)
         return corpus
@@ -83,13 +84,10 @@ class PreProcessing:
         uni_tagger = nltk.UnigramTagger(model=self.tagging_data, backoff=self.default_tagger)
         bi_tagger = nltk.BigramTagger(model=self.tagging_data, backoff=uni_tagger)
         tri_tagger = nltk.TrigramTagger(model=self.tagging_data, backoff=bi_tagger)
-        n4_tagger = nltk.NgramTagger(model=self.tagging_data, backoff=tri_tagger, n=4)
-        n5_tagger = nltk.NgramTagger(model=self.tagging_data, backoff=n4_tagger, n=5)
-        n6_tagger = nltk.NgramTagger(model=self.tagging_data, backoff=n5_tagger, n=6)
-        n7_tagger = nltk.NgramTagger(model=self.tagging_data, backoff=n6_tagger, n=7)
-        n8_tagger = nltk.NgramTagger(model=self.tagging_data, backoff=n7_tagger, n=8)
-        n9_tagger = nltk.NgramTagger(model=self.tagging_data, backoff=n8_tagger, n=9)
-        return n9_tagger
+        rsid_tagger = nltk.RegexpTagger(regexps=[(r'(?:rs[0-9]{1,}){1}', 'RSID')], backoff=tri_tagger)
+
+        # facet joint arthrosis
+        return rsid_tagger
 
     def tag_text(self):
         """
@@ -98,15 +96,18 @@ class PreProcessing:
         """
         text = ""
         for i in self.corpus:
-            text = text + i
+            text = text + " " + i
         text = nltk.word_tokenize(text)
         return self.phenotype_tagger.tag(text)
 
     def chunk_text(self):
-        pattern = "<DT>?<JJ>*<NN.*>"
-       # regexp_pattern = tag_pattern2re_pattern(pattern)
+        pattern = r"""NP: {<DT|PP\$>?<JJ>*<NN>}
+                      {<NNP>+}"""
+        chonk = nltk.RegexpParser(pattern)
+        result = chonk.parse(self.tagged_text)
+        return result
 
-
+    # regexp_pattern = tag_pattern2re_pattern(pattern)
 
     # Retrieves rs identifiers from input string
     @staticmethod
@@ -119,6 +120,7 @@ class PreProcessing:
 
     def strip_xml(self, pmid, xml):
         study = Study()
+        xml = re.sub("</", " </", xml)  # Ensure white space is present between nested tags
         tree = etree.fromstring(xml, etree.get_default_parser())
         study.pmid = pmid
 
@@ -160,9 +162,10 @@ class PreProcessing:
             section = [section_title,
                        section_text]
             sections.append(section)
+
         study.sections = sections
 
-        #  SNP Extraction
+        #  SNP Extraction   <------REDUNDANT with new NLP Regex tags
 
         snips = []
         titleSNP = PreProcessing.get_rs_identifiers(study.title)
