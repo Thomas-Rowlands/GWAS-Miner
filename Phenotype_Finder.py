@@ -9,7 +9,7 @@ Found here: https://medium.com/analytics-vidhya/automated-keyword-extraction-fro
 
 """
 import os
-
+import TableData
 import DB
 from Ontology import OntologyMap
 from DataPreparation import PreProcessing
@@ -82,8 +82,10 @@ def process_studies(directory):
     #  Retrieve ontology terms for tagging
     get_ontology_terms()
     tagging_data = {}
+    test = []
     for (id, term) in hpoTerms:
         tagging_data[term] = "HP"
+        test.append(term)
     # print(tagging_data)
 
     # Load study data
@@ -95,6 +97,7 @@ def process_studies(directory):
     studies = []
     for (pmid, xmlText) in file_data:
         studies.append(PreProcessing.strip_xml(None, pmid, xmlText))
+        sys.exit()
 
 
 
@@ -104,27 +107,14 @@ def process_studies(directory):
     #  Create array of text from main body of study
     for study in studies:
         data = []
-        #test = ""
+        data.append(study.abstract)
         for section in study.sections:
             data.append(section[:][1])
             #test = test + str(study.sections[:][1])
-        #import SpaceJam
-        #SpaceJam.process_text(test, tagging_data)
-        #sys.exit()
+        import SpaceJam
+        #SpaceJam.process_text(data, test)
         pre_processor = PreProcessing(np.array(data), tagging_data)
-        tmp = []
-        snps = []
-        snp_count = 0
-        for (word, tag) in pre_processor.tagged_text:
-            if tag == 'RSID':
-                snps.append(word)
-            if tag in ['HP', 'TEST']:
-                tmp.append((word, tag))
-        snps = list(dict.fromkeys(snps))
-        snp_count = len(snps)
-        print("PMID " + study.pmid + " contains " + str(snp_count) + " unique SNP identifiers")
-        print(tmp)
-        pprint.pprint(pre_processor.chunked_text)
+
         sys.exit("Stopping after 1st study")
 
 

@@ -1,3 +1,4 @@
+import pprint
 import re
 import sys
 
@@ -10,7 +11,7 @@ from nltk.corpus import stopwords
 import nltk.tag
 import nltk.data
 import nltk.chunk
-
+from pprint import pprint
 nltk.download('stopwords')
 nltk.download('wordnet')
 nltk.download('punkt')
@@ -190,6 +191,52 @@ class PreProcessing:
         for tmp in content:
             acknowledgements = acknowledgements + tmp
         study.acknowledgements = acknowledgements
+
+        #  Tables
+        tables = tree.xpath("//table")
+        snps_with_values = {}
+        for elem in tables:#Iterate through tables in study
+            header = elem.xpath(".//thead/tr//td")
+            i = 1
+            fbat_p_val_col = None
+            gee_p_val_col = None
+            snp_col = None
+            phenotype_col = None
+            for cell in header:#Identify purpose of each column
+                text = cell.xpath(".//text()")[0]
+                p_type = re.search(r"(p{1}([- ]?val(ue)?))", text, flags=re.IGNORECASE)
+                if p_type:
+                    if "GEE" in p_type.string:
+                        gee_p_val_col = i
+                        i += 1
+                        continue
+                    elif "FBAT" in p_type.string:
+                        fbat_p_val_col = i
+                        i += 1
+                        continue
+                if "snp" in text.lower():
+                    snp_col = i
+                    i += 1
+                    continue
+                if "phenotype" == text.lower().replace("* ", ""):
+                    phenotype_col = i
+                    i += 1
+                    continue
+                i += 1
+            if fbat_p_val_col or gee_p_val_col:#Check if table contains associated p-vals
+                body = elem.xpath(".//tbody")
+                rows = body[0].xpath(".//tr")
+                for row in rows:
+                    fbat_p_value = "".join(row.xpath(".//td["+str(fbat_p_val_col)+"]//text()"))
+                    gee_p_value = "".join(row.xpath(".//td["+str(gee_p_val_col)+"]//text()"))
+                    phenotype = "".join(row.xpath(".//td["+str(phenotype_col)+"]//text()"))
+                    snp = "".join(row.xpath(".//td["+str(snp_col)+"]//text()"))
+                    if phenotype not in snps_with_values.keys():
+                        snps_with_values[phenotype] = []
+                    snps_with_values[phenotype].append({"FBAT":fbat_p_value, "GEE":gee_p_value, "SNP":snp})
+            else:
+                continue
+        pprint(snps_with_values)
 
         #  Citations pending
 
