@@ -4,7 +4,8 @@ import sys
 
 from lxml import etree
 
-from Study import Study
+import TableParsing
+from DataStructures import Study, SNP
 from nltk.stem.porter import PorterStemmer
 from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.corpus import stopwords
@@ -12,6 +13,7 @@ import nltk.tag
 import nltk.data
 import nltk.chunk
 from pprint import pprint
+
 nltk.download('stopwords')
 nltk.download('wordnet')
 nltk.download('punkt')
@@ -119,35 +121,30 @@ class PreProcessing:
         else:
             return result
 
-    def strip_xml(self, pmid, xml):
-        study = Study()
-        xml = re.sub("</", " </", xml)  # Ensure white space is present between nested tags
-        tree = etree.fromstring(xml, etree.get_default_parser())
-        study.pmid = pmid
-
-        #  Abstract
-
-        tmp = tree.xpath("//abstract//*/text()")
-        abstract = ""
-        for i in tmp:
-            abstract = abstract + " " + i
-        study.abstract = abstract
-
-        #  Article Title
-
-        study.title = tree.xpath("//article-title[1]/text()")[0]
-
-        #  Authors
-
-        study.authors = []
+    @staticmethod
+    def __get_authors(tree):
+        results = []
         for i in range(int(tree.xpath("count(//contrib[@contrib-type='author'])"))):
             author = [tree.xpath("//contrib[@contrib-type='author'][" + str(i + 1) + "]//text()")[0],
                       tree.xpath("//contrib[@contrib-type='author'][" + str(i + 1) + "]//text()")[1],
                       tree.xpath("//contrib[@contrib-type='author'][" + str(i + 1) + "]//text()")[-1:][0]]
-            study.authors.append(author)
+            results.append(author)
+        return results
 
-        #  Sections
+    @staticmethod
+    def __get_abstract(tree):
+        tmp = tree.xpath("//abstract//*/text()")
+        abstract = ""
+        for i in tmp:
+            abstract = abstract + " " + i
+        return abstract
 
+    @staticmethod
+    def __get_title(tree):
+        return tree.xpath("//article-title[1]/text()")[0]
+
+    @staticmethod
+    def __get_sections(tree):
         sections = []
         for i in range(int(tree.xpath("count(//body//sec)"))):  # Iterate through each section title
             content = ""
@@ -163,29 +160,33 @@ class PreProcessing:
             section = [section_title,
                        section_text]
             sections.append(section)
+        return sections
 
-        study.sections = sections
+    @staticmethod
+    def __get_snps(tree):
+        tables = tree.xpath("//table")
+        snps = []
+        i = 1
+        for table in tables:
+            for snp in TableParsing.parse_table_data(table, table_num=i):
+                snps.append(snp)
+            i += 1
+        return snps
 
-        #  SNP Extraction   <------REDUNDANT with new NLP Regex tags
+    @staticmethod
+    def strip_xml(pmid, xml):
+        study = Study()
+        xml = re.sub("</", " </", xml)  # Ensure white space is present between nested tags
+        tree = etree.fromstring(xml, etree.get_default_parser())
+        study.pmid = pmid
 
-        snips = []
-        titleSNP = PreProcessing.get_rs_identifiers(study.title)
-        if titleSNP:
-            for i in range(len(titleSNP)):
-                snips.append(titleSNP[i])
-        abstractSNP = PreProcessing.get_rs_identifiers(study.abstract)
-        if abstractSNP:
-            for i in range(len(abstractSNP)):
-                snips.append(abstractSNP[i])
-        for (title, body) in study.sections:
-            results = PreProcessing.get_rs_identifiers(body)
-            if results:
-                for i in range(len(results)):
-                    snips.append(results[i])
-        study.snps = snips
+        study.abstract = PreProcessing.__get_abstract(tree)
+        study.title = PreProcessing.__get_title(tree)
+        study.authors = PreProcessing.__get_authors(tree)
+        study.sections = PreProcessing.__get_sections(tree)
+        study.snps = PreProcessing.__get_snps(tree)
 
         #  Back sections
-
         acknowledgements = ""
         content = tree.xpath("//back/ack//*[not(self::title)]/text()")
         for tmp in content:
@@ -193,51 +194,16 @@ class PreProcessing:
         study.acknowledgements = acknowledgements
 
         #  Tables
-        tables = tree.xpath("//table")
-        snps_with_values = {}
-        for elem in tables:#Iterate through tables in study
-            header = elem.xpath(".//thead/tr//td")
-            i = 1
-            fbat_p_val_col = None
-            gee_p_val_col = None
-            snp_col = None
-            phenotype_col = None
-            for cell in header:#Identify purpose of each column
-                text = cell.xpath(".//text()")[0]
-                p_type = re.search(r"(p{1}([- ]?val(ue)?))", text, flags=re.IGNORECASE)
-                if p_type:
-                    if "GEE" in p_type.string:
-                        gee_p_val_col = i
-                        i += 1
-                        continue
-                    elif "FBAT" in p_type.string:
-                        fbat_p_val_col = i
-                        i += 1
-                        continue
-                if "snp" in text.lower():
-                    snp_col = i
-                    i += 1
-                    continue
-                if "phenotype" == text.lower().replace("* ", ""):
-                    phenotype_col = i
-                    i += 1
-                    continue
-                i += 1
-            if fbat_p_val_col or gee_p_val_col:#Check if table contains associated p-vals
-                body = elem.xpath(".//tbody")
-                rows = body[0].xpath(".//tr")
-                for row in rows:
-                    fbat_p_value = "".join(row.xpath(".//td["+str(fbat_p_val_col)+"]//text()"))
-                    gee_p_value = "".join(row.xpath(".//td["+str(gee_p_val_col)+"]//text()"))
-                    phenotype = "".join(row.xpath(".//td["+str(phenotype_col)+"]//text()"))
-                    snp = "".join(row.xpath(".//td["+str(snp_col)+"]//text()"))
-                    if phenotype not in snps_with_values.keys():
-                        snps_with_values[phenotype] = []
-                    snps_with_values[phenotype].append({"FBAT":fbat_p_value, "GEE":gee_p_value, "SNP":snp})
-            else:
-                continue
-        pprint(snps_with_values)
-
+        # for snp in study.snps:
+        #     output = snp.rs_identifier
+        #     if snp.gee_p_val:
+        #         output += " GEE => " + snp.gee_p_val
+        #     elif snp.fbat_p_val:
+        #         output += " FBAT => " + snp.fbat_p_val
+        #     else:
+        #         output += " MISC => " + snp.misc_p_val
+        #     output += " | Phenotype => " + snp.phenotype
+        #     print(output)
         #  Citations pending
 
         return study
