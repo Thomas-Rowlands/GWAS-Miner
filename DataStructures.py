@@ -10,21 +10,20 @@ def convert_to_list(num):
 
 
 class Study:
-    def __init__(self, title=None, abstract=None, authors=None, snps=None, concepts=None, p_values=None, results=None,
-                 pmid=None, gwas_id=None, sections=None, acknowledgements=None, citations=None, tables=None):
-        self.title = title
-        self.abstract = abstract
-        self.authors = authors
-        self.snps = snps
-        self.concepts = concepts
-        self.p_values = p_values
-        self.results = results
-        self.pmid = pmid
-        self.gwas_id = gwas_id
-        self.sections = sections
-        self.acknowledgements = acknowledgements
-        self.citations = citations
-        self.tables = tables
+    def __init__(self):
+        self.title = None
+        self.abstract = None
+        self.authors = None
+        self.snps = None
+        self.concepts = None
+        self.p_values = None
+        self.results = None
+        self.pmid = None
+        self.gwas_id = None
+        self.sections = None
+        self.acknowledgements = None
+        self.citations = None
+        self.tables = None
 
 
 class Table:
@@ -86,7 +85,9 @@ class Table:
             row_cells = row.xpath(".//td")
             row_data = []
             for cell in row_cells:
-                content = cell.xpath(".//text()")[0]
+                content = cell.xpath(".//text()")
+                if content:
+                    content = content[0]
                 row_data.append(content)
             table["body"].append(row_data)
         return table

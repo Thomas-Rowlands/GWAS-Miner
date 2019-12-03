@@ -4,8 +4,7 @@ import sys
 
 from lxml import etree
 
-import TableParsing
-from DataStructures import Study, SNP
+from DataStructures import Study, SNP, Table
 from nltk.stem.porter import PorterStemmer
 from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.corpus import stopwords
@@ -146,6 +145,11 @@ class PreProcessing:
     @staticmethod
     def __get_sections(tree):
         sections = []
+        tables = tree.xpath("//table")
+        for t in tables:
+            children = t.getchildren()
+            for child in children:
+                t.remove(child)
         for i in range(int(tree.xpath("count(//body//sec)"))):  # Iterate through each section title
             content = ""
             section_text = tree.xpath("//body/sec[" + str(i + 1) + "]//*[not(self::title)]/text()")
@@ -163,28 +167,34 @@ class PreProcessing:
         return sections
 
     @staticmethod
-    def __get_snps(tree):
+    def __get_tables(tree):
         tables = tree.xpath("//table")
-        snps = []
+        results = []
         i = 1
+        snps = []
         for table in tables:
-            for snp in TableParsing.parse_table_data(table, table_num=i):
-                snps.append(snp)
+            parsed_table = Table(table, table_num=i)
+            results.append(parsed_table)
+            if parsed_table.snps:
+                snps.append([x for x in parsed_table.snps])
             i += 1
-        return snps
+        return results, snps
+
 
     @staticmethod
     def strip_xml(pmid, xml):
         study = Study()
         xml = re.sub("</", " </", xml)  # Ensure white space is present between nested tags
-        tree = etree.fromstring(xml, etree.get_default_parser())
+        parser = etree.XMLParser(encoding='utf-8')
+        tree = etree.fromstring(xml, parser)
         study.pmid = pmid
 
         study.abstract = PreProcessing.__get_abstract(tree)
         study.title = PreProcessing.__get_title(tree)
         study.authors = PreProcessing.__get_authors(tree)
+        study.tables, study.snps = PreProcessing.__get_tables(tree)
         study.sections = PreProcessing.__get_sections(tree)
-        study.snps = PreProcessing.__get_snps(tree)
+
 
         #  Back sections
         acknowledgements = ""

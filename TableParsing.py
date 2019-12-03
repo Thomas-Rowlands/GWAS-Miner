@@ -9,35 +9,7 @@ from DataStructures import SNP, Table
 
 def parse_table_data(elem, table_num=None):
     table = Table(elem, table_num=table_num)
-    snps = []
-    p_pattern = r"((^[^a-z]{0})(\d+.?\d+)[*×xX]?(\d+-?\d{0,}\(?\d{0,}\)?)?)"
-    pprint(table.data)
-    table.set_targets(["p-value", "phenotype"])
-    print(table.target_indexes)
-    sys.exit()
-    header = elem.xpath(".//thead")[0]
-    header_rows = header.xpath(".//tr")
-    header_row_count = 0
-    for i in header_rows:
-        header_row_count += 1
-    top_header_col_count = int(elem.xpath("count(.//thead//tr[1]//td)"))
-
-    body = elem.xpath(".//tbody")[0]
-    body_row_count = int(elem.xpath("count(.//tbody//tr)"))
-
-    fbat_p_val_col = None
-    gee_p_val_col = None
-    misc_p_val_col = None
-    snp_col = None
-    phenotype_col = None
-
-    # start of experimental block
-    desired_cols = {"GEE": None, "FBAT": None, "Phenotype": None, "SNP": None}
-
-    table.map = table_map
     print("\n TABLE - " + str(table_num) + "\n")
-
-
     # end of experimental block
 
     # for row_num in range(header_row_count):
@@ -99,4 +71,4 @@ def parse_table_data(elem, table_num=None):
     #         newSNP.misc_p_val = misc_p_value
     #         newSNP.phenotype = phenotype
     #         snps.append(newSNP)
-    return snps
+    return table

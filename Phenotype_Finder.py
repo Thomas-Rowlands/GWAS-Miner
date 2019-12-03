@@ -60,14 +60,13 @@ def old_get_ontology_terms():
 def get_ontology_terms():
     global meshTerms, hpoTerms, hpoSyns, hpo2Mesh
     # Retrieve MeSH terms
-
-    # meshTerms = ontology.get_mesh()
+    meshTerms = ontology.get_mesh_file()
 
     # Retrieve HPO terms
     hpoTerms = ontology.get_hpo()  # Array of lists (id, label string literal)
 
     # Retrieve HPO synonyms
-    # hpoSyns = ontology.get_hpo_synonyms()
+    hpoSyns = ontology.get_hpo_synonyms()
 
     # Retrieve HPO to Mesh mappings
     query_string = """SELECT hpoID, meshID
@@ -80,13 +79,15 @@ def get_ontology_terms():
 def process_studies(directory):
     #  Retrieve ontology terms for tagging
     get_ontology_terms()
-    tagging_data = {}
+    tagging_data = {"HPO": {}, "HPO_Syn": {}, "MeSH": {}}
     test = []
     for (id, term) in hpoTerms:
-        tagging_data[term] = "HP"
-        test.append(term)
-    # print(tagging_data)
-
+        tagging_data["HPO"][term] = "HP"
+    for (id, synonym) in hpoSyns:
+        tagging_data["HPO_Syn"][synonym] = "HP_Syn"
+    for (id, descriptor) in meshTerms:
+        tagging_data["MeSH"][descriptor] = "MeSH"
+    print(tagging_data)
     # Load study data
     file_data = []
     for filename in os.listdir(directory):
@@ -103,15 +104,15 @@ def process_studies(directory):
     # for (id, term) in hpoSyns:
     #    tagging_data[term] = "HPS"
 
-    #  Create array of text from main body of study
-    # for study in studies:
-    #     data = []
-    #     data.append(study.abstract)
-    #     for section in study.sections:
-    #         data[0] += " " + section[:][1]
-    #     import SpaceJam
-    #     SpaceJam.process_text(data, tagging_data)
-       # pre_processor = PreProcessing(np.array(data), tagging_data)
+    # Create array of text from main body of study
+    for study in studies:
+        data = []
+        data.append(study.abstract)
+        for section in study.sections:
+            data.append(" " + section[:][1])
+        import SpaceJam
+        SpaceJam.process_text(data, tagging_data)
+      # pre_processor = PreProcessing(np.array(data), tagging_data)
 
         sys.exit("Stopping after 1st study")
 
