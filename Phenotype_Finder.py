@@ -10,7 +10,7 @@ Found here: https://medium.com/analytics-vidhya/automated-keyword-extraction-fro
 """
 import os
 import DB
-from Ontology import OntologyMap
+from Ontology import HPO, Mesh
 from DataPreparation import PreProcessing
 from DataStructures import Study
 import numpy as np
@@ -18,55 +18,25 @@ import config
 import sys
 import pprint
 
-ontology = OntologyMap
 connection = DB.Connection(config.user, config.password, config.database, config.server, config.port)
 meshTerms = None
 hpoTerms = None
 hpoSyns = None
 hpo2Mesh = None
 
-
-def old_get_ontology_terms():
-    global meshTerms, hpoTerms, hpoSyns, hpo2Mesh
-    # Retrieve MeSH terms
-    query_string = """SELECT meshID, termID, termName
-        FROM mesh_term
-        WHERE meshID in 
-            (SELECT meshID
-                FROM mesh_termtree
-                WHERE LEFT(treeID,1) = 'C');
-                            """
-    meshTerms = ontology.get_mesh(connection.query(query_string))
-
-    # Retrieve HPO terms
-    query_string = """SELECT hpoID, name
-                FROM hpo_term"""
-
-    hpoTerms = ontology.get_hpo(connection.query(query_string))
-
-    # Retrieve HPO synonyms
-    query_string = """SELECT hpoID, synonymText
-                FROM hpo_synonym
-                            """
-    hpoSyns = ontology.get_hpo_synonyms(connection.query(query_string))
-
-    # Retrieve HPO to Mesh mappings
-    query_string = """SELECT hpoID, meshID
-                FROM hpo2mesh
-                            """
-    hpo2Mesh = ontology.get_hpo_2_mesh(connection.query(query_string))
-
-
 def get_ontology_terms():
-    global meshTerms, hpoTerms, hpoSyns, hpo2Mesh
+    global mesh_data, hpo_data, hpo_syns, hpo2Mesh
+    # Update ontology file & extracted data.
+    # Mesh.update_mesh_file()
+
     # Retrieve MeSH terms
-    meshTerms = ontology.get_mesh_file()
+    mesh_data = Mesh.get_mesh_phenotypes()
 
     # Retrieve HPO terms
-    hpoTerms = ontology.get_hpo()  # Array of lists (id, label string literal)
+    hpo_data = HPO.get_hpo()  # Array of lists (id, label string literal)
 
     # Retrieve HPO synonyms
-    hpoSyns = ontology.get_hpo_synonyms()
+    hpo_syns = HPO.get_hpo_synonyms()
 
     # Retrieve HPO to Mesh mappings
     query_string = """SELECT hpoID, meshID
@@ -79,14 +49,13 @@ def get_ontology_terms():
 def process_studies(directory):
     #  Retrieve ontology terms for tagging
     get_ontology_terms()
-    tagging_data = {"HPO": {}, "HPO_Syn": {}, "MeSH": {}}
-    test = []
-    for (id, term) in hpoTerms:
-        tagging_data["HPO"][term] = "HP"
-    for (id, synonym) in hpoSyns:
-        tagging_data["HPO_Syn"][synonym] = "HP_Syn"
-    for (id, descriptor) in meshTerms:
-        tagging_data["MeSH"][descriptor] = "MeSH"
+    tagging_data = {"HPO": [], "MeSH": []}
+    for (id, term) in hpo_data:
+        tagging_data["HPO"].append(term)
+    #for (id, synonym) in hpo_syns:
+    #    tagging_data["HPO_Syn"].append(synonym)
+    for (id, label) in mesh_data:
+        tagging_data["MeSH"].append(label)
     print(tagging_data)
     # Load study data
     file_data = []
@@ -105,13 +74,13 @@ def process_studies(directory):
     #    tagging_data[term] = "HPS"
 
     # Create array of text from main body of study
+    from NLP import PhenoNLP
+    pheno_nlp = PhenoNLP(tagging_data)
     for study in studies:
-        data = []
-        data.append(study.abstract)
+        corpus = study.abstract
         for section in study.sections:
-            data.append(" " + section[:][1])
-        import SpaceJam
-        SpaceJam.process_text(data, tagging_data)
+            corpus += " " + section[:][1]
+        pheno_nlp.process_corpus(corpus)
       # pre_processor = PreProcessing(np.array(data), tagging_data)
 
         sys.exit("Stopping after 1st study")
