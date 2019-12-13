@@ -3,6 +3,7 @@ import json
 import rdflib
 import owlready2
 import requests
+from lxml import etree
 
 import config
 import csv
@@ -14,14 +15,17 @@ class Mesh:
                        "meshv": mesh_namespace}
 
     @staticmethod
-    def get_mesh_data():
-        terms = Mesh.__get_terms()
-        descriptors = Mesh.__get_descriptors()
-        data = []
-        for id, term in terms:
-            data.append([id, term])
-        for id, descriptor in descriptors:
-            data.append([id, descriptor])
+    def get_mesh_data(use_xml=False):
+        if use_xml:
+            return Mesh.__get_descriptors_xml()
+        else:
+            terms = Mesh.__get_terms()
+            descriptors = Mesh.__get_descriptors()
+            data = []
+            for id, term in terms:
+                data.append([id, term])
+            for id, descriptor in descriptors:
+                data.append([id, descriptor])
         return data
 
     @staticmethod
@@ -94,6 +98,23 @@ class Mesh:
             g.close()
             return False
         return True
+
+    @staticmethod
+    def __get_descriptors_xml():
+        parser = etree.XMLParser(encoding='utf-8')
+        tree = etree.parse("desc2020.xml")
+        results = [str(x) for x in tree.xpath("//DescriptorRecord/DescriptorName/String/text()", smart_string=False)]
+        concepts = [str(x) for x in tree.xpath("//DescriptorRecord/ConceptList/Concept/ConceptName/String/text()",
+                                  smart_string=False)]
+        for concept in concepts:
+            results.append(concept)
+
+        terms = [str(x) for x in tree.xpath("//DescriptorRecord/ConceptList/Concept/TermList/Term/String/text()",
+                                  smart_string=False)]
+        for term in terms:
+            results.append(term)
+
+        return results
 
     @staticmethod
     def __set_descriptors():

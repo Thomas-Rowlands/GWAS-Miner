@@ -12,7 +12,7 @@ import os
 import DB
 from Ontology import HPO, Mesh
 from DataPreparation import PreProcessing
-from DataStructures import Study
+from DataStructures import Study, MasterLexicon
 import numpy as np
 import config
 import sys
@@ -27,10 +27,11 @@ hpo2Mesh = None
 def get_ontology_terms():
     global mesh_data, hpo_data, hpo_syns, hpo2Mesh
     # Update ontology file & extracted data.
-    # Mesh.update_mesh_file()
+    # Mesh.update_mesh_file() #  Could be dangerous to use if structural changes are made.
 
     # Retrieve MeSH terms
-    mesh_data = Mesh.get_mesh_phenotypes()
+    # mesh_data = Mesh.get_mesh_data()
+    mesh_data = Mesh.get_mesh_data(use_xml=True)
 
     # Retrieve HPO terms
     hpo_data = HPO.get_hpo()  # Array of lists (id, label string literal)
@@ -54,35 +55,26 @@ def process_studies(directory):
         tagging_data["HPO"].append(term)
     #for (id, synonym) in hpo_syns:
     #    tagging_data["HPO_Syn"].append(synonym)
-    for (id, label) in mesh_data:
+    for (label) in mesh_data:
         tagging_data["MeSH"].append(label)
-    print(tagging_data)
     # Load study data
     file_data = []
     for filename in os.listdir(directory):
         with open(directory + "/" + filename, 'r') as file:
             file_data.append([filename, file.read()])
 
-    studies = []
+    from NLP import Interpreter
+    lexicon = MasterLexicon().parse(tagging_data)
+    nlp = Interpreter(lexicon)
+
     for (pmid, xmlText) in file_data:
         print("-------------------------\nProcessing study " + str(pmid) + "\n-------------------------")
-        studies.append(PreProcessing.strip_xml(pmid, xmlText))
-
-
-
-    # for (id, term) in hpoSyns:
-    #    tagging_data[term] = "HPS"
-
-    # Create array of text from main body of study
-    from NLP import PhenoNLP
-    pheno_nlp = PhenoNLP(tagging_data)
-    for study in studies:
+        study = PreProcessing.strip_xml(pmid, xmlText)
         corpus = study.abstract
         for section in study.sections:
             corpus += " " + section[:][1]
-        pheno_nlp.process_corpus(corpus)
-      # pre_processor = PreProcessing(np.array(data), tagging_data)
-
+        #nlp.process_corpus(corpus)
+        #nlp.process_table_corpus(study.tables)
         sys.exit("Stopping after 1st study")
 
 

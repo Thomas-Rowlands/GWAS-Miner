@@ -176,7 +176,8 @@ class PreProcessing:
             parsed_table = Table(table, table_num=i)
             results.append(parsed_table)
             if parsed_table.snps:
-                snps.append([x for x in parsed_table.snps])
+                for snp in parsed_table.snps:
+                    snps.append(snp)
             i += 1
         return results, snps
 
@@ -204,16 +205,21 @@ class PreProcessing:
         study.acknowledgements = acknowledgements
 
         #  Tables
-        # for snp in study.snps:
-        #     output = snp.rs_identifier
-        #     if snp.gee_p_val:
-        #         output += " GEE => " + snp.gee_p_val
-        #     elif snp.fbat_p_val:
-        #         output += " FBAT => " + snp.fbat_p_val
-        #     else:
-        #         output += " MISC => " + snp.misc_p_val
-        #     output += " | Phenotype => " + snp.phenotype
-        #     print(output)
+        for snp in study.snps:
+            output = snp.rs_identifier
+            if not output:
+                continue
+            if snp.gee_p_val:
+                output += " | GEE => " + snp.gee_p_val
+            elif snp.fbat_p_val:
+                output += " | FBAT => " + snp.fbat_p_val
+            elif snp.misc_p_val:
+                output += " | MISC => " + snp.misc_p_val
+            if snp.phenotype:
+                output += " | Phenotype => " + snp.phenotype
+            print(output)
+
+
         #  Citations pending
 
         return study

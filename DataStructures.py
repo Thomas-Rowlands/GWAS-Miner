@@ -1,3 +1,5 @@
+import pprint
+import re
 from collections import OrderedDict
 from lxml import etree
 
@@ -35,8 +37,9 @@ class Table:
         :param table_num: (Optional) Integer identifier for the table
         """
         self.xml = xml
+        self.caption = self.__get_caption(xml)
         self.p_values = None
-        self.snps = None
+        self.snps = []
         self.targets = targets
         self.table_num = table_num
         self.map, self.data = Table.__map_table(xml, table_num=self.table_num)
@@ -45,6 +48,7 @@ class Table:
         self.target_indexes = None
         if self.targets:
             self.target_indexes = Table.__get_target_headings(self.targets)
+        self.__get_snps()
 
     def set_targets(self, targets):
         """
@@ -70,7 +74,10 @@ class Table:
             row_cells = row.xpath(".//td")
             row_data = []
             for cell in row_cells:
-                content = cell.xpath(".//text()")[0]
+                content_list = cell.xpath(".//text()")
+                content = ""
+                for text in content_list:
+                    content += text
                 span = cell.xpath(".//@colspan")
                 if span:  # Duplicate cells where they span to align columns
                     for i in range(int(span[0])):
@@ -85,12 +92,93 @@ class Table:
             row_cells = row.xpath(".//td")
             row_data = []
             for cell in row_cells:
-                content = cell.xpath(".//text()")
-                if content:
-                    content = content[0]
+                content_list = cell.xpath(".//text()")
+                content = ""
+                if content_list:
+                    for text in content_list:
+                        content += text
+                else:
+                    content = content_list
                 row_data.append(content)
             table["body"].append(row_data)
         return table
+
+    def __get_table_column_types(self):
+        valuable_fields = {"Phenotypes": [], "GEE": [], "FBAT": [], "MISC_PVAL": [], "SNP": []}
+        acceptable_threshold = 85
+        for i in range(len(self.headings)):
+            for o in range(len(self.headings[i])):
+                #  Test each body cell value in column
+                rsid_count = 0  # Contains RSID, should be a SNP column.
+                phenotype_count = 0  # High chance of being a phenotype descriptor of some sort.
+                integer_count = 0  # Likely to be a quantity or other non-desirable value
+                p_val_count = 0  # Likely to contain a p-value
+                value_test_count = len(self.rows)
+                for l in range(value_test_count):
+                    cell_value = None
+                    try:  # Malformed tables can contain horizontal rules which will cause an Index Error.
+                        cell_value = str(self.rows[l][o])
+                    except IndexError as e:
+                        continue
+                    if re.search(r"(?:rs[0-9]{1,}){1}", cell_value, re.IGNORECASE):
+                        rsid_count += 1
+                    elif re.fullmatch(r"(^[0-9]{1,}[ ]?$)", cell_value, re.IGNORECASE):
+                        integer_count += 1
+                    elif re.search(r"(\d+\.?\d?[ ]?[×xX][ ]?\d+-\d[\(]?\d?[\)]?)",
+                                   cell_value, re.IGNORECASE):
+                        p_val_count += 1
+                    elif cell_value == " ":
+                        continue
+                    else:
+                        phenotype_count += 1
+                rsid_count = (rsid_count * (100 / value_test_count)) > acceptable_threshold
+                phenotype_count = (phenotype_count * (100 / value_test_count)) > acceptable_threshold
+                integer_count = (integer_count * (100 / value_test_count)) > acceptable_threshold
+                p_val_count = (p_val_count * (100 / value_test_count)) > acceptable_threshold
+                heading = self.headings[i][o].lower()
+                if "snp" in heading:
+                    if rsid_count:
+                        valuable_fields["SNP"].append([i, o])
+                elif "gee" in heading:
+                    if p_val_count:
+                        valuable_fields["GEE"].append([i, o])
+                elif "fbat" in heading:
+                    if p_val_count:
+                        valuable_fields["FBAT"].append([i, o])
+                elif "p-val" in heading:
+                    if p_val_count:
+                        valuable_fields["MISC_PVAL"].append([i, o])
+                elif "phenotype" in heading:
+                    if "p-val" not in heading:
+                        if phenotype_count:
+                            valuable_fields["Phenotypes"].append([i, o])
+        print(self.table_num)
+        pprint.pprint(valuable_fields)
+        return valuable_fields
+
+    def __get_snps(self):
+        table_targets = self.__get_table_column_types()
+        for i in range(len(self.rows)):
+            new_snp = SNP()
+            if table_targets["Phenotypes"]:
+                new_snp.phenotype = self.rows[i][table_targets["Phenotypes"][0][1]]
+            if table_targets["GEE"]:
+                new_snp.gee_p_val = self.rows[i][table_targets["GEE"][0][1]]
+            if table_targets["FBAT"]:
+                new_snp.fbat_p_val = self.rows[i][table_targets["FBAT"][0][1]]
+            if table_targets["SNP"]:
+                new_snp.rs_identifier = self.rows[i][table_targets["SNP"][0][1]]
+            self.snps.append(new_snp)
+
+    @staticmethod
+    def __get_caption(elem):
+        """
+        Retrieves the accompanying table caption text.
+        @param elem: XML root from which to retrieve the caption.
+        @return: String containing caption text.
+        """
+        caption = elem.xpath(".//preceding-sibling::caption//p//text()")[0]
+        return caption
 
     @staticmethod
     def __map_table(elem, table_num=None):
@@ -165,10 +253,46 @@ class Table:
 
 
 class SNP:
-    def __init__(self):
-        self.rs_identifier = None
+    def __init__(self, rs_identifier=None):
+        self.rs_identifier = rs_identifier
         self.gee_p_val = None
         self.fbat_p_val = None
         self.misc_p_val = None
         self.phenotype = None
         self.internal_marker = None
+
+
+class MasterLexicon:
+    def __init__(self, vocab=None):
+        self.vocab = None
+        self.master = None
+        if vocab:
+            self.parse(vocab)
+
+    def parse(self, vocab):
+        self.vocab = vocab
+        self.master = self.__separate_lexicon()
+        return self.master
+
+    def __separate_lexicon(self):
+        """
+        (Internal) Divide the input vocabulary by the number of tokens in each term, for each ontology dict entry.
+        @return: Dictionary containing the master lexicon generated.
+        """
+        master = {}
+        for ontology in self.vocab.keys():
+            master[ontology] = {}
+            for phrase in self.vocab[ontology]:
+                space_count = phrase.count(" ")
+                if space_count in master[ontology]:
+                    master[ontology][space_count].append(phrase)
+                else:
+                    master[ontology][space_count] = [phrase]
+        return master
+
+    def vocab_count(self, key):
+        """
+        Calculate the number of vocabularies in the master lexicon for a specified key.
+        @return: Integer count of master lexicon vocabularies.
+        """
+        return len(self.master[key].keys())
