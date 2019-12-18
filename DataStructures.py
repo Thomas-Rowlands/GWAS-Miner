@@ -124,51 +124,95 @@ class Table:
                         rsid_count += 1
                     elif re.fullmatch(r"(^[0-9]{1,}[ ]?$)", cell_value, re.IGNORECASE):
                         integer_count += 1
-                    elif re.search(r"(\d+\.?\d?[ ]?[×xX][ ]?\d+-\d[\(]?\d?[\)]?)",
+                    elif re.search(r"(\d+\.?\d?[ ]?[×xX][ ]?\d+-\d[\(]?\d?[\)]?)|(\d\.\d+ ?)$",
                                    cell_value, re.IGNORECASE):
                         p_val_count += 1
                     elif cell_value == " ":
                         continue
                     else:
                         phenotype_count += 1
-                rsid_count = (rsid_count * (100 / value_test_count)) > acceptable_threshold
-                phenotype_count = (phenotype_count * (100 / value_test_count)) > acceptable_threshold
-                integer_count = (integer_count * (100 / value_test_count)) > acceptable_threshold
-                p_val_count = (p_val_count * (100 / value_test_count)) > acceptable_threshold
+                is_rsid = (rsid_count * (100 / value_test_count)) > acceptable_threshold
+                is_phenotype = (phenotype_count * (100 / value_test_count)) > acceptable_threshold
+                is_integer = (integer_count * (100 / value_test_count)) > acceptable_threshold
+                is_p_val = (p_val_count * (100 / value_test_count)) > acceptable_threshold
                 heading = self.headings[i][o].lower()
                 if "snp" in heading:
-                    if rsid_count:
+                    if is_rsid:
                         valuable_fields["SNP"].append([i, o])
                 elif "gee" in heading:
-                    if p_val_count:
+                    if is_p_val:
                         valuable_fields["GEE"].append([i, o])
                 elif "fbat" in heading:
-                    if p_val_count:
+                    if is_p_val:
                         valuable_fields["FBAT"].append([i, o])
                 elif "p-val" in heading:
-                    if p_val_count:
+                    if is_p_val:
                         valuable_fields["MISC_PVAL"].append([i, o])
                 elif "phenotype" in heading:
                     if "p-val" not in heading:
-                        if phenotype_count:
+                        if is_phenotype:
                             valuable_fields["Phenotypes"].append([i, o])
+                elif heading and is_p_val:
+                    back_counter = i - 1
+                    while back_counter >= 0:
+                        if "p-val" in self.headings[back_counter][o].lower():
+                            valuable_fields["GEE"].append([i, o, heading])
+                            break
+                        else:
+                            back_counter -= 1
         print(self.table_num)
         pprint.pprint(valuable_fields)
         return valuable_fields
 
+    @staticmethod
+    def __strip_pval(text):
+        match = re.search(r"(\d+\.?\d?[ ]?[×xX][ ]?\d+-\d[\(]?\d?[\)]?)|(\d\.\d+ ?)$", text,
+                          re.IGNORECASE)
+        if match:
+            return match.group()
+        else:
+            return None
+
+    @staticmethod
+    def __strip_rsid(text):
+        match = re.search(r"(?:rs[0-9]{1,}){1}", text, re.IGNORECASE)
+        if match:
+            return match.group()
+        else:
+            return None
+
     def __get_snps(self):
+        """
+        Assigns genetic markers with their RS identifier and associated P-values & phenotype.
+        @return:
+        """
         table_targets = self.__get_table_column_types()
         for i in range(len(self.rows)):
             new_snp = SNP()
+            is_snp_added = False
             if table_targets["Phenotypes"]:
                 new_snp.phenotype = self.rows[i][table_targets["Phenotypes"][0][1]]
             if table_targets["GEE"]:
-                new_snp.gee_p_val = self.rows[i][table_targets["GEE"][0][1]]
+                if len(table_targets["GEE"]) > 1:
+                    for entry in table_targets["GEE"]:
+                        if len(entry) == 3:
+                            if entry[2].replace(" ", ""):
+                                new_snp = SNP()
+                                new_snp.phenotype = entry[2]
+                                new_snp.gee_p_val = Table.__strip_pval(self.rows[i][entry[1]])
+                                if table_targets["SNP"]:
+                                    new_snp.rs_identifier = Table.__strip_rsid(self.rows[i][table_targets["SNP"][0][1]])
+                                self.snps.append(new_snp)
+                                is_snp_added = True
+                else:
+                    new_snp.gee_p_val = Table.__strip_pval(self.rows[i][table_targets["GEE"][0][1]])
+
             if table_targets["FBAT"]:
-                new_snp.fbat_p_val = self.rows[i][table_targets["FBAT"][0][1]]
+                new_snp.fbat_p_val = Table.__strip_pval(self.rows[i][table_targets["FBAT"][0][1]])
             if table_targets["SNP"]:
-                new_snp.rs_identifier = self.rows[i][table_targets["SNP"][0][1]]
-            self.snps.append(new_snp)
+                new_snp.rs_identifier = Table.__strip_rsid(self.rows[i][table_targets["SNP"][0][1]])
+            if not is_snp_added:
+                self.snps.append(new_snp)
 
     @staticmethod
     def __get_caption(elem):

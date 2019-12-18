@@ -3,10 +3,6 @@
 Created on Mon Oct  7 08:47:22 2019
 
 @author: Thomas Rowlands
-
-Based on the tutorial by Sowmya Vivek
-Found here: https://medium.com/analytics-vidhya/automated-keyword-extraction-from-articles-using-nlp-bfd864f41b34
-
 """
 import os
 import DB
