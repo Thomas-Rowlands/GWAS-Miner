@@ -3,6 +3,7 @@ import re
 import sys
 
 from lxml import etree
+from lxml.etree import tostring
 
 from DataStructures import Study, SNP, Table
 from nltk.stem.porter import PorterStemmer
@@ -167,11 +168,124 @@ class PreProcessing:
         return sections
 
     @staticmethod
+    def __divide_table(xml_table, row_nums):
+        """
+        Splits an XML table into multiple XML tables at specified break points
+        @param xml_table: Lxml Element containing table body elements
+        @param row_nums: List of Integers representing the row numbers to split the table at.
+        @return: List of XML tables created by splitting the input table.
+        """
+        for i in row_nums:
+            if type(i) != list:
+                print(xml_table.xpath(".//tbody//tr[" + str(i) + "]//text()"))
+            else:
+                print("Between: \n")
+                print(xml_table.xpath(".//tbody//tr[" + str(i[0]) + "]//text()"))
+                print("\nAnd:")
+                print(xml_table.xpath(".//tbody//tr[" + str(i[1]) + "]//text()"))
+
+
+        result = []
+        ignore_row_index = 0
+        first_table_xml = "<table>"
+        for x in xml_table.xpath(".//thead"):
+            test = tostring(x, encoding="unicode", method="xml")
+            first_table_xml += tostring(x, encoding="unicode", method="xml")
+        if type(row_nums[0]) != list:
+            if row_nums[0] <= 3:
+                ignore_row_index = row_nums[0]
+                for elem in xml_table.xpath(".//tbody//tr[position() < " + str(row_nums[0]) + "]"):
+                    first_table_xml += tostring(elem, encoding="unicode", method="xml")
+                first_table_xml += "</thead>"
+        first_table_xml += "<tbody>"
+        for x in xml_table.xpath(".//tbody//tr[position() <= " + str(row_nums[1][0]) + " and position() > " + str(ignore_row_index) + "]"):
+            first_table_xml += tostring(x, encoding="unicode", method="xml")
+        first_table_xml += "</tbody></table>"
+        result.append(first_table_xml)
+        row_nums = row_nums[1:]
+
+        for i in range(len(row_nums)):
+            new_table_xml = "<table><thead>"
+            for elem in xml_table.xpath(".//tbody//tr[position() >=" + str(row_nums[i][0]) + " and position() <= " +
+                                        str(row_nums[i][1]) + "]"):
+                new_table_xml += tostring(elem, encoding="unicode", method="xml")
+
+            new_table_xml += "</thead><tbody>"
+            if i == (len(row_nums) - 1):
+                for elem in xml_table.xpath(".//tbody//tr[position() >= " + str(row_nums[i][1]) + "]"):
+                    new_table_xml += tostring(elem, encoding="unicode", method="xml")
+            else:
+                for elem in xml_table.xpath(".//tbody//tr[position() >= " + str(row_nums[i][1]) +
+                                            "and not (position() >= " + str(row_nums[i + 1][0]) + ")]"):
+                    new_table_xml += tostring(elem, encoding="unicode", method="xml")
+
+            new_table_xml += "</tbody></table>"
+            result.append(new_table_xml)
+        return result
+
+    @staticmethod
+    def __sort_ranges(values):
+        """
+        Group list of ascending integers by neighbouring values.
+        @param values: List of integers in ascending order
+        @return: List containing lone integers and lists of ranges for neighbouring values (e.g. [2, [27-29]]
+        """
+        result = []
+        counter = 0
+        for i in range(len(values)):
+            if i == (len(values) - 1):
+                if counter == 0:
+                    result.append(values[i])
+                else:
+                    result.append([values[i - counter], values[i]])
+                break
+            first = values[i]
+            second = values[i + 1]
+            if (first + 2) >= second >= (first - 2):
+                counter += 1
+                continue
+            elif counter == 0:
+                result.append(values[i])
+            else:
+                result.append([values[i - counter], values[i]])
+                counter = 0
+        return result
+
+    @staticmethod
     def __get_tables(tree):
         tables = tree.xpath("//table")
+        new_tables = []
         results = []
         i = 1
         snps = []
+
+        for table in tables:
+            header_cell_count = table.xpath("count(.//thead//td)")
+            separator_indexes = []
+            body_rows = table.xpath(".//tbody//tr")
+            row_index = 1
+            is_prev_row_rule = False
+            for row in body_rows:
+                span_count = 0
+                if row.xpath(".//hr"):
+                    is_prev_row_rule = True
+                    row_index += 1
+                    continue
+                span_count = row.xpath(".//td[1]//@colspan")
+                if span_count:
+                    span_count = int(span_count[0])
+                else:
+                    span_count = 0
+                bold_count = row.xpath("count(.//td//bold)")
+                if is_prev_row_rule and (bold_count >= (header_cell_count - 2)):
+                    separator_indexes.append(row_index - 1)
+                row_index += 1
+                is_prev_row_rule = False
+            if separator_indexes:
+                ranges = PreProcessing.__sort_ranges(separator_indexes)
+                new_tables.append([x for x in PreProcessing.__divide_table(table, ranges)])
+        sys.exit()
+        #  end of experiment
         for table in tables:
             parsed_table = Table(table, table_num=i)
             results.append(parsed_table)
@@ -180,7 +294,6 @@ class PreProcessing:
                     snps.append(snp)
             i += 1
         return results, snps
-
 
     @staticmethod
     def strip_xml(pmid, xml):
@@ -195,7 +308,6 @@ class PreProcessing:
         study.authors = PreProcessing.__get_authors(tree)
         study.tables, study.snps = PreProcessing.__get_tables(tree)
         study.sections = PreProcessing.__get_sections(tree)
-
 
         #  Back sections
         acknowledgements = ""
@@ -221,7 +333,6 @@ class PreProcessing:
                 output += " | Phenotype => " + snp.phenotype
             print(output)
         print("Total markers /w P-vals: " + str(marker_count))
-
 
         #  Citations pending
 

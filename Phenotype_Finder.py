@@ -63,7 +63,7 @@ def process_studies(directory):
     lexicon = MasterLexicon().parse(tagging_data)
     nlp = Interpreter(lexicon)
 
-    for (pmid, xmlText) in file_data:
+    for (pmid, xmlText) in file_data[1:]:
         print("-------------------------\nProcessing study " + str(pmid) + "\n-------------------------")
         study = PreProcessing.strip_xml(pmid, xmlText)
         corpus = study.abstract

@@ -99,7 +99,12 @@ class Table:
                         content += text
                 else:
                     content = content_list
-                row_data.append(content)
+                span = cell.xpath(".//@colspan")
+                if span:
+                    for i in range(int(span[0])):
+                        row_data.append(content)
+                else:
+                    row_data.append(content)
             table["body"].append(row_data)
         return table
 
@@ -124,11 +129,9 @@ class Table:
                         rsid_count += 1
                     elif re.fullmatch(r"(^[0-9]{1,}[ ]?$)", cell_value, re.IGNORECASE):
                         integer_count += 1
-                    elif re.search(r"(\d+\.?\d?[ ]?[×xX][ ]?\d+-\d[\(]?\d?[\)]?)|(\d\.\d+ ?)$",
+                    elif re.search(r"(\d+\.?\d?[ ]?[×xX*][ ]?\d+-\d[\(]?\d?[\)]?)|(\d\.\d+ ?)$",
                                    cell_value, re.IGNORECASE):
                         p_val_count += 1
-                    elif cell_value == " ":
-                        continue
                     else:
                         phenotype_count += 1
                 is_rsid = (rsid_count * (100 / value_test_count)) > acceptable_threshold
@@ -148,7 +151,7 @@ class Table:
                 elif "p-val" in heading:
                     if is_p_val:
                         valuable_fields["MISC_PVAL"].append([i, o])
-                elif "phenotype" in heading:
+                elif "phenotype" in heading or "trait" in heading:
                     if "p-val" not in heading:
                         if is_phenotype:
                             valuable_fields["Phenotypes"].append([i, o])
@@ -166,7 +169,7 @@ class Table:
 
     @staticmethod
     def __strip_pval(text):
-        match = re.search(r"(\d+\.?\d?[ ]?[×xX][ ]?\d+-\d[\(]?\d?[\)]?)|(\d\.\d+ ?)$", text,
+        match = re.search(r"(\d+\.?\d?[ ]?[×xX*][ ]?\d+-\d[\(]?\d?[\)]?)|(\d\.\d+ ?)$", text,
                           re.IGNORECASE)
         if match:
             return match.group()
@@ -191,7 +194,19 @@ class Table:
             new_snp = SNP()
             is_snp_added = False
             if table_targets["Phenotypes"]:
-                new_snp.phenotype = self.rows[i][table_targets["Phenotypes"][0][1]]
+                pheno_val = self.rows[i][table_targets["Phenotypes"][0][1]]
+                if not pheno_val.replace(" ", ""):
+                    back_counter = i
+                    while back_counter >= 0:  # Phenotypes can be stated once but used for multiple rows.
+                        prev_val = self.rows[back_counter][table_targets["Phenotypes"][0][1]].replace(" ", "")
+                        if not prev_val:
+                            back_counter -= 1
+                            continue
+                        else:
+                            pheno_val = self.rows[back_counter][table_targets["Phenotypes"][0][1]]
+                            break
+                        back_counter -= 1
+                new_snp.phenotype = pheno_val
             if table_targets["GEE"]:
                 if len(table_targets["GEE"]) > 1:
                     for entry in table_targets["GEE"]:
