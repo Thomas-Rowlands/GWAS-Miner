@@ -20,6 +20,7 @@ hpoTerms = None
 hpoSyns = None
 hpo2Mesh = None
 
+
 def get_ontology_terms():
     global mesh_data, hpo_data, hpo_syns, hpo2Mesh
     # Update ontology file & extracted data.
@@ -49,7 +50,7 @@ def process_studies(directory):
     tagging_data = {"HPO": [], "MeSH": []}
     for (id, term) in hpo_data:
         tagging_data["HPO"].append(term)
-    #for (id, synonym) in hpo_syns:
+    # for (id, synonym) in hpo_syns:
     #    tagging_data["HPO_Syn"].append(synonym)
     for (label) in mesh_data:
         tagging_data["MeSH"].append(label)
@@ -63,15 +64,15 @@ def process_studies(directory):
     lexicon = MasterLexicon().parse(tagging_data)
     nlp = Interpreter(lexicon)
 
-    for (pmid, xmlText) in file_data[1:]:
+    for (pmid, xmlText) in file_data:
         print("-------------------------\nProcessing study " + str(pmid) + "\n-------------------------")
         study = PreProcessing.strip_xml(pmid, xmlText)
-        corpus = study.abstract
-        for section in study.sections:
-            corpus += " " + section[:][1]
-        #nlp.process_corpus(corpus)
-        #nlp.process_table_corpus(study.tables)
-        sys.exit("Stopping after 1st study")
+        #corpus = study.abstract
+        #for section in study.sections:
+        #    corpus += " " + section[:][1]
+        # nlp.process_corpus(corpus)
+        # nlp.process_table_corpus(study.tables)
+        #sys.exit("Stopping after 1st study")
 
 
 def main():

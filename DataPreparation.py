@@ -177,28 +177,32 @@ class PreProcessing:
         """
         for i in row_nums:
             if type(i) != list:
-                print(xml_table.xpath(".//tbody//tr[" + str(i) + "]//text()"))
+                print(xml_table.xpath(".//tbody//tr[position() = " + str(i) + "]//text()"))
             else:
                 print("Between: \n")
-                print(xml_table.xpath(".//tbody//tr[" + str(i[0]) + "]//text()"))
+                print(xml_table.xpath(".//tbody//tr[position() = " + str(i[0]) + "]//text()"))
                 print("\nAnd:")
-                print(xml_table.xpath(".//tbody//tr[" + str(i[1]) + "]//text()"))
+                print(xml_table.xpath(".//tbody//tr[position() = " + str(i[1]) + "]//text()"))
 
 
         result = []
         ignore_row_index = 0
-        first_table_xml = "<table>"
-        for x in xml_table.xpath(".//thead"):
+        first_table_xml = "<table><thead>"
+        for x in xml_table.xpath(".//thead//tr"):
             test = tostring(x, encoding="unicode", method="xml")
             first_table_xml += tostring(x, encoding="unicode", method="xml")
         if type(row_nums[0]) != list:
             if row_nums[0] <= 3:
                 ignore_row_index = row_nums[0]
-                for elem in xml_table.xpath(".//tbody//tr[position() < " + str(row_nums[0]) + "]"):
+                for elem in xml_table.xpath(".//tbody//tr[position() <" + str(row_nums[0]) + "]"):
                     first_table_xml += tostring(elem, encoding="unicode", method="xml")
-                first_table_xml += "</thead>"
-        first_table_xml += "<tbody>"
-        for x in xml_table.xpath(".//tbody//tr[position() <= " + str(row_nums[1][0]) + " and position() > " + str(ignore_row_index) + "]"):
+                #first_table_xml += "</thead>"
+        else:
+            if row_nums[0][1] <= 3:
+                for elem in xml_table.xpath(".//tbody//tr[position() <" + str(row_nums[0][1]) + "]"):
+                    first_table_xml += tostring(elem, encoding="unicode", method="xml")
+        first_table_xml += "</thead><tbody>"
+        for x in xml_table.xpath(".//tbody//tr[position() < " + str(row_nums[1][0]) + "]"):
             first_table_xml += tostring(x, encoding="unicode", method="xml")
         first_table_xml += "</tbody></table>"
         result.append(first_table_xml)
@@ -212,11 +216,11 @@ class PreProcessing:
 
             new_table_xml += "</thead><tbody>"
             if i == (len(row_nums) - 1):
-                for elem in xml_table.xpath(".//tbody//tr[position() >= " + str(row_nums[i][1]) + "]"):
+                for elem in xml_table.xpath(".//tbody//tr[position() > " + str(row_nums[i][1]) + "]"):
                     new_table_xml += tostring(elem, encoding="unicode", method="xml")
             else:
-                for elem in xml_table.xpath(".//tbody//tr[position() >= " + str(row_nums[i][1]) +
-                                            "and not (position() >= " + str(row_nums[i + 1][0]) + ")]"):
+                for elem in xml_table.xpath(".//tbody//tr[position() > " + str(row_nums[i][1]) +
+                                            "and position() < " + str(row_nums[i + 1][0]) + "]"):
                     new_table_xml += tostring(elem, encoding="unicode", method="xml")
 
             new_table_xml += "</tbody></table>"
@@ -256,18 +260,21 @@ class PreProcessing:
         tables = tree.xpath("//table")
         new_tables = []
         results = []
-        i = 1
         snps = []
-
+        table_count = 1
         for table in tables:
             header_cell_count = table.xpath("count(.//thead//td)")
             separator_indexes = []
             body_rows = table.xpath(".//tbody//tr")
             row_index = 1
             is_prev_row_rule = False
+            is_prev_row_header = True
             for row in body_rows:
+                test_content = row.xpath(".//text()")
                 span_count = 0
                 if row.xpath(".//hr"):
+                    if is_prev_row_header:
+                        separator_indexes.append(row_index)
                     is_prev_row_rule = True
                     row_index += 1
                     continue
@@ -277,22 +284,46 @@ class PreProcessing:
                 else:
                     span_count = 0
                 bold_count = row.xpath("count(.//td//bold)")
-                if is_prev_row_rule and (bold_count >= (header_cell_count - 2)):
-                    separator_indexes.append(row_index - 1)
+                if (is_prev_row_rule or is_prev_row_header) and (bold_count > (header_cell_count - (span_count - 1))):
+                    separator_indexes.append(row_index)
+                    is_prev_row_header = True
+                    row_index += 1
+                    continue
                 row_index += 1
                 is_prev_row_rule = False
+                is_prev_row_header = False
+                table_count += 1
             if separator_indexes:
                 ranges = PreProcessing.__sort_ranges(separator_indexes)
+                is_two_dimensional = True
+                for i in ranges[1:]:
+                    if type(i) == list:
+                        is_two_dimensional = False
+                        break
+                if is_two_dimensional:
+                    new_tables.append(table)
+                    continue
                 new_tables.append([x for x in PreProcessing.__divide_table(table, ranges)])
-        sys.exit()
+            else:
+                new_tables.append(table)
         #  end of experiment
-        for table in tables:
-            parsed_table = Table(table, table_num=i)
-            results.append(parsed_table)
-            if parsed_table.snps:
-                for snp in parsed_table.snps:
-                    snps.append(snp)
-            i += 1
+        table_num = 1
+        for table in new_tables:
+            parsed_table = None
+            if type(table) == list:
+                for i in table:
+                    parsed_table = Table(i, table_num=table_num)
+                    results.append(parsed_table)
+                    if parsed_table.snps:
+                        for snp in parsed_table.snps:
+                            snps.append(snp)
+            else:
+                parsed_table = Table(table, table_num=table_num)
+                results.append(parsed_table)
+                if parsed_table.snps:
+                    for snp in parsed_table.snps:
+                        snps.append(snp)
+            table_num += 1
         return results, snps
 
     @staticmethod

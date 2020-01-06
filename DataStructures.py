@@ -36,13 +36,13 @@ class Table:
         :param targets: (Optional) List of heading strings to identify column indexes for
         :param table_num: (Optional) Integer identifier for the table
         """
-        self.xml = xml
-        self.caption = self.__get_caption(xml)
+        self.xml = self.__validate_xml(xml)
+        self.caption = self.__get_caption()
         self.p_values = None
         self.snps = []
         self.targets = targets
         self.table_num = table_num
-        self.map, self.data = Table.__map_table(xml, table_num=self.table_num)
+        self.map, self.data = Table.__map_table(self.xml, table_num=self.table_num)
         self.rows = [x for x in self.data["body"]]
         self.headings = [y for y in self.data["header"]]
         self.target_indexes = None
@@ -58,6 +58,12 @@ class Table:
         """
         self.targets = targets
         self.target_indexes = Table.__get_target_headings(table=self.data, target_headings=self.targets)
+
+    @staticmethod
+    def __validate_xml(xml):
+        if type(xml) == str:
+            return etree.fromstring(xml)
+        return xml
 
     @staticmethod
     def __validate_table(elem):
@@ -110,8 +116,14 @@ class Table:
 
     def __get_table_column_types(self):
         valuable_fields = {"Phenotypes": [], "GEE": [], "FBAT": [], "MISC_PVAL": [], "SNP": []}
-        acceptable_threshold = 85
+        acceptable_threshold = 30
+        contains_data = False
+        data = [x for x in [i for i in self.headings] if x]
+        if not data:
+            return valuable_fields
         for i in range(len(self.headings)):
+            if self.headings[i].count(self.headings[i][0]) == len(self.headings[i]):
+                continue
             for o in range(len(self.headings[i])):
                 #  Test each body cell value in column
                 rsid_count = 0  # Contains RSID, should be a SNP column.
@@ -205,7 +217,6 @@ class Table:
                         else:
                             pheno_val = self.rows[back_counter][table_targets["Phenotypes"][0][1]]
                             break
-                        back_counter -= 1
                 new_snp.phenotype = pheno_val
             if table_targets["GEE"]:
                 if len(table_targets["GEE"]) > 1:
@@ -229,14 +240,17 @@ class Table:
             if not is_snp_added:
                 self.snps.append(new_snp)
 
-    @staticmethod
-    def __get_caption(elem):
+    def __get_caption(self):
         """
         Retrieves the accompanying table caption text.
         @param elem: XML root from which to retrieve the caption.
         @return: String containing caption text.
         """
-        caption = elem.xpath(".//preceding-sibling::caption//p//text()")[0]
+        caption = None
+        try:
+            caption = self.xml.xpath(".//preceding-sibling::caption//p//text()")[0]
+        except:
+            print("No caption.")
         return caption
 
     @staticmethod
