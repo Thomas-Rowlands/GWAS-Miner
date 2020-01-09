@@ -26,6 +26,7 @@ class Study:
         self.acknowledgements = None
         self.citations = None
         self.tables = None
+        self.original = None
 
 
 class Table:
@@ -116,7 +117,7 @@ class Table:
 
     def __get_table_column_types(self):
         valuable_fields = {"Phenotypes": [], "GEE": [], "FBAT": [], "MISC_PVAL": [], "SNP": []}
-        acceptable_threshold = 30
+        acceptable_threshold = 80
         contains_data = False
         data = [x for x in [i for i in self.headings] if x]
         if not data:
@@ -126,7 +127,7 @@ class Table:
                 continue
             for o in range(len(self.headings[i])):
                 #  Test each body cell value in column
-                rsid_count = 0  # Contains RSID, should be a SNP column.
+                rsid_count = 0  # Contains RSID, should be a marker column.
                 phenotype_count = 0  # High chance of being a phenotype descriptor of some sort.
                 integer_count = 0  # Likely to be a quantity or other non-desirable value
                 p_val_count = 0  # Likely to contain a p-value
@@ -166,7 +167,7 @@ class Table:
                 elif "phenotype" in heading or "trait" in heading:
                     if "p-val" not in heading:
                         if is_phenotype:
-                            valuable_fields["Phenotypes"].append([i, o])
+                            valuable_fields["Phenotypes"].append([i, o, heading]) # Do not remove heading!
                 elif heading and is_p_val:
                     back_counter = i - 1
                     while back_counter >= 0:

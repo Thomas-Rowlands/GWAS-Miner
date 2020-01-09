@@ -43,7 +43,6 @@ def get_ontology_terms():
 
     # hpo2Mesh = ontology.get_hpo_2_mesh(connection.query(query_string))
 
-
 def process_studies(directory):
     #  Retrieve ontology terms for tagging
     get_ontology_terms()
@@ -64,9 +63,37 @@ def process_studies(directory):
     lexicon = MasterLexicon().parse(tagging_data)
     nlp = Interpreter(lexicon)
 
-    for (pmid, xmlText) in file_data:
+    for (pmid, xmlText) in file_data[0:1]:
         print("-------------------------\nProcessing study " + str(pmid) + "\n-------------------------")
         study = PreProcessing.strip_xml(pmid, xmlText)
+        marker_count = 0
+        ontology_matches = 0
+        for snp in study.snps:
+            if (not snp.rs_identifier) or (not snp.gee_p_val) or (snp.phenotype is None):
+                continue
+            output = snp.rs_identifier
+            if snp.gee_p_val:
+                output += " | GEE => " + snp.gee_p_val
+            if snp.fbat_p_val:
+                output += " | FBAT => " + snp.fbat_p_val
+            if snp.misc_p_val:
+                output += " | MISC => " + snp.misc_p_val
+            output += " | Phenotype => "
+            snp.phenotype = nlp.replace_abbreviations(snp.phenotype, study.original)
+            if snp.phenotype is None:
+                continue
+            marker_count += 1
+            matches = nlp.onto_match(snp.phenotype)
+            if matches:
+                for match in matches:
+                    output += match[0] + "<" + match[1] + ">"
+                ontology_matches += 1
+            else:
+                output += snp.phenotype + "<NO MATCH>"
+            print(output)
+
+        print("Total markers /w P-vals: " + str(marker_count))
+        print(F"Total markers matched to an ontology: {ontology_matches}")
         #corpus = study.abstract
         #for section in study.sections:
         #    corpus += " " + section[:][1]

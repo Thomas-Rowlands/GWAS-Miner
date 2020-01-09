@@ -330,6 +330,7 @@ class PreProcessing:
     def strip_xml(pmid, xml):
         study = Study()
         xml = re.sub("</", " </", xml)  # Ensure white space is present between nested tags
+        study.original = xml
         parser = etree.XMLParser(encoding='utf-8')
         tree = etree.fromstring(xml, parser)
         study.pmid = pmid
@@ -348,22 +349,7 @@ class PreProcessing:
         study.acknowledgements = acknowledgements
 
         #  Tables
-        marker_count = 0
-        for snp in study.snps:
-            output = snp.rs_identifier
-            if (not output) or (not snp.gee_p_val) or (not snp.phenotype):
-                continue
-            if snp.gee_p_val:
-                output += " | GEE => " + snp.gee_p_val
-                marker_count += 1
-            if snp.fbat_p_val:
-                output += " | FBAT => " + snp.fbat_p_val
-            if snp.misc_p_val:
-                output += " | MISC => " + snp.misc_p_val
-            if snp.phenotype:
-                output += " | Phenotype => " + snp.phenotype
-            print(output)
-        print("Total markers /w P-vals: " + str(marker_count))
+
 
         #  Citations pending
 
