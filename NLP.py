@@ -136,8 +136,7 @@ class Interpreter:
 
     @staticmethod
     def replace_abbreviations(doc, fulltext):
-        doc = doc.lstrip()
-        doc = doc.rstrip()
+        doc = doc.strip()
         if len(doc) < 5:
             new_doc = doc.upper()
             fulltext = fulltext.upper()

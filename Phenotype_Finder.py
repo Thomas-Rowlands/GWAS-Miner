@@ -21,20 +21,22 @@ hpoSyns = None
 hpo2Mesh = None
 
 
-def get_ontology_terms():
+def get_ontology_terms(use_cache=True):
     global mesh_data, hpo_data, hpo_syns, hpo2Mesh
     # Update ontology file & extracted data.
     # Mesh.update_mesh_file() #  Could be dangerous to use if structural changes are made.
 
-    # Retrieve MeSH terms
-    # mesh_data = Mesh.get_mesh_data()
-    mesh_data = Mesh.get_mesh_data(use_xml=True)
+    # Retrieve MeSH & HPO terms/descriptors/concepts
+    if use_cache:
+        mesh_data = Mesh.get_mesh_from_cache()
+        hpo_data = HPO.get_hpo_from_cache()
+    else:
+        mesh_data = Mesh.get_mesh_data(use_xml=True)
+        hpo_data = HPO.get_hpo()  # Array of lists (id, label string literal)
 
-    # Retrieve HPO terms
-    hpo_data = HPO.get_hpo()  # Array of lists (id, label string literal)
 
     # Retrieve HPO synonyms
-    hpo_syns = HPO.get_hpo_synonyms()
+    #hpo_syns = HPO.get_hpo_synonyms()
 
     # Retrieve HPO to Mesh mappings
     query_string = """SELECT hpoID, meshID
@@ -42,6 +44,7 @@ def get_ontology_terms():
                             """
 
     # hpo2Mesh = ontology.get_hpo_2_mesh(connection.query(query_string))
+
 
 def process_studies(directory):
     #  Retrieve ontology terms for tagging
@@ -51,7 +54,7 @@ def process_studies(directory):
         tagging_data["HPO"].append(term)
     # for (id, synonym) in hpo_syns:
     #    tagging_data["HPO_Syn"].append(synonym)
-    for (label) in mesh_data:
+    for (id, label) in mesh_data:
         tagging_data["MeSH"].append(label)
     # Load study data
     file_data = []
@@ -73,11 +76,11 @@ def process_studies(directory):
                 continue
             output = snp.rs_identifier
             if snp.gee_p_val:
-                output += " | GEE => " + snp.gee_p_val
+                output += F" | GEE => {snp.gee_p_val}"
             if snp.fbat_p_val:
-                output += " | FBAT => " + snp.fbat_p_val
+                output += F" | FBAT => {snp.fbat_p_val}"
             if snp.misc_p_val:
-                output += " | MISC => " + snp.misc_p_val
+                output += F" | MISC => {snp.misc_p_val}"
             output += " | Phenotype => "
             snp.phenotype = nlp.replace_abbreviations(snp.phenotype, study.original)
             if snp.phenotype is None:
@@ -86,20 +89,20 @@ def process_studies(directory):
             matches = nlp.onto_match(snp.phenotype)
             if matches:
                 for match in matches:
-                    output += match[0] + "<" + match[1] + ">"
+                    output += F"{match[0]}<{match[1]}>"
                 ontology_matches += 1
             else:
-                output += snp.phenotype + "<NO MATCH>"
+                output += F"{snp.phenotype}<NO MATCH>"
             print(output)
 
         print("Total markers /w P-vals: " + str(marker_count))
         print(F"Total markers matched to an ontology: {ontology_matches}")
-        #corpus = study.abstract
-        #for section in study.sections:
+        # corpus = study.abstract
+        # for section in study.sections:
         #    corpus += " " + section[:][1]
         # nlp.process_corpus(corpus)
         # nlp.process_table_corpus(study.tables)
-        #sys.exit("Stopping after 1st study")
+        # sys.exit("Stopping after 1st study")
 
 
 def main():

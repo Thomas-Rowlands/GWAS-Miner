@@ -4,7 +4,7 @@ import rdflib
 import owlready2
 import requests
 from lxml import etree
-
+import json
 import config
 import csv
 
@@ -103,17 +103,34 @@ class Mesh:
     def __get_descriptors_xml():
         parser = etree.XMLParser(encoding='utf-8')
         tree = etree.parse("desc2020.xml")
-        results = [str(x) for x in tree.xpath("//DescriptorRecord/DescriptorName/String/text()", smart_string=False)]
-        concepts = [str(x) for x in tree.xpath("//DescriptorRecord/ConceptList/Concept/ConceptName/String/text()",
-                                  smart_string=False)]
-        for concept in concepts:
-            results.append(concept)
+        results = [str(x) for x in tree.xpath("//DescriptorRecord/DescriptorUI/text() | "
+                                              "//DescriptorRecord/DescriptorName/String/text()", smart_string=False)]
+        concepts = [str(x) for x in tree.xpath("//DescriptorRecord/ConceptList/Concept/ConceptUI/text() | "
+                                               "//DescriptorRecord/ConceptList/Concept/ConceptName/String/text()",
+                                               smart_string=False)]
+        terms = [str(x) for x in tree.xpath("//DescriptorRecord/ConceptList/Concept/TermList/Term/TermUI/text() | "
+                                            "//DescriptorRecord/ConceptList/Concept/TermList/Term/String/text()",
+                                            smart_string=False)]
 
-        terms = [str(x) for x in tree.xpath("//DescriptorRecord/ConceptList/Concept/TermList/Term/String/text()",
-                                  smart_string=False)]
-        for term in terms:
-            results.append(term)
+        results = [results[i:i + 2] for i in range(0, len(results), 2)]
+        concepts = [concepts[i:i + 2] for i in range(0, len(concepts), 2)]
+        terms = [terms[i:i + 2] for i in range(0, len(terms), 2)]
 
+        for (id, concept) in concepts:
+            results.append([id, concept])
+        for (id, term) in terms:
+            results.append([id, term])
+
+        output = json.dumps(results)
+        file = open("mesh.json", "w")
+        file.write(output)
+        file.close()
+        return results
+
+    @staticmethod
+    def get_mesh_from_cache():
+        file = open("mesh.json", "r")
+        results = json.load(file)
         return results
 
     @staticmethod
@@ -207,7 +224,17 @@ class HPO:
         g = owlready2.default_world.as_rdflib_graph()
         hpo_ontology_terms = g.query(config.hpo_statement, initNs=HPO.hp_namespaces)
         g.close()
-        results = [[id, term.toPython().lower()] for (id, term) in hpo_ontology_terms]
+        results = [[id[id.rfind("/") + 1:], term.toPython().lower()] for (id, term) in hpo_ontology_terms]
+        output = json.dumps(results)
+        file = open("hp.json", "w")
+        file.write(output)
+        file.close()
+        return results
+
+    @staticmethod
+    def get_hpo_from_cache():
+        file = open("hp.json", "r")
+        results = json.load(file)
         return results
 
     @staticmethod
@@ -218,6 +245,16 @@ class HPO:
         hpo_ontology_syns = g.query(config.hpo_syns_statement, initNs=HPO.hp_namespaces)
         g.close()
         results = [[id, synonym.toPython().lower()] for (id, term, synonym) in hpo_ontology_syns]
+        output = json.dumps(results)
+        file = open("hp_syns.json", "w")
+        file.write(output)
+        file.close()
+        return results
+
+    @staticmethod
+    def get_hpo_syns_from_cache():
+        file = open("hp_syns.json", "r")
+        results = json.load(file)
         return results
 
     @staticmethod

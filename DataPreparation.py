@@ -184,7 +184,6 @@ class PreProcessing:
                 print("\nAnd:")
                 print(xml_table.xpath(".//tbody//tr[position() = " + str(i[1]) + "]//text()"))
 
-
         result = []
         ignore_row_index = 0
         first_table_xml = "<table><thead>"
@@ -196,7 +195,7 @@ class PreProcessing:
                 ignore_row_index = row_nums[0]
                 for elem in xml_table.xpath(".//tbody//tr[position() <" + str(row_nums[0]) + "]"):
                     first_table_xml += tostring(elem, encoding="unicode", method="xml")
-                #first_table_xml += "</thead>"
+                # first_table_xml += "</thead>"
         else:
             if row_nums[0][1] <= 3:
                 for elem in xml_table.xpath(".//tbody//tr[position() <" + str(row_nums[0][1]) + "]"):
@@ -349,7 +348,6 @@ class PreProcessing:
         study.acknowledgements = acknowledgements
 
         #  Tables
-
 
         #  Citations pending
 
