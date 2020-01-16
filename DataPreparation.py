@@ -29,87 +29,6 @@ class PreProcessing:
     from string import punctuation
     import re
 
-    def __init__(self, study_data, tagging_data):
-        """
-        Preprocesses free text data ready for analyses.
-        :param study_data: Unprocessed corpus text (numpy array).
-        :param tagging_data: Ontology terms to use for POS tagging
-        """
-        self.study_data = self.pandas.DataFrame(data=study_data, columns=["content"])
-        self.study_data["word_count"] = self.study_data["content"].apply(lambda x: len(str(x).split(" ")))
-        self.common_words = self.pandas.Series(''.join(self.study_data["content"]).split()).value_counts()[:20]
-        self.uncommon_words = self.pandas.Series(''.join(self.study_data["content"]).split()).value_counts()[-20:]
-        self.stop_words = nltk.corpus.stopwords
-        self.lem = nltk.WordNetLemmatizer()
-        self.stop_words = set(nltk.corpus.stopwords.words('english') + list(self.punctuation))
-        self.corpus = self.prepare_corpus()
-        self.default_tagger = BackoffTagger()
-        self.tagging_data = tagging_data
-        self.phenotype_tagger = self.build_semantic_taggers()
-        self.tagged_text = self.tag_text()
-        self.chunked_text = self.chunk_text()
-
-    def add_stop_words(self, new_words):
-        """
-        Add a new set of stop words
-        :param new_words: List of stop words to append to the current set.
-        :return:
-        """
-        self.stop_words = self.stop_words.union(new_words)
-
-    def prepare_corpus(self):
-        """
-        Processes the current corpus text, cleaning & preparing the text.
-        :return: Pre-processed corpus text.
-        """
-        corpus = []
-        for i in range(len(self.study_data.index)):
-            # Remove punctuations
-            # text = self.re.sub('[^a-zA-Z0-9]', ' ', self.study_data['content'][i])
-            # Convert to lowercase
-            text = self.study_data['content'][i].lower()
-            # remove tags
-            # text = self.re.sub("&lt;/?.*?&gt;", " &lt;&gt; ", text)
-            # remove special characters
-            text = self.re.sub("(\\W)+", " ", text)
-            # Convert to list from string
-            text = text.split()
-            text = [self.lem.lemmatize(word) for word in text]  # if word not in self.stop_words]
-            text = " ".join(text)
-            corpus.append(text)
-        return corpus
-
-    def build_semantic_taggers(self):
-        """
-        Uses the MeSH & HPO terms to create a new tagger that backs off to the NLTK tagger.
-        :return:
-        """
-        uni_tagger = nltk.UnigramTagger(model=self.tagging_data, backoff=self.default_tagger)
-        bi_tagger = nltk.BigramTagger(model=self.tagging_data, backoff=uni_tagger)
-        tri_tagger = nltk.TrigramTagger(model=self.tagging_data, backoff=bi_tagger)
-        rsid_tagger = nltk.RegexpTagger(regexps=[(r'(?:rs[0-9]{1,}){1}', 'RSID')], backoff=tri_tagger)
-
-        # facet joint arthrosis
-        return rsid_tagger
-
-    def tag_text(self):
-        """
-        Attaches POS tags to each word in the corpus
-        :return: Tagged version of the corpus
-        """
-        text = ""
-        for i in self.corpus:
-            text = text + " " + i
-        text = nltk.word_tokenize(text)
-        return self.phenotype_tagger.tag(text)
-
-    def chunk_text(self):
-        pattern = r"""NP: {<DT|PP\$>?<JJ>*<NN>}
-                      {<NNP>+}"""
-        chonk = nltk.RegexpParser(pattern)
-        result = chonk.parse(self.tagged_text)
-        return result
-
     # regexp_pattern = tag_pattern2re_pattern(pattern)
 
     # Retrieves rs identifiers from input string
@@ -255,13 +174,29 @@ class PreProcessing:
         return result
 
     @staticmethod
+    def __get_caption(tree):
+        return str(tree.xpath("../caption//p/text()")[0])
+
+    @staticmethod
+    def __validate_caption(caption):
+        if "candidate gene" in caption.lower():
+            return False
+        else:
+            return True
+
+    @staticmethod
     def __get_tables(tree):
         tables = tree.xpath("//table")
         new_tables = []
         results = []
+        captions = []
         snps = []
         table_count = 1
         for table in tables:
+            caption = PreProcessing.__get_caption(table)
+            captions.append(caption)
+            if not PreProcessing.__validate_caption(caption):
+                continue
             header_cell_count = table.xpath("count(.//thead//td)")
             separator_indexes = []
             body_rows = table.xpath(".//tbody//tr")
@@ -307,22 +242,24 @@ class PreProcessing:
                 new_tables.append(table)
         #  end of experiment
         table_num = 1
+        caption_counter = 0
         for table in new_tables:
             parsed_table = None
             if type(table) == list:
                 for i in table:
-                    parsed_table = Table(i, table_num=table_num)
+                    parsed_table = Table(i, table_num=table_num, caption=captions[caption_counter])
                     results.append(parsed_table)
                     if parsed_table.snps:
                         for snp in parsed_table.snps:
                             snps.append(snp)
             else:
-                parsed_table = Table(table, table_num=table_num)
+                parsed_table = Table(table, table_num=table_num, caption=captions[caption_counter])
                 results.append(parsed_table)
                 if parsed_table.snps:
                     for snp in parsed_table.snps:
                         snps.append(snp)
             table_num += 1
+            caption_counter += 1
         return results, snps
 
     @staticmethod

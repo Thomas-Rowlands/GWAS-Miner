@@ -2,7 +2,7 @@ import pprint
 import re
 from collections import OrderedDict
 from lxml import etree
-
+import NLP
 
 def convert_to_list(num):
     result = []
@@ -30,7 +30,7 @@ class Study:
 
 
 class Table:
-    def __init__(self, xml, targets=None, table_num=None):
+    def __init__(self, xml, caption="", targets=None, table_num=None):
         """
         Table data structure for processing/storing PubMed table XML/HTML.
         :param xml: The xml element containing data for the PubMed table
@@ -38,7 +38,7 @@ class Table:
         :param table_num: (Optional) Integer identifier for the table
         """
         self.xml = self.__validate_xml(xml)
-        self.caption = self.__get_caption()
+        self.caption = caption
         self.p_values = None
         self.snps = []
         self.targets = targets
@@ -167,7 +167,7 @@ class Table:
                 elif "phenotype" in heading or "trait" in heading:
                     if "p-val" not in heading:
                         if is_phenotype:
-                            valuable_fields["Phenotypes"].append([i, o, heading]) # Do not remove heading!
+                            valuable_fields["Phenotypes"].append([i, o, heading])  # Do not remove heading!
                 elif heading and is_p_val:
                     back_counter = i - 1
                     while back_counter >= 0:
@@ -176,6 +176,7 @@ class Table:
                             break
                         else:
                             back_counter -= 1
+        print(self.caption)
         print(self.table_num)
         pprint.pprint(valuable_fields)
         return valuable_fields
@@ -240,19 +241,6 @@ class Table:
                 new_snp.rs_identifier = Table.__strip_rsid(self.rows[i][table_targets["SNP"][0][1]])
             if not is_snp_added:
                 self.snps.append(new_snp)
-
-    def __get_caption(self):
-        """
-        Retrieves the accompanying table caption text.
-        @param elem: XML root from which to retrieve the caption.
-        @return: String containing caption text.
-        """
-        caption = None
-        try:
-            caption = self.xml.xpath(".//preceding-sibling::caption//p//text()")[0]
-        except:
-            print("No caption.")
-        return caption
 
     @staticmethod
     def __map_table(elem, table_num=None):

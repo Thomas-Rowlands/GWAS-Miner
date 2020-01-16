@@ -69,6 +69,11 @@ def process_studies(directory):
     for (pmid, xmlText) in file_data[0:1]:
         print("-------------------------\nProcessing study " + str(pmid) + "\n-------------------------")
         study = PreProcessing.strip_xml(pmid, xmlText)
+        for table in study.tables:
+            if table.table_num == 5:
+                rule = [{'POS': 'PROPN'}, {'POS': 'VERB'}]
+                nlp.add_rule_matcher("test", rule)
+                nlp.display_structure(table.caption)
         marker_count = 0
         ontology_matches = 0
         for snp in study.snps:
