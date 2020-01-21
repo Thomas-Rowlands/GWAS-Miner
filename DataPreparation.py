@@ -274,7 +274,9 @@ class PreProcessing:
         study.abstract = PreProcessing.__get_abstract(tree)
         study.title = PreProcessing.__get_title(tree)
         study.authors = PreProcessing.__get_authors(tree)
-        study.tables, study.snps = PreProcessing.__get_tables(tree)
+        table_data = PreProcessing.__get_tables(tree)
+        study.tables = table_data[0]
+        study.set_snps(table_data[1])
         study.sections = PreProcessing.__get_sections(tree)
 
         #  Back sections

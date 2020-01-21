@@ -71,12 +71,12 @@ def process_studies(directory):
         study = PreProcessing.strip_xml(pmid, xmlText)
         for table in study.tables:
             if table.table_num == 5:
-                rule = [{'POS': 'PROPN'}, {'POS': 'VERB'}]
-                nlp.add_rule_matcher("test", rule)
-                nlp.display_structure(table.caption)
+                doc = nlp.process_corpus(study.get_fulltext())
+                test = nlp.extract_phenotypes(doc)
+        #nlp.display_structure(study.get_fulltext())
         marker_count = 0
         ontology_matches = 0
-        for snp in study.snps:
+        for snp in study.get_snps():
             if (not snp.rs_identifier) or (not snp.gee_p_val) or (snp.phenotype is None):
                 continue
             output = snp.rs_identifier

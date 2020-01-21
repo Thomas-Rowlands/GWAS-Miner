@@ -4,6 +4,7 @@ from collections import OrderedDict
 from lxml import etree
 import NLP
 
+
 def convert_to_list(num):
     result = []
     for i in range(num):
@@ -16,7 +17,7 @@ class Study:
         self.title = None
         self.abstract = None
         self.authors = None
-        self.snps = None
+        self.__snps = None
         self.concepts = None
         self.p_values = None
         self.results = None
@@ -27,7 +28,53 @@ class Study:
         self.citations = None
         self.tables = None
         self.original = None
+        self.full_text = None
 
+    def get_fulltext(self):
+        """
+        Generates a free text string for the study excluding acknowledgements, citations and tables.
+        @return: String containing the full text study
+        """
+        if self.sections:
+            result = F"{self.title}\n{self.abstract}\n"
+            for section in self.sections:
+                result = F"{result} {section}\n"
+            return result
+        else:
+            return None
+
+    def append_snp(self, new_snp):
+        """
+        Append a new unique SNP object to the study
+        @param new_snp: SNP object to append to the study
+        @return: True on a successful append, False if a duplicate is found
+        """
+        duplicate_found = False
+        for snp in self.__snps:
+            if snp.__dict__ == new_snp.__dict__:
+                duplicate_found = True
+                break
+        if duplicate_found:
+            return False
+        else:
+            self.__snps.append(new_snp)
+            return True
+
+    def set_snps(self, new_snps):
+        """
+        Setter for the list of SNP objects of this study.
+        @param new_snps: List of snps to assign to the study.
+        @return: True on success
+        """
+        self.__snps = new_snps
+        return True
+
+    def get_snps(self):
+        """
+        Getter for all SNP objects for this study
+        @return: List of SNP objects
+        """
+        return self.__snps
 
 class Table:
     def __init__(self, xml, caption="", targets=None, table_num=None):

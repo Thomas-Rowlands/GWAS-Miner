@@ -1,3 +1,4 @@
+import itertools
 import re
 from pprint import pprint
 import spacy
@@ -6,15 +7,18 @@ from spacy import displacy
 from spacy.matcher.matcher import Matcher
 from spacy.matcher.phrasematcher import PhraseMatcher
 from spacy.tokens.span import Span
+from Utility_Functions import Utility
+import networkx as nx
 import string
 
 
 class Interpreter:
     __failed_matches = []
-    __nlp = spacy.load("en_core_web_sm")
+    __nlp = spacy.load("en_core_web_md")
     __nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
     __rsid_regex = [{"TEXT": {"REGEX": "(?:rs[0-9]{1,}){1}"}}]
     __p_value_regex = r"((\(?\bp[ -=<]{1,}(val{1,}[ue]{0,})?[ <≥=×xX-]{0,}[ \(]?\d+[\.]?[\d]{0,}[-^*() \d×xX]{0,}))"
+    __p_value_regex_inline = r"(\d?\.?\d[*×xX]{1}\d{1,}[ ]?-\d{1,})"
     __p_type_regex = r"(\(?GEE\)?)|(\(?FBAT\)?)"
     __SNP_regex = [{"TEXT": {"REGEX": r"([ATCG]{1}[a-z]{1,}[0-9]{1,}[ATCG]{1}[a-z]{1,})"}}]
     __gene_seq_regex = [{"TEXT": {"REGEX": "([ ][ACTG]{3,}[ ])"}}]
@@ -63,20 +67,35 @@ class Interpreter:
             if span is not None:
                 doc.ents += (span,)
 
-    def __process_corpus(self, corpus, ontology_only=False):
+    def process_corpus(self, corpus, ontology_only=False):
         # Clean corpus with NLPre parsers
         parsers = [dedash(), titlecaps(), separate_reference(), unidecoder()]
         for parser in parsers:
             corpus = parser(corpus)
 
         doc = self.__nlp(corpus)
+
         old_ents, doc.ents = doc.ents, []
         #  Additional regex matches unnecessary when limited to ontology entities.
         if not ontology_only:
             self.__regex_match(self.__table_ref_regex, doc, "TABLE")
             self.__regex_match(self.__p_value_regex, doc, "PVAL")
+            self.__regex_match(self.__p_value_regex_inline, doc, "PVAL")
             self.__regex_match(self.__p_type_regex, doc, "PTYPE")
-            self.__basic_matcher(doc)
+
+        hyphenated_pattern = [{'POS': 'PROPN'}, {'IS_PUNCT': True, 'LOWER': '-'}, {'POS': 'VERB'}]
+        compound_pattern = [{'POS': 'NOUN', 'DEP': 'compound'}, {'POS': 'NOUN', 'DEP': 'compound'}, {'POS': 'NOUN'}]
+        self.__basic_matcher.add("JOIN", None, hyphenated_pattern, compound_pattern)
+        self.__basic_matcher(doc)
+
+        new_doc = ""
+        # for i in range(len(sentence_spans)):
+        #     change = Interpreter.replace_list(sentence_spans[i])
+        #     if change:
+        #         for statement in change['statements']:
+        #             new_doc = F"{new_doc} {statement}"
+        #     else:
+        #         new_doc = F"{new_doc} {sentence_spans[i]}"
         for matcher in self.__phrase_matchers:
             matcher(doc)
         if not ontology_only:
@@ -85,8 +104,87 @@ class Interpreter:
                     doc.ents += (ent,)
                 except:  # Default SpaCy entities should never override others.
                     continue
-
+        self.merge_spans(doc, "PVAL")
         return doc
+
+    @staticmethod
+    def merge_spans(doc, entity_label):
+        with doc.retokenize() as retokenizer:
+            for ent in [x for x in doc.ents if x.label_ == entity_label]:
+                retokenizer.merge(doc[ent.start:ent.end])
+
+    @staticmethod
+    def filter_sents_by_entity(sents, entity_list):
+        """
+        Remove sentence objects from a list if they do not contain all of the provided entities.
+        @param sents: List of sentence objects
+        @param entity_list: List of entity label strings to search for
+        @return: List of sentence objects containing all of the required entities.
+        """
+        output = []
+        for sent in sents:
+            missing_entity = False
+            for ent in entity_list:
+                ents = [x.label_ for x in sent.ents]
+                if ent not in ents:
+                    missing_entity = True
+                    break
+            if not missing_entity:
+                output.append(sent)
+        return output
+
+    @staticmethod
+    def validate_edge_entities(ents, edges):
+        output = []
+        for item in ents:
+            for (a, b) in edges:
+                if item == a or item == b:
+                    output.append(item)
+                    break
+        return output
+
+    @staticmethod
+    def extract_phenotypes(doc):
+        output = []
+        phenotype_sents = Interpreter.filter_sents_by_entity(doc.sents, ["MeSH", "PVAL", "RSID"])
+        # Iterate through each sentence containing a phenotype named entity label
+        for sent in phenotype_sents:
+            edges = []
+            for token in sent:
+                for child in token.children:
+                    edges.append(('{0}'.format(token.lower_), '{0}'.format(child.lower_)))
+            graph = nx.Graph(edges)
+
+            phenotypes = Interpreter.validate_edge_entities([x.lower_ for x in sent.ents if x.label_ == 'MeSH'], edges)
+            snps = Interpreter.validate_edge_entities([x.lower_ for x in sent.ents if x.label_ == 'RSID'], edges)
+            pvals = Interpreter.validate_edge_entities([x.lower_ for x in sent.ents if x.label_ == 'PVAL'], edges)
+
+            combinations = [phenotypes, snps, pvals]
+
+            phenotype_count = len(phenotypes)
+            snp_count = len(snps)
+            pval_count = len(pvals)
+
+            combinations = list(itertools.product(*combinations))
+            results = []
+            for (pheno, snp, pval) in combinations:
+                results.append({"Phenotype": pheno, "SNP": snp, "PVAL": pval,
+                                "pheno>snp": {"Distance": nx.shortest_path_length(graph, source=pheno, target=snp),
+                                              "Path": nx.shortest_path(graph, source=pheno, target=snp)}
+                                "snp>pval": {"Distance": nx.shortest_path_length(graph, source=snp, target=pval),
+                                             "Path": nx.shortest_path(graph, source=snp, target=pval)}
+                                }
+                               )
+
+
+    @staticmethod
+    def split_doc_sents(doc):
+        """
+        Retrieve a list of sentence objects from a Spacy Doc object.
+        @param doc: Spacy Doc object.
+        @return: List of sentence objects
+        """
+        return [x for x in list(doc.sents)]
 
     @staticmethod
     def merge_reliant(doc, word):
@@ -114,47 +212,43 @@ class Interpreter:
         return result
 
     @staticmethod
-    def check_lists(doc):
+    def replace_list(doc):
+        """
+        Replace a list within a sentence with multiple statements e.g. epi-, collagen- and adp-induced platelet...
+        @param doc: The sentence string to be changed
+        @return: List of new sentences generated from the input statement
+        """
         results = []
         temp_word = ""
         temp_word_two = ""
+        is_changed = False
         for word in doc:
-            if word.dep_ == "amod":
+            if word.dep_ == "amod":  # adjectival modifier
                 temp_word = Interpreter.merge_reliant(doc, word)
                 temp_word_two = Interpreter.merge_reliant(doc, word.head)
-                results.append({"original": str(word), "index": word.idx, "l_words": [temp_word['l_words'], temp_word_two['l_words']], "replacement": F"{temp_word['replacement']} {temp_word_two['replacement']}"})
+                results.append({"original": str(word), "index": word.idx,
+                                "l_words": [temp_word['l_words'], temp_word_two['l_words']],
+                                "replacement": F"{temp_word['replacement']} {temp_word_two['replacement']}"})
+                is_changed = True
+        if not is_changed:
+            return None
         new_text = doc.text
-        test = []
+        output = {"items": [], "statements": []}
         for result in results:
-            test.append(F"{new_text[:result['l_words'][0]]} {result['replacement']}.")
-            #TODO: Remove the additional terms which stack up on every subsequent list addition.
-        #new_text = F"{new_text[:temp_word_two['index']]} {new_text[temp_word_two['index'] + len(temp_word_two['original']):]}"
-        #print(new_text)
-        pprint(test)
+            output["statements"].append(F"{new_text[:results[0]['l_words'][0]]}{result['replacement']}.")
+            output['items'].append(result['replacement'])
+        return output
 
     def display_structure(self, doc):
         """
         Start running the Displacy visualization of the tokenized sentences identified by the NLP pipeline.
-        @param doc: The document to process for tokenized sentence structures.
+        @param doc: The NLP processed document.
         """
-        doc = doc.replace(",", "").replace(" and", "")
-
-        hyphenated_pattern = [{'POS': 'PROPN'}, {'IS_PUNCT': True}, {'POS': 'VERB'}]
-        compound_pattern = [{'POS': 'NOUN', 'DEP': 'compound'}, {'POS': 'NOUN', 'DEP': 'compound'}, {'POS': 'NOUN'}]
-
-        matcher = Matcher(self.__nlp.vocab)
-        matcher.add("JOIN", None, hyphenated_pattern, compound_pattern)
-        doc = self.__nlp(doc)
-        matches = matcher(doc)
-        spans = []
-        for match_id, start, end in matches:
-            string_id = self.__nlp.vocab.strings[match_id]  # Get string representation
-            span = doc[start:end]  # The matched span
-            spans.append(span)
-
-        Interpreter.check_lists(doc)
-
-        sentence_spans = [x for x in list(doc.sents)]
+        sentence_spans = None
+        if type(doc) == list:
+            sentence_spans = doc
+        else:
+            sentence_spans = [x for x in list(doc.sents)]
         options = {"compact": True}
         # pprint([doc[match[1]:match[2]] for match in matches])
         displacy.serve(sentence_spans, style="dep", options=options)
@@ -162,9 +256,8 @@ class Interpreter:
     def display_ents(self, doc):
         """
         Start running the Displacy visualization of the named entities recognised by the NLP pipeline.
-        @param doc: The document to process for named entities.
+        @param doc: The NLP processed document.
         """
-        doc = self.__process_corpus(doc)
         colors = {"MESH": "rgb(247, 66, 145)", "HP": "rgb(147, 66, 245)", "RSID": "rgb(245, 66, 72)",
                   "PVAL": "rgb(102, 255, 51)", "PTYPE": "rgb(51, 102, 255)", "SNP": "rgb(0, 255, 204)"}
         options = {"colors": colors}
@@ -172,7 +265,7 @@ class Interpreter:
         displacy.serve(doc, style="ent", options=options)
 
     def onto_match(self, doc):
-        doc = self.__process_corpus(doc, ontology_only=True)
+        doc = self.process_corpus(doc, ontology_only=True)
         return [(x.text, x.label_) for x in doc.ents]
 
     @staticmethod
