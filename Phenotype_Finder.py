@@ -9,10 +9,9 @@ import DB
 from Ontology import HPO, Mesh
 from DataPreparation import PreProcessing
 from DataStructures import Study, MasterLexicon
-import numpy as np
 import config
 import sys
-import pprint
+from pprint import pprint
 
 connection = DB.Connection(config.user, config.password, config.database, config.server, config.port)
 meshTerms = None
@@ -48,7 +47,7 @@ def get_ontology_terms(use_cache=True):
 
 def process_studies(directory):
     #  Retrieve ontology terms for tagging
-    get_ontology_terms()
+    get_ontology_terms(use_cache=False)
     tagging_data = {"HPO": [], "MeSH": []}
     for (id, term) in hpo_data:
         tagging_data["HPO"].append(term)
@@ -69,11 +68,11 @@ def process_studies(directory):
     for (pmid, xmlText) in file_data[0:1]:
         print("-------------------------\nProcessing study " + str(pmid) + "\n-------------------------")
         study = PreProcessing.strip_xml(pmid, xmlText)
-        for table in study.tables:
-            if table.table_num == 5:
-                doc = nlp.process_corpus(study.get_fulltext())
-                test = nlp.extract_phenotypes(doc)
-        #nlp.display_structure(study.get_fulltext())
+        doc = nlp.process_corpus(study.get_fulltext())
+        test = nlp.extract_phenotypes(doc)
+        print("\nPhenotypes matched from study text:\n")
+        pprint(test)
+        print("\nPhenotypes matched from results tables:\n")
         marker_count = 0
         ontology_matches = 0
         for snp in study.get_snps():

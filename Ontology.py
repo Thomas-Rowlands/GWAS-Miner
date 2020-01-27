@@ -103,23 +103,62 @@ class Mesh:
     def __get_descriptors_xml():
         parser = etree.XMLParser(encoding='utf-8')
         tree = etree.parse("desc2020.xml")
-        results = [str(x) for x in tree.xpath("//DescriptorRecord/DescriptorUI/text() | "
-                                              "//DescriptorRecord/DescriptorName/String/text()", smart_string=False)]
-        concepts = [str(x) for x in tree.xpath("//DescriptorRecord/ConceptList/Concept/ConceptUI/text() | "
-                                               "//DescriptorRecord/ConceptList/Concept/ConceptName/String/text()",
-                                               smart_string=False)]
-        terms = [str(x) for x in tree.xpath("//DescriptorRecord/ConceptList/Concept/TermList/Term/TermUI/text() | "
-                                            "//DescriptorRecord/ConceptList/Concept/TermList/Term/String/text()",
-                                            smart_string=False)]
+        desired_branches = ["A", "C", "G", "F", "D"]
+        branch_exceptions = ["G17", "G05", "F02.463.425.069", "F04.754.720.346"]
+        # results = [str(x) for x in tree.xpath("//DescriptorRecord/DescriptorUI/text() | "
+        #                                       "//DescriptorRecord/DescriptorName/String/text()", smart_string=False)]
+        # concepts = [str(x) for x in tree.xpath("//DescriptorRecord/ConceptList/Concept/ConceptUI/text() | "
+        #                                        "//DescriptorRecord/ConceptList/Concept/ConceptName/String/text()",
+        #                                        smart_string=False)]
+        # terms = [str(x) for x in tree.xpath("//DescriptorRecord/ConceptList/Concept/TermList/Term/TermUI/text() | "
+        #                                     "//DescriptorRecord/ConceptList/Concept/TermList/Term/String/text()",
+        #                                     smart_string=False)]
 
-        results = [results[i:i + 2] for i in range(0, len(results), 2)]
-        concepts = [concepts[i:i + 2] for i in range(0, len(concepts), 2)]
-        terms = [terms[i:i + 2] for i in range(0, len(terms), 2)]
+        all_descriptors = [x for x in tree.xpath("//DescriptorRecord", smart_string=False)]
+        filtered_descriptors = []
+        for desc in all_descriptors:
+            is_valid = False
+            for num in desc.xpath(".//TreeNumberList//TreeNumber//text()"):
+                for desired in desired_branches:
+                    if desired in num:
+                        is_valid = True
+                for undesired in branch_exceptions:
+                    if undesired in num:
+                        is_valid = False
+                        break
+            if is_valid:
+                filtered_descriptors.append(desc)
+        results = []
+        for desc in filtered_descriptors:
+            descriptors = [str(x) for x in desc.xpath("./DescriptorUI/text() | "
+                                                      "./DescriptorName/String/text()", smart_string=False)]
+            concepts = [str(x) for x in desc.xpath("./ConceptList/Concept/ConceptUI/text() | "
+                                                   "./ConceptList/Concept/ConceptName/String/text()",
+                                                   smart_string=False)]
+            terms = [str(x) for x in desc.xpath("./ConceptList/Concept/TermList/Term/TermUI/text() | "
+                                                "./ConceptList/Concept/TermList/Term/String/text()",
+                                                smart_string=False)]
+            descriptors = [descriptors[i:i + 2] for i in range(0, len(descriptors), 2)]
+            concepts = [concepts[i:i + 2] for i in range(0, len(concepts), 2)]
+            terms = [terms[i:i + 2] for i in range(0, len(terms), 2)]
 
-        for (id, concept) in concepts:
-            results.append([id, concept])
-        for (id, term) in terms:
-            results.append([id, term])
+            for (id, descriptor) in descriptors:
+                results.append([id, descriptor])
+            for (id, concept) in concepts:
+                results.append([id, concept])
+            for (id, term) in terms:
+                results.append([id, term])
+
+        # sys.exit()
+        # results = []  # delete me
+        # results = [results[i:i + 2] for i in range(0, len(results), 2)]
+        # concepts = [concepts[i:i + 2] for i in range(0, len(concepts), 2)]
+        # terms = [terms[i:i + 2] for i in range(0, len(terms), 2)]
+        #
+        # for (id, concept) in concepts:
+        #     results.append([id, concept])
+        # for (id, term) in terms:
+        #     results.append([id, term])
 
         output = json.dumps(results)
         file = open("mesh.json", "w")

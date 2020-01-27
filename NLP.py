@@ -105,6 +105,7 @@ class Interpreter:
                 except:  # Default SpaCy entities should never override others.
                     continue
         self.merge_spans(doc, "PVAL")
+        self.merge_spans(doc, "MeSH")
         return doc
 
     @staticmethod
@@ -147,6 +148,7 @@ class Interpreter:
     def extract_phenotypes(doc):
         output = []
         phenotype_sents = Interpreter.filter_sents_by_entity(doc.sents, ["MeSH", "PVAL", "RSID"])
+        results = {}
         # Iterate through each sentence containing a phenotype named entity label
         for sent in phenotype_sents:
             edges = []
@@ -165,17 +167,46 @@ class Interpreter:
             snp_count = len(snps)
             pval_count = len(pvals)
 
-            combinations = list(itertools.product(*combinations))
-            results = []
-            for (pheno, snp, pval) in combinations:
-                results.append({"Phenotype": pheno, "SNP": snp, "PVAL": pval,
-                                "pheno>snp": {"Distance": nx.shortest_path_length(graph, source=pheno, target=snp),
-                                              "Path": nx.shortest_path(graph, source=pheno, target=snp)}
-                                "snp>pval": {"Distance": nx.shortest_path_length(graph, source=snp, target=pval),
-                                             "Path": nx.shortest_path(graph, source=snp, target=pval)}
-                                }
-                               )
+            #combinations = list(itertools.product(*combinations))
 
+
+            for phenotype in phenotypes:
+                snp_distance = 100
+                rsid = None
+                pval_distance = 100
+                pval = None
+                for snp in snps:
+                    temp_distance = nx.shortest_path_length(graph, source=phenotype, target=snp)
+                    if temp_distance < snp_distance:
+                        snp_distance = temp_distance
+                        rsid = nx.shortest_path(graph, source=phenotype, target=snp)[-1]
+                results[phenotype] = [rsid]
+                for pvalue in pvals:
+                    temp_distance = nx.shortest_path_length(graph, source=results[phenotype][0], target=pvalue)
+                    if temp_distance < pval_distance:
+                        pval_distance = temp_distance
+                        pval = nx.shortest_path(graph, source=results[phenotype][0], target=pvalue)[-1]
+                results[phenotype].append(pval)
+            # for (pheno, snp, pval) in combinations:
+            # results.append({"Phenotype": pheno, "SNP": snp, "PVAL": pval,
+            #                 "pheno>snp": {"Distance": nx.shortest_path_length(graph, source=pheno, target=snp),
+            #                               "Path": nx.shortest_path(graph, source=pheno, target=snp)},
+            #                 "snp>pval": {"Distance": nx.shortest_path_length(graph, source=snp, target=pval),
+            #                              "Path": nx.shortest_path(graph, source=snp, target=pval)}
+            #                 }
+            #                )
+
+        return results
+
+
+    @staticmethod
+    def count_entities(doc, label):
+        count = 0
+        for ent in doc.ents:
+            if ent.label_ == label:
+                print(ent.lower_)
+                count += 1
+        return count
 
     @staticmethod
     def split_doc_sents(doc):
@@ -239,7 +270,8 @@ class Interpreter:
             output['items'].append(result['replacement'])
         return output
 
-    def display_structure(self, doc):
+    @staticmethod
+    def display_structure(doc):
         """
         Start running the Displacy visualization of the tokenized sentences identified by the NLP pipeline.
         @param doc: The NLP processed document.
@@ -253,7 +285,8 @@ class Interpreter:
         # pprint([doc[match[1]:match[2]] for match in matches])
         displacy.serve(sentence_spans, style="dep", options=options)
 
-    def display_ents(self, doc):
+    @staticmethod
+    def display_ents(doc):
         """
         Start running the Displacy visualization of the named entities recognised by the NLP pipeline.
         @param doc: The NLP processed document.
@@ -261,7 +294,6 @@ class Interpreter:
         colors = {"MESH": "rgb(247, 66, 145)", "HP": "rgb(147, 66, 245)", "RSID": "rgb(245, 66, 72)",
                   "PVAL": "rgb(102, 255, 51)", "PTYPE": "rgb(51, 102, 255)", "SNP": "rgb(0, 255, 204)"}
         options = {"colors": colors}
-        pprint(self.__failed_matches)
         displacy.serve(doc, style="ent", options=options)
 
     def onto_match(self, doc):
