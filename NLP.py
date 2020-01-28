@@ -104,18 +104,18 @@ class Interpreter:
                     doc.ents += (ent,)
                 except:  # Default SpaCy entities should never override others.
                     continue
-        self.merge_spans(doc, "PVAL")
-        self.merge_spans(doc, "MeSH")
+        self.__merge_spans(doc, "PVAL")
+        self.__merge_spans(doc, "MeSH")
         return doc
 
     @staticmethod
-    def merge_spans(doc, entity_label):
+    def __merge_spans(doc, entity_label):
         with doc.retokenize() as retokenizer:
             for ent in [x for x in doc.ents if x.label_ == entity_label]:
                 retokenizer.merge(doc[ent.start:ent.end])
 
     @staticmethod
-    def filter_sents_by_entity(sents, entity_list):
+    def __filter_sents_by_entity(sents, entity_list):
         """
         Remove sentence objects from a list if they do not contain all of the provided entities.
         @param sents: List of sentence objects
@@ -135,19 +135,29 @@ class Interpreter:
         return output
 
     @staticmethod
-    def validate_edge_entities(ents, edges):
+    def __validate_edge_entities(ents, edges):
         output = []
         for item in ents:
             for (a, b) in edges:
-                if item == a or item == b:
+                if item.lower_ == a or item.lower_ == b:
                     output.append(item)
                     break
         return output
 
     @staticmethod
+    def __validate_phenotype_context(token):
+        temp = []
+        for left in token.lefts:
+            temp.append(left)
+            if left.n_lefts == 0:
+                break
+        head = token
+        sys.exit()
+
+    @staticmethod
     def extract_phenotypes(doc):
         output = []
-        phenotype_sents = Interpreter.filter_sents_by_entity(doc.sents, ["MeSH", "PVAL", "RSID"])
+        phenotype_sents = Interpreter.__filter_sents_by_entity(doc.sents, ["MeSH", "PVAL", "RSID"])
         results = {}
         # Iterate through each sentence containing a phenotype named entity label
         for sent in phenotype_sents:
@@ -157,9 +167,9 @@ class Interpreter:
                     edges.append(('{0}'.format(token.lower_), '{0}'.format(child.lower_)))
             graph = nx.Graph(edges)
 
-            phenotypes = Interpreter.validate_edge_entities([x.lower_ for x in sent.ents if x.label_ == 'MeSH'], edges)
-            snps = Interpreter.validate_edge_entities([x.lower_ for x in sent.ents if x.label_ == 'RSID'], edges)
-            pvals = Interpreter.validate_edge_entities([x.lower_ for x in sent.ents if x.label_ == 'PVAL'], edges)
+            phenotypes = Interpreter.__validate_edge_entities([x for x in sent.ents if x.label_ == 'MeSH'], edges)
+            snps = Interpreter.__validate_edge_entities([x for x in sent.ents if x.label_ == 'RSID'], edges)
+            pvals = Interpreter.__validate_edge_entities([x for x in sent.ents if x.label_ == 'PVAL'], edges)
 
             combinations = [phenotypes, snps, pvals]
 
@@ -168,24 +178,29 @@ class Interpreter:
             pval_count = len(pvals)
 
             #combinations = list(itertools.product(*combinations))
-
+            # if "olfactory receptor" in phenotypes:
+            #     Interpreter.display_structure(sent)
 
             for phenotype in phenotypes:
+                # if phenotype.lower_ == "olfactory receptor":
+                #     test = Interpreter.__validate_phenotype_context(phenotype)
+                # if not Interpreter.__validate_phenotype_context(phenotype):
+                #     continue
                 snp_distance = 100
                 rsid = None
                 pval_distance = 100
                 pval = None
                 for snp in snps:
-                    temp_distance = nx.shortest_path_length(graph, source=phenotype, target=snp)
+                    temp_distance = nx.shortest_path_length(graph, source=phenotype.lower_, target=snp.lower_)
                     if temp_distance < snp_distance:
                         snp_distance = temp_distance
-                        rsid = nx.shortest_path(graph, source=phenotype, target=snp)[-1]
+                        rsid = nx.shortest_path(graph, source=phenotype.lower_, target=snp.lower_)[-1]
                 results[phenotype] = [rsid]
                 for pvalue in pvals:
-                    temp_distance = nx.shortest_path_length(graph, source=results[phenotype][0], target=pvalue)
+                    temp_distance = nx.shortest_path_length(graph, source=results[phenotype][0], target=pvalue.lower_)
                     if temp_distance < pval_distance:
                         pval_distance = temp_distance
-                        pval = nx.shortest_path(graph, source=results[phenotype][0], target=pvalue)[-1]
+                        pval = nx.shortest_path(graph, source=results[phenotype][0], target=pvalue.lower_)[-1]
                 results[phenotype].append(pval)
             # for (pheno, snp, pval) in combinations:
             # results.append({"Phenotype": pheno, "SNP": snp, "PVAL": pval,
@@ -271,16 +286,11 @@ class Interpreter:
         return output
 
     @staticmethod
-    def display_structure(doc):
+    def display_structure(sentence_spans):
         """
         Start running the Displacy visualization of the tokenized sentences identified by the NLP pipeline.
         @param doc: The NLP processed document.
         """
-        sentence_spans = None
-        if type(doc) == list:
-            sentence_spans = doc
-        else:
-            sentence_spans = [x for x in list(doc.sents)]
         options = {"compact": True}
         # pprint([doc[match[1]:match[2]] for match in matches])
         displacy.serve(sentence_spans, style="dep", options=options)
@@ -350,9 +360,34 @@ class Interpreter:
             found_indexes.sort()
             for x in split_sent[found_indexes[(first_char_count - found_counter)]:-1]:
                 result += x + " "
-        if result[0:1] == " ":
-            result = result[1:]
-        return result[:-1]
+        result = result.strip()
+        if result:
+            return result
+        else:
+            return False
+
+    @staticmethod
+    def replace_all_abbreviations(fulltext):
+        """
+        Returns the expanded form of an abbreviation from the fulltext.
+        @param fulltext: The document containing the abbreviations and their declarations
+        @return: String containing the expanded version of the abbreviation.
+        """
+        changes = []
+        pattern = r"([^(-]\b[a-z]{0,}[A-Z]{2,}[a-z]{0,}\b[^)-])"
+        for match in re.findall(pattern, fulltext):
+            target = ""
+            if type(match) == str:
+                target = match
+            else:
+                target = match[0]
+            if match not in [x for [x, y] in changes]:
+                changes.append([target, Interpreter.replace_abbreviations(target, fulltext)])
+        for change in changes:
+            if change[1]:
+                fulltext = fulltext.replace(change[0], F" {change[1]} ")
+        pprint(changes)
+        return fulltext
 
     @staticmethod
     def replace_abbreviations(token, fulltext):

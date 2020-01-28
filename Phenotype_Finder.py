@@ -6,6 +6,7 @@ Created on Mon Oct  7 08:47:22 2019
 """
 import os
 import DB
+import Utility_Functions
 from Ontology import HPO, Mesh
 from DataPreparation import PreProcessing
 from DataStructures import Study, MasterLexicon
@@ -47,7 +48,7 @@ def get_ontology_terms(use_cache=True):
 
 def process_studies(directory):
     #  Retrieve ontology terms for tagging
-    get_ontology_terms(use_cache=False)
+    get_ontology_terms(use_cache=True)
     tagging_data = {"HPO": [], "MeSH": []}
     for (id, term) in hpo_data:
         tagging_data["HPO"].append(term)
@@ -68,6 +69,7 @@ def process_studies(directory):
     for (pmid, xmlText) in file_data[0:1]:
         print("-------------------------\nProcessing study " + str(pmid) + "\n-------------------------")
         study = PreProcessing.strip_xml(pmid, xmlText)
+        test = nlp.replace_all_abbreviations(study.get_fulltext())
         doc = nlp.process_corpus(study.get_fulltext())
         test = nlp.extract_phenotypes(doc)
         print("\nPhenotypes matched from study text:\n")
@@ -75,10 +77,12 @@ def process_studies(directory):
         print("\nPhenotypes matched from results tables:\n")
         marker_count = 0
         ontology_matches = 0
+        temp = []
         for snp in study.get_snps():
             if (not snp.rs_identifier) or (not snp.gee_p_val) or (snp.phenotype is None):
                 continue
             output = snp.rs_identifier
+            temp.append(snp.rs_identifier)
             if snp.gee_p_val:
                 output += F" | GEE => {snp.gee_p_val}"
             if snp.fbat_p_val:
@@ -98,7 +102,7 @@ def process_studies(directory):
             else:
                 output += F"{snp.phenotype}<NO MATCH>"
             print(output)
-
+        print(Utility_Functions.Utility.remove_duplicates(temp))
         print("Total markers /w P-vals: " + str(marker_count))
         print(F"Total markers matched to an ontology: {ontology_matches}")
         # corpus = study.abstract
