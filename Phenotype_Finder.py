@@ -69,7 +69,7 @@ def process_studies(directory):
     for (pmid, xmlText) in file_data[0:1]:
         print("-------------------------\nProcessing study " + str(pmid) + "\n-------------------------")
         study = PreProcessing.strip_xml(pmid, xmlText)
-        test = nlp.replace_all_abbreviations(study.get_fulltext())
+        #test = nlp.replace_all_abbreviations(study.get_fulltext())
         doc = nlp.process_corpus(study.get_fulltext())
         test = nlp.extract_phenotypes(doc)
         print("\nPhenotypes matched from study text:\n")

@@ -18,7 +18,7 @@ class Interpreter:
     __nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
     __rsid_regex = [{"TEXT": {"REGEX": "(?:rs[0-9]{1,}){1}"}}]
     __p_value_regex = r"((\(?\bp[ -=<]{1,}(val{1,}[ue]{0,})?[ <≥=×xX-]{0,}[ \(]?\d+[\.]?[\d]{0,}[-^*() \d×xX]{0,}))"
-    __p_value_regex_inline = r"(\d?\.?\d[*×xX]{1}\d{1,}[ ]?-\d{1,})"
+    __p_value_regex_inline = r"(\d?\.?\d[ ]?[*×xX]{1}[ ]?\d{1,}[ ]?-\d{1,})"
     __p_type_regex = r"(\(?GEE\)?)|(\(?FBAT\)?)"
     __SNP_regex = [{"TEXT": {"REGEX": r"([ATCG]{1}[a-z]{1,}[0-9]{1,}[ATCG]{1}[a-z]{1,})"}}]
     __gene_seq_regex = [{"TEXT": {"REGEX": "([ ][ACTG]{3,}[ ])"}}]
@@ -65,7 +65,10 @@ class Interpreter:
             start, end = match.span()
             span = doc.char_span(start, end, label=label)
             if span is not None:
-                doc.ents += (span,)
+                try:
+                    doc.ents += (span,)
+                except:
+                    test = None
 
     def process_corpus(self, corpus, ontology_only=False):
         # Clean corpus with NLPre parsers
@@ -79,8 +82,8 @@ class Interpreter:
         #  Additional regex matches unnecessary when limited to ontology entities.
         if not ontology_only:
             self.__regex_match(self.__table_ref_regex, doc, "TABLE")
-            self.__regex_match(self.__p_value_regex, doc, "PVAL")
             self.__regex_match(self.__p_value_regex_inline, doc, "PVAL")
+            self.__regex_match(self.__p_value_regex, doc, "PVAL-G")
             self.__regex_match(self.__p_type_regex, doc, "PTYPE")
 
         hyphenated_pattern = [{'POS': 'PROPN'}, {'IS_PUNCT': True, 'LOWER': '-'}, {'POS': 'VERB'}]
@@ -152,7 +155,34 @@ class Interpreter:
             if left.n_lefts == 0:
                 break
         head = token
-        sys.exit()
+
+    @staticmethod
+    def __expand_sentence_dependency_search(token):
+        contains_pval = False
+        contains_snp = False
+        next_token = None
+        old_token = None
+        if type(token) == Span:
+            next_token = token.root.head
+            old_token = token.root
+        else:
+            next_token = token.head
+            old_token = token
+        while old_token != next_token:
+            if next_token.pos_ == 'SCONJ':
+                return False, False
+            old_token = next_token
+            next_token = old_token.head
+        test = []
+        for child in next_token.subtree:
+            test.append(child)
+            if child.ent_type_ == "PVAL":
+                contains_pval = True
+            elif child.ent_type_ == "RSID":
+                contains_snp = True
+
+        return contains_pval, contains_snp
+
 
     @staticmethod
     def extract_phenotypes(doc):
@@ -178,12 +208,26 @@ class Interpreter:
             pval_count = len(pvals)
 
             #combinations = list(itertools.product(*combinations))
-            # if "olfactory receptor" in phenotypes:
-            #     Interpreter.display_structure(sent)
 
             for phenotype in phenotypes:
-                # if phenotype.lower_ == "olfactory receptor":
-                #     test = Interpreter.__validate_phenotype_context(phenotype)
+                # if phenotype.lower_ == 'olfactory receptors':
+                #     Interpreter.display_structure(sent)
+                contains_snp = False
+                contains_pval = False
+                subtree_count = 0
+                for child in phenotype.subtree:
+                    if child.ent_type_ == "PVAL":
+                        contains_pval = True
+                    elif child.ent_type_ == "RSID":
+                        contains_snp = True
+                    subtree_count += 1
+                if not contains_snp and not contains_pval:
+                    contains_pval, contains_snp = Interpreter.__expand_sentence_dependency_search(phenotype)
+                if not contains_pval and not contains_snp:
+                    continue
+                #if phenotype.lower_ == "olfactory receptor":
+                    # test = Interpreter.__validate_phenotype_context(phenotype)
+                    # Interpreter.display_structure(sent)
                 # if not Interpreter.__validate_phenotype_context(phenotype):
                 #     continue
                 snp_distance = 100
