@@ -14,7 +14,7 @@ import string
 
 class Interpreter:
     __failed_matches = []
-    __nlp = spacy.load("en_core_web_md")
+    __nlp = spacy.load("en_core_web_md", disable=["ner"])
     __nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
     __rsid_regex = [{"TEXT": {"REGEX": "(?:rs[0-9]{1,}){1}"}}]
     __p_value_regex = r"((\(?\bp[ -=<]{1,}(val{1,}[ue]{0,})?[ <≥=×xX-]{0,}[ \(]?\d+[\.]?[\d]{0,}[-^*() \d×xX]{0,}))"
@@ -138,13 +138,24 @@ class Interpreter:
         return output
 
     @staticmethod
-    def __validate_edge_entities(ents, edges):
+    def __validate_node_entities(ents, nodes):
         output = []
+        used_indexes = []
         for item in ents:
-            for (a, b) in edges:
-                if item.lower_ == a or item.lower_ == b:
-                    output.append(item)
-                    break
+            for node in nodes:
+                if item.lower_ == str(node) or item.lower_ == str(node):
+                    duplicate_node_indexes = Utility.retrieve_value_indexes(str(node), list(nodes))
+                    for idx in duplicate_node_indexes:
+                        current_idx = None
+                        try:
+                            current_idx = output.index((item, idx))
+                        except(ValueError):
+                            current_idx = None
+                        if current_idx:
+                            continue
+                        else:
+                            output.append((item, list(nodes).index(node)))
+                            break
         return output
 
     @staticmethod
@@ -168,6 +179,8 @@ class Interpreter:
         else:
             next_token = token.head
             old_token = token
+        # Expand the list of tokens which are related to the original token (unless containing a subordinating
+        # conjunction)
         while old_token != next_token:
             if next_token.pos_ == 'SCONJ':
                 return False, False
@@ -180,26 +193,41 @@ class Interpreter:
                 contains_pval = True
             elif child.ent_type_ == "RSID":
                 contains_snp = True
-
         return contains_pval, contains_snp
 
-
-    @staticmethod
-    def extract_phenotypes(doc):
+    def extract_phenotypes(self, doc):
         output = []
         phenotype_sents = Interpreter.__filter_sents_by_entity(doc.sents, ["MeSH", "PVAL", "RSID"])
+        new_phenotype_sents = []
+        # Split any sentences containing duplicate phenotypes up.
+        # for sent in phenotype_sents:
+        #     duplicate_found = False
+        #     for token in sent:
+        #         duplicate_count = len([x for x in sent if x.lower_ == token.lower_ and token.lower_ in [i.lower_ for i in sent.ents]])
+        #         if duplicate_count > 1:
+        #             duplicate_found = True
+        #             length = len(token.lower_)
+        #             for dupe_token in [x for x in sent if x.lower_ == token.lower_]:
+        #                 start = dupe_token.sent_start
+        #                 new_sent = F"{sent.text[:start]} <dupe> {sent.text[start + length:]}"
+        #                 new_sent = self.process_corpus(new_sent)
+        #                 new_phenotype_sents.append([dupe_token, new_sent])
+        #     if not duplicate_found:
+        #         new_phenotype_sents.append(sent)
+
+
         results = {}
         # Iterate through each sentence containing a phenotype named entity label
         for sent in phenotype_sents:
             edges = []
             for token in sent:
-                for child in token.children:
+                for child in token.children:# TODO: Re-label duplicates with some easily but uniquely identifiable id.
                     edges.append(('{0}'.format(token.lower_), '{0}'.format(child.lower_)))
             graph = nx.Graph(edges)
 
-            phenotypes = Interpreter.__validate_edge_entities([x for x in sent.ents if x.label_ == 'MeSH'], edges)
-            snps = Interpreter.__validate_edge_entities([x for x in sent.ents if x.label_ == 'RSID'], edges)
-            pvals = Interpreter.__validate_edge_entities([x for x in sent.ents if x.label_ == 'PVAL'], edges)
+            phenotypes = Interpreter.__validate_node_entities([x for x in sent.ents if x.label_ == 'MeSH'], graph.nodes)
+            snps = Interpreter.__validate_node_entities([x for x in sent.ents if x.label_ == 'RSID'], graph.nodes)
+            pvals = Interpreter.__validate_node_entities([x for x in sent.ents if x.label_ == 'PVAL'], graph.nodes)
 
             combinations = [phenotypes, snps, pvals]
 
@@ -215,14 +243,14 @@ class Interpreter:
                 contains_snp = False
                 contains_pval = False
                 subtree_count = 0
-                for child in phenotype.subtree:
+                for child in phenotype[0].subtree:
                     if child.ent_type_ == "PVAL":
                         contains_pval = True
                     elif child.ent_type_ == "RSID":
                         contains_snp = True
                     subtree_count += 1
                 if not contains_snp and not contains_pval:
-                    contains_pval, contains_snp = Interpreter.__expand_sentence_dependency_search(phenotype)
+                    contains_pval, contains_snp = Interpreter.__expand_sentence_dependency_search(phenotype[0])
                 if not contains_pval and not contains_snp:
                     continue
                 #if phenotype.lower_ == "olfactory receptor":
@@ -230,22 +258,30 @@ class Interpreter:
                     # Interpreter.display_structure(sent)
                 # if not Interpreter.__validate_phenotype_context(phenotype):
                 #     continue
-                snp_distance = 100
+                snp_distance = 4
                 rsid = None
-                pval_distance = 100
+                pval_distance = 4
                 pval = None
                 for snp in snps:
-                    temp_distance = nx.shortest_path_length(graph, source=phenotype.lower_, target=snp.lower_)
-                    if temp_distance < snp_distance:
+                    temp_distance = nx.shortest_path_length(graph, source=phenotype[0].lower_, target=snp[0].lower_)
+                    if temp_distance <= snp_distance:
                         snp_distance = temp_distance
-                        rsid = nx.shortest_path(graph, source=phenotype.lower_, target=snp.lower_)[-1]
-                results[phenotype] = [rsid]
+                        rsid = nx.shortest_path(graph, source=phenotype[0].lower_, target=snp[0].lower_)[-1]
+                    else:
+                        continue
+                if not rsid:
+                    continue
                 for pvalue in pvals:
-                    temp_distance = nx.shortest_path_length(graph, source=results[phenotype][0], target=pvalue.lower_)
-                    if temp_distance < pval_distance:
+                    temp_distance = nx.shortest_path_length(graph, source=rsid, target=pvalue[0].lower_)
+                    if temp_distance <= pval_distance:
                         pval_distance = temp_distance
-                        pval = nx.shortest_path(graph, source=results[phenotype][0], target=pvalue.lower_)[-1]
-                results[phenotype].append(pval)
+                        pval = nx.shortest_path(graph, source=rsid, target=pvalue[0].lower_)[-1]
+                    else:
+                        continue
+                if not pval:
+                    continue
+                results[phenotype[0]] = [rsid]
+                results[phenotype[0]].append(pval)
             # for (pheno, snp, pval) in combinations:
             # results.append({"Phenotype": pheno, "SNP": snp, "PVAL": pval,
             #                 "pheno>snp": {"Distance": nx.shortest_path_length(graph, source=pheno, target=snp),
@@ -418,14 +454,15 @@ class Interpreter:
         @return: String containing the expanded version of the abbreviation.
         """
         changes = []
-        pattern = r"([^(-]\b[a-z]{0,}[A-Z]{2,}[a-z]{0,}\b[^)-])"
+        pattern = r"([^ \"',.(-]\b)?([a-z]{0,})([A-Z]{2,})([a-z]{0,})(\b[^;,.'\" )-]?)"#r"([^(-]\b[a-z]{0,}[A-Z]{2,}[a-z]{0,}\b[^)-])"
         for match in re.findall(pattern, fulltext):
             target = ""
             if type(match) == str:
                 target = match
             else:
-                target = match[0]
-            if match not in [x for [x, y] in changes]:
+                target = match[2]
+            target = target.strip()
+            if target not in [x for [x, y] in changes]:
                 changes.append([target, Interpreter.replace_abbreviations(target, fulltext)])
         for change in changes:
             if change[1]:

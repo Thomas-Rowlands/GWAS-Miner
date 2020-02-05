@@ -15,3 +15,13 @@ class Utility:
             if item not in output:
                 output.append(item)
         return output
+
+    @staticmethod
+    def retrieve_value_indexes(search, list_input):
+        output = []
+        for item in list_input:
+            if item == search:
+                output.append(list_input.index(search))
+                list_input.remove(search)
+        return output
+
