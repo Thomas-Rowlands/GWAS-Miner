@@ -103,7 +103,7 @@ class Mesh:
     def __get_descriptors_xml():
         parser = etree.XMLParser(encoding='utf-8')
         tree = etree.parse("desc2020.xml")
-        desired_branches = ["A", "C", "G", "F", "D"]
+        desired_branches = ["A", "C", "G", "F", "D", "E01", "N06.850"]
         branch_exceptions = ["G17", "G05", "F02.463.425.069", "F04.754.720.346", "F01.829.263",
                              "I01.880.853.150"]
         # results = [str(x) for x in tree.xpath("//DescriptorRecord/DescriptorUI/text() | "

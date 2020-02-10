@@ -419,13 +419,13 @@ class Interpreter:
         first_char = token[0:1]
         first_char_count = token.count(first_char)  # Get the number of occurrences of this letter in abbreviation.
         # Locate abbreviations in parenthesis
-        search_regex = r"([ \-'\na-zA-Z0-9]+\n?\({0}\))".format(re.escape(token))
+        search_regex = r"([ \-'\n\w0-9]+\n?\({0}[^a-zA-Z]{0,}\))".replace("{0}", re.escape(token))  # r"([ \-'\na-zA-Z0-9]+\n?\({0}\))".format(re.escape(token))
         declaration_match = re.search(search_regex, fulltext, re.IGNORECASE | re.MULTILINE)
         if declaration_match is None:  # No declaration found for token
             return None
         # First match SHOULD be the declaration of this abbreviation.
         # Split REGEX match to a list of words
-        split_sent = declaration_match.group(0).lower().split(" ")
+        split_sent = declaration_match.group(0).lower().replace(" )", ")").replace("( ", "(").split(" ")
         found_counter = 0
         found_indexes = []
         i = len(split_sent) - 2  # Indexing + ignore the actual abbreviation
