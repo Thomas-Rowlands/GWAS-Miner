@@ -1,3 +1,6 @@
+import re
+from collections import Counter
+from pprint import pprint
 
 
 class Utility:
@@ -24,4 +27,3 @@ class Utility:
                 output.append(list_input.index(search))
                 list_input.remove(search)
         return output
-

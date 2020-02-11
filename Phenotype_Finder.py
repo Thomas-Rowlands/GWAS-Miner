@@ -72,7 +72,7 @@ def process_studies(directory):
         #test = nlp.replace_all_abbreviations(study.get_fulltext())
         #doc = nlp.process_corpus(study.get_fulltext())
         doc = nlp.process_corpus(nlp.replace_all_abbreviations(study.get_fulltext()))
-        nlp.display_ents(doc)
+        #nlp.display_ents(doc)
         test = nlp.extract_phenotypes(doc)
         print("\nPhenotypes matched from study text:\n")
         pprint(test)
