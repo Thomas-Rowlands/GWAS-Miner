@@ -7,7 +7,7 @@ Created on Mon Oct  7 08:47:22 2019
 import os
 import DB
 import Utility_Functions
-from Ontology import HPO, Mesh
+from Ontology import HPO, Mesh, EFO
 from DataPreparation import PreProcessing
 from DataStructures import Study, MasterLexicon
 import config
@@ -22,7 +22,7 @@ hpo2Mesh = None
 
 
 def get_ontology_terms(use_cache=True):
-    global mesh_data, hpo_data, hpo_syns, hpo2Mesh
+    global mesh_data, hpo_data, hpo_syns, hpo2Mesh, efo_terms, efo_syns
     # Update ontology file & extracted data.
     # Mesh.update_mesh_file() #  Could be dangerous to use if structural changes are made.
 
@@ -30,6 +30,7 @@ def get_ontology_terms(use_cache=True):
     if use_cache:
         mesh_data = Mesh.get_mesh_from_cache()
         hpo_data = HPO.get_hpo_from_cache()
+        efo_terms, efo_syns = EFO.get_efo_from_cache()
     else:
         mesh_data = Mesh.get_mesh_data(use_xml=True)
         hpo_data = HPO.get_hpo()  # Array of lists (id, label string literal)
@@ -47,15 +48,19 @@ def get_ontology_terms(use_cache=True):
 
 
 def process_studies(directory):
-    #  Retrieve ontology terms for tagging
+    # Retrieve ontology terms for tagging
     get_ontology_terms(use_cache=True)
-    tagging_data = {"HPO": [], "MeSH": []}
+    tagging_data = {"HPO": [], "MeSH": [], "EFO": []}
     for (id, term) in hpo_data:
-        tagging_data["HPO"].append(term)
+       tagging_data["HPO"].append(term)
     # for (id, synonym) in hpo_syns:
     #    tagging_data["HPO_Syn"].append(synonym)
     for (id, label) in mesh_data:
-        tagging_data["MeSH"].append(label)
+       tagging_data["MeSH"].append(label)
+    for (id, label) in efo_terms:
+        tagging_data["EFO"].append(label)
+    for (id, label) in efo_syns:
+        tagging_data["EFO"].append(label)
     # Load study data
     file_data = []
     for filename in os.listdir(directory):
@@ -69,10 +74,8 @@ def process_studies(directory):
     for (pmid, xmlText) in file_data[0:1]:
         print("-------------------------\nProcessing study " + str(pmid) + "\n-------------------------")
         study = PreProcessing.strip_xml(pmid, xmlText)
-        #test = nlp.replace_all_abbreviations(study.get_fulltext())
-        #doc = nlp.process_corpus(study.get_fulltext())
         doc = nlp.process_corpus(nlp.replace_all_abbreviations(study.get_fulltext()))
-        #nlp.display_ents(doc)
+        nlp.display_ents(doc)
         test = nlp.extract_phenotypes(doc)
         print("\nPhenotypes matched from study text:\n")
         pprint(test)

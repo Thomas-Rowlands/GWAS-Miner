@@ -19,6 +19,7 @@ class Interpreter:
     __rsid_regex = [{"TEXT": {"REGEX": "(?:rs[0-9]{1,}){1}"}}]
     __p_value_regex = r"((\(?\bp[ -=<]{1,}(val{1,}[ue]{0,})?[ <≥=×xX-]{0,}[ \(]?\d+[\.]?[\d]{0,}[-^*() \d×xX]{0,}))"
     __p_value_regex_inline = r"(\d?\.?\d[ ]?[*×xX]{1}[ ]?\d{1,}[ ]?-\d{1,})"
+    __p_value_master_regex = r"((\(?\bp[ -=<]{1,}(val{1,}[ue]{0,})?[ <≥=×xX-]{0,}[ \(]?\d+[\.]?[\d]{0,}[-^*() \d×xX]{0,})|(\d?\.?\d[ ]?[*×xX]{1}[ ]?\d{1,}[ ]?-\d{1,}))"
     __p_type_regex = r"(\(?GEE\)?)|(\(?FBAT\)?)"
     __SNP_regex = [{"TEXT": {"REGEX": r"([ATCG]{1}[a-z]{1,}[0-9]{1,}[ATCG]{1}[a-z]{1,})"}}]
     __gene_seq_regex = [{"TEXT": {"REGEX": "([ ][ACTG]{3,}[ ])"}}]
@@ -82,8 +83,9 @@ class Interpreter:
         #  Additional regex matches unnecessary when limited to ontology entities.
         if not ontology_only:
             self.__regex_match(self.__table_ref_regex, doc, "TABLE")
-            self.__regex_match(self.__p_value_regex_inline, doc, "PVAL")
             self.__regex_match(self.__p_value_regex, doc, "PVAL-G")
+            self.__regex_match(self.__p_value_regex_inline, doc, "PVAL")
+            #self.__regex_match(self.__p_value_master_regex, doc, "PVAL")
             self.__regex_match(self.__p_type_regex, doc, "PTYPE")
 
         hyphenated_pattern = [{'POS': 'PROPN'}, {'IS_PUNCT': True, 'LOWER': '-'}, {'POS': 'VERB'}]
@@ -91,14 +93,6 @@ class Interpreter:
         self.__basic_matcher.add("JOIN", None, hyphenated_pattern, compound_pattern)
         self.__basic_matcher(doc)
 
-        new_doc = ""
-        # for i in range(len(sentence_spans)):
-        #     change = Interpreter.replace_list(sentence_spans[i])
-        #     if change:
-        #         for statement in change['statements']:
-        #             new_doc = F"{new_doc} {statement}"
-        #     else:
-        #         new_doc = F"{new_doc} {sentence_spans[i]}"
         for matcher in self.__phrase_matchers:
             matcher(doc)
         if not ontology_only:
@@ -107,12 +101,20 @@ class Interpreter:
                     doc.ents += (ent,)
                 except:  # Default SpaCy entities should never override others.
                     continue
+        self.__merge_spans(doc, "PVAL-G")
         self.__merge_spans(doc, "PVAL")
         self.__merge_spans(doc, "MeSH")
+        self.__merge_spans(doc, "EFO")
+        self.__merge_spans(doc, "HPO")
         return doc
 
     @staticmethod
     def __merge_spans(doc, entity_label):
+        """
+        Merge document spans that are part of the same entity.
+        @param doc: Processed document
+        @param entity_label: Label of entities to merge.
+        """
         with doc.retokenize() as retokenizer:
             for ent in [x for x in doc.ents if x.label_ == entity_label]:
                 retokenizer.merge(doc[ent.start:ent.end])
@@ -184,9 +186,24 @@ class Interpreter:
                 contains_snp = True
         return contains_pval, contains_snp
 
+    def allocate_contiguous_phenotypes(self, sent):
+        result = []
+        prev_token = None
+        for token in sent:
+            if prev_token:
+                if "PVAL" in token.ent_type_ and prev_token.ent_type_ == "MeSH":
+                    result.append(
+                        [(prev_token, F"{prev_token.lower_}<id{prev_token.i}>"), (token, F"{token.lower_}<id{token.i}>")])
+            prev_token = token
+        return result
+
     def extract_phenotypes(self, doc):
         output = []
         phenotype_sents = Interpreter.__filter_sents_by_entity(doc.sents, ["MeSH", "PVAL", "RSID"])
+        results = self.calculate_sdp(phenotype_sents)
+        return results
+
+    def calculate_sdp(self, phenotype_sents):
         results = {}
         # Iterate through each sentence containing a phenotype named entity label
         for sent in phenotype_sents:
@@ -199,22 +216,14 @@ class Interpreter:
 
             graph = nx.Graph(edges)
 
-            #phenotypes = [(x, F"{x}<id{x.start}>") for x in sent.ents if x.label_ == 'MeSH']
-            #snps = [(x, F"{x}<id{x.start}>") for x in sent.ents if x.label_ == 'RSID']
-            #pvals = [(x, F"{x}<id{x.start}>") for x in sent.ents if x.label_ == 'PVAL']
-
             phenotypes = Interpreter.__validate_node_entities([x for x in sent.ents if x.label_ == 'MeSH'], graph.nodes)
             snps = Interpreter.__validate_node_entities([x for x in sent.ents if x.label_ == 'RSID'], graph.nodes)
             pvals = Interpreter.__validate_node_entities([x for x in sent.ents if x.label_ == 'PVAL'], graph.nodes)
 
-
-            combinations = [phenotypes, snps, pvals]
-
             phenotype_count = len(phenotypes)
             snp_count = len(snps)
             pval_count = len(pvals)
-
-            #combinations = list(itertools.product(*combinations))
+            immediate_relations = self.allocate_contiguous_phenotypes(sent)
 
             for phenotype in phenotypes:
                 # if phenotype.lower_ == 'olfactory receptors':
@@ -228,15 +237,15 @@ class Interpreter:
                     elif child.ent_type_ == "RSID":
                         contains_snp = True
                     subtree_count += 1
+
                 if not contains_snp and not contains_pval:
                     contains_pval, contains_snp = Interpreter.__expand_sentence_dependency_search(phenotype[0][0])
                 if not contains_pval and not contains_snp:
                     continue
-                #if phenotype.lower_ == "olfactory receptor":
-                    # test = Interpreter.__validate_phenotype_context(phenotype)
-                    # Interpreter.display_structure(sent)
-                # if not Interpreter.__validate_phenotype_context(phenotype):
-                #     continue
+
+                # if phenotype[0].lower_ == "hematocrit":
+                #     Interpreter.display_structure(sent)
+
                 snp_distance = 4
                 pval_distance = 4
                 rsid = None
@@ -267,9 +276,7 @@ class Interpreter:
                     results[phenotype[0].lower_] = []
                 results[phenotype[0].lower_].append([rsid[:rsid.find("<id")]])
                 results[phenotype[0].lower_].append([pval[:pval.find("<id")]])
-
         return results
-
 
     @staticmethod
     def count_entities(doc, label):
@@ -358,7 +365,7 @@ class Interpreter:
         Start running the Displacy visualization of the named entities recognised by the NLP pipeline.
         @param doc: The NLP processed document.
         """
-        colors = {"MESH": "rgb(247, 66, 145)", "HP": "rgb(147, 66, 245)", "RSID": "rgb(245, 66, 72)",
+        colors = {"MESH": "rgb(247, 66, 145)", "EFO": "rgb(247, 66, 145)", "HP": "rgb(147, 66, 245)", "RSID": "rgb(245, 66, 72)",
                   "PVAL": "rgb(102, 255, 51)", "PTYPE": "rgb(51, 102, 255)", "SNP": "rgb(0, 255, 204)"}
         options = {"colors": colors}
         displacy.serve(doc, style="ent", options=options)
@@ -396,7 +403,8 @@ class Interpreter:
         first_char = token[0:1]
         first_char_count = token.count(first_char)  # Get the number of occurrences of this letter in abbreviation.
         # Locate abbreviations in parenthesis
-        search_regex = r"([ \-'\n\w0-9]+\n?\({0}[^a-zA-Z]{0,}\))".replace("{0}", re.escape(token))  # r"([ \-'\na-zA-Z0-9]+\n?\({0}\))".format(re.escape(token))
+        search_regex = r"([ \-'\n\w0-9]+\n?\({0}[^a-zA-Z]{0,}\))".replace("{0}", re.escape(
+            token))  # r"([ \-'\na-zA-Z0-9]+\n?\({0}\))".format(re.escape(token))
         declaration_match = re.search(search_regex, fulltext, re.IGNORECASE | re.MULTILINE)
         if declaration_match is None:  # No declaration found for token
             return None
@@ -431,7 +439,7 @@ class Interpreter:
         @return: String containing the expanded version of the abbreviation.
         """
         changes = []
-        pattern = r"([^ \"',.(-]\b)?([a-z]{0,})([A-Z]{2,})([a-z]{0,})(\b[^;,.'\" )-]?)"#r"([^(-]\b[a-z]{0,}[A-Z]{2,}[a-z]{0,}\b[^)-])"
+        pattern = r"([^ \"',.(-]\b)?([a-z]{0,})([A-Z]{2,})([a-z]{0,})(\b[^;,.'\" )-]?)"  # r"([^(-]\b[a-z]{0,}[A-Z]{2,}[a-z]{0,}\b[^)-])"
         for match in re.findall(pattern, fulltext):
             target = ""
             if type(match) == str:

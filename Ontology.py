@@ -7,6 +7,49 @@ from lxml import etree
 import json
 import config
 import csv
+import codecs
+
+class EFO:
+    efo_namespace = rdflib.namespace.Namespace("http://www.ebi.ac.uk/efo/efo.owl")
+    efo_namespaces = {"owl": rdflib.namespace.OWL, "rdf": rdflib.namespace.RDF, "rdfs": rdflib.namespace.RDFS}
+
+    @staticmethod
+    def get_efo_data():
+        query_string = """
+            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+            PREFIX go: <http://www.geneontology.org/formats/oboInOwl#>
+            SELECT ?term ?termLabel ?exactSynLabel
+            WHERE {
+                ?term rdfs:subClassOf ?parent .
+                ?term rdfs:label ?termLabel .
+                ?term <http://www.geneontology.org/formats/oboInOwl#hasExactSynonym> ?exactSyn .
+                ?exactSyn rdfs:label ?exactSynLabel .
+            } 
+            ORDER BY ?term
+                """
+        g = rdflib.Graph()
+        g.parse(config.efo_file)
+        mesh_ontology_terms = g.query(query_string, initNs=EFO.efo_namespaces)
+        with open("ontology_data/efo_terms.json", "a") as out_file:
+            results = {}
+            for (id, label, exactSyn) in mesh_ontology_terms:
+                if id not in results:
+                    results[id] = [label, exactSyn]
+                else:
+                    print("Mistakes were made...")
+            json.dump(results, out_file)
+        g.close()
+
+    @staticmethod
+    def get_efo_from_cache():
+        results = json.load(codecs.open('ontology_data/efo_terms.json', 'r', 'utf-8-sig'))
+        terms = [[x["a.id"], x["a.FSN"]] for x in results]
+        temp_syns = [[x["a.id"], x["synonym"]] for x in results]
+        syns = []
+        for i in range(len(temp_syns)):
+            for syn in temp_syns[i][1]:
+                syns.append([temp_syns[i][0], syn])
+        return terms, syns
 
 
 class Mesh:
@@ -162,14 +205,14 @@ class Mesh:
         #     results.append([id, term])
 
         output = json.dumps(results)
-        file = open("mesh.json", "w")
+        file = open("ontology_data/mesh.json", "w")
         file.write(output)
         file.close()
         return results
 
     @staticmethod
     def get_mesh_from_cache():
-        file = open("mesh.json", "r")
+        file = open("ontology_data/mesh.json", "r")
         results = json.load(file)
         return results
 
@@ -266,14 +309,14 @@ class HPO:
         g.close()
         results = [[id[id.rfind("/") + 1:], term.toPython().lower()] for (id, term) in hpo_ontology_terms]
         output = json.dumps(results)
-        file = open("hp.json", "w")
+        file = open("ontology_data/hp.json", "w")
         file.write(output)
         file.close()
         return results
 
     @staticmethod
     def get_hpo_from_cache():
-        file = open("hp.json", "r")
+        file = open("ontology_data/hp.json", "r")
         results = json.load(file)
         return results
 
@@ -286,14 +329,14 @@ class HPO:
         g.close()
         results = [[id, synonym.toPython().lower()] for (id, term, synonym) in hpo_ontology_syns]
         output = json.dumps(results)
-        file = open("hp_syns.json", "w")
+        file = open("ontology_data/hp_syns.json", "w")
         file.write(output)
         file.close()
         return results
 
     @staticmethod
     def get_hpo_syns_from_cache():
-        file = open("hp_syns.json", "r")
+        file = open("ontology_data/hp_syns.json", "r")
         results = json.load(file)
         return results
 
