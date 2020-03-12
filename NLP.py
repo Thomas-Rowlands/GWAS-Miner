@@ -85,7 +85,7 @@ class Interpreter:
             self.__regex_match(self.__table_ref_regex, doc, "TABLE")
             self.__regex_match(self.__p_value_regex, doc, "PVAL-G")
             self.__regex_match(self.__p_value_regex_inline, doc, "PVAL")
-            #self.__regex_match(self.__p_value_master_regex, doc, "PVAL")
+            # self.__regex_match(self.__p_value_master_regex, doc, "PVAL")
             self.__regex_match(self.__p_type_regex, doc, "PTYPE")
 
         hyphenated_pattern = [{'POS': 'PROPN'}, {'IS_PUNCT': True, 'LOWER': '-'}, {'POS': 'VERB'}]
@@ -193,7 +193,8 @@ class Interpreter:
             if prev_token:
                 if "PVAL" in token.ent_type_ and prev_token.ent_type_ == "MeSH":
                     result.append(
-                        [(prev_token, F"{prev_token.lower_}<id{prev_token.i}>"), (token, F"{token.lower_}<id{token.i}>")])
+                        [(prev_token, F"{prev_token.lower_}<id{prev_token.i}>"),
+                         (token, F"{token.lower_}<id{token.i}>")])
             prev_token = token
         return result
 
@@ -246,13 +247,13 @@ class Interpreter:
                 # if phenotype[0].lower_ == "hematocrit":
                 #     Interpreter.display_structure(sent)
 
-                snp_distance = 4
+                snp_distance = 4  # Maximum length of dependency path for association.
                 pval_distance = 4
                 rsid = None
                 pval = None
                 best_snp_distance = snp_distance + 1
                 best_pval_distance = pval_distance + 1
-                for snp in snps:
+                for snp in snps:  # Check shortest dependency path between each SNP and each phenotype & RSID.
                     temp_distance = nx.shortest_path_length(graph, source=phenotype[1].lower(), target=snp[1].lower())
                     if temp_distance <= snp_distance and temp_distance < best_snp_distance:
                         snp_distance = temp_distance
@@ -260,7 +261,7 @@ class Interpreter:
                         best_snp_distance = temp_distance
                     else:
                         continue
-                if not rsid:
+                if not rsid:  # RSID must be present for an association to be made.
                     continue
                 for pvalue in pvals:
                     temp_distance = nx.shortest_path_length(graph, source=rsid, target=pvalue[1].lower())
@@ -365,7 +366,8 @@ class Interpreter:
         Start running the Displacy visualization of the named entities recognised by the NLP pipeline.
         @param doc: The NLP processed document.
         """
-        colors = {"MESH": "rgb(247, 66, 145)", "EFO": "rgb(247, 66, 145)", "HP": "rgb(147, 66, 245)", "RSID": "rgb(245, 66, 72)",
+        colors = {"MESH": "rgb(247, 66, 145)", "EFO": "rgb(247, 66, 145)", "HP": "rgb(147, 66, 245)",
+                  "RSID": "rgb(245, 66, 72)",
                   "PVAL": "rgb(102, 255, 51)", "PTYPE": "rgb(51, 102, 255)", "SNP": "rgb(0, 255, 204)"}
         options = {"colors": colors}
         displacy.serve(doc, style="ent", options=options)

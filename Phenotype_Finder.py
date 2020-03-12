@@ -21,23 +21,18 @@ hpoSyns = None
 hpo2Mesh = None
 
 
-def get_ontology_terms(use_cache=True):
+def get_ontology_terms():
     global mesh_data, hpo_data, hpo_syns, hpo2Mesh, efo_terms, efo_syns
     # Update ontology file & extracted data.
     # Mesh.update_mesh_file() #  Could be dangerous to use if structural changes are made.
 
     # Retrieve MeSH & HPO terms/descriptors/concepts
-    if use_cache:
-        mesh_data = Mesh.get_mesh_from_cache()
-        hpo_data = HPO.get_hpo_from_cache()
-        efo_terms, efo_syns = EFO.get_efo_from_cache()
-    else:
-        mesh_data = Mesh.get_mesh_data(use_xml=True)
-        hpo_data = HPO.get_hpo()  # Array of lists (id, label string literal)
-
+    mesh_data = Mesh.get_descriptors()
+    hpo_data = HPO.get_hpo_from_cache()
+    efo_terms, efo_syns = EFO.get_efo_from_cache()
 
     # Retrieve HPO synonyms
-    #hpo_syns = HPO.get_hpo_synonyms()
+    hpo_syns = HPO.get_syns()
 
     # Retrieve HPO to Mesh mappings
     query_string = """SELECT hpoID, meshID
@@ -47,20 +42,28 @@ def get_ontology_terms(use_cache=True):
     # hpo2Mesh = ontology.get_hpo_2_mesh(connection.query(query_string))
 
 
+def update_ontology_cache():
+    Mesh.set_descriptors()
+    HPO.set_terms()
+    HPO.set_hpo_synonyms()
+    EFO.set_terms()
+
+
 def process_studies(directory):
     # Retrieve ontology terms for tagging
-    get_ontology_terms(use_cache=True)
+    get_ontology_terms()
     tagging_data = {"HPO": [], "MeSH": [], "EFO": []}
-    for (id, term) in hpo_data:
-       tagging_data["HPO"].append(term)
-    # for (id, synonym) in hpo_syns:
-    #    tagging_data["HPO_Syn"].append(synonym)
+    for (id, label) in hpo_data:
+        tagging_data["HPO"].append(label)
+    for (id, label) in hpo_syns:
+        tagging_data["HPO"].append(label)
     for (id, label) in mesh_data:
-       tagging_data["MeSH"].append(label)
+        tagging_data["MeSH"].append(label)
     for (id, label) in efo_terms:
         tagging_data["EFO"].append(label)
     for (id, label) in efo_syns:
         tagging_data["EFO"].append(label)
+
     # Load study data
     file_data = []
     for filename in os.listdir(directory):
@@ -76,6 +79,7 @@ def process_studies(directory):
         study = PreProcessing.strip_xml(pmid, xmlText)
         doc = nlp.process_corpus(nlp.replace_all_abbreviations(study.get_fulltext()))
         nlp.display_ents(doc)
+        nlp.display_structure([sent for sent in doc.sents])
         test = nlp.extract_phenotypes(doc)
         print("\nPhenotypes matched from study text:\n")
         pprint(test)
@@ -121,12 +125,17 @@ def process_studies(directory):
 def main():
     args = sys.argv[1:]
     cores = 1
-    docs = "study_data"
+    docs = ""
     for i in range(len(args)):
         if args[i] == "-cores":
-            args[i + 1] = cores
+            cores = args[i + 1]
         if args[i] == "-docs":
-            args[i + 1] = docs
+            docs = args[i + 1]
+        if args[i] == "-update-ont":
+            update_ontology_cache()
+            sys.exit("Ontology cache updated.")
+    if docs == "":
+        sys.exit("Document directory must be passed via -docs <path>")
     process_studies(docs)
 
 
