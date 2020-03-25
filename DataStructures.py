@@ -3,7 +3,7 @@ import re
 from collections import OrderedDict
 from lxml import etree
 import NLP
-
+from Utility_Functions import Utility
 
 def convert_to_list(num):
     result = []
@@ -90,7 +90,7 @@ class Table:
         self.snps = []
         self.targets = targets
         self.table_num = table_num
-        self.map, self.data = Table.__map_table(self.xml, table_num=self.table_num)
+        self.map, self.data = Table.__map_table(xml, table_num=self.table_num)
         self.rows = [x for x in self.data["body"]]
         self.headings = [y for y in self.data["header"]]
         self.target_indexes = None
@@ -121,7 +121,7 @@ class Table:
         :return: Dictionary containing the table structure & data.
         """
         #  Make table array from XML table
-        header = elem.xpath(".//thead")[0]
+        header = Utility.expand_xpath_output(elem.xpath(".//thead"))
         header_rows = header.xpath(".//tr")
         table = {"header": []}
         for row in header_rows:
@@ -223,9 +223,10 @@ class Table:
                             break
                         else:
                             back_counter -= 1
-        print(self.caption)
-        print(self.table_num)
-        pprint.pprint(valuable_fields)
+        # Debugging Only
+        # print(self.caption)
+        # print(self.table_num)
+        # pprint.pprint(valuable_fields)
         return valuable_fields
 
     @staticmethod
@@ -298,8 +299,8 @@ class Table:
         :param table_num: (Optional) The table's integer identifier
         :return: 2 Dictionaries, the table map and the validated table data
         """
-        header = elem.xpath(".//thead")[0]
-        body = elem.xpath(".//tbody")[0]
+        header = Utility.expand_xpath_output(elem.xpath(".//thead"))
+        body = Utility.expand_xpath_output(elem.xpath(".//tbody"))
         header_row_count = int(elem.xpath("count(.//thead//tr)"))
         body_row_count = int(elem.xpath("count(.//tbody//tr)"))
         table_map = {"h": [], "b": []}

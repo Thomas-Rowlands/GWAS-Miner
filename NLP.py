@@ -2,11 +2,11 @@ import itertools
 import re
 from pprint import pprint
 import spacy
-from nlpre import dedash, titlecaps, separate_reference, unidecoder, identify_parenthetical_phrases, replace_acronyms
+#from nlpre import dedash, titlecaps, separate_reference, unidecoder, identify_parenthetical_phrases, replace_acronyms
 from spacy import displacy
-from spacy.matcher.matcher import Matcher
-from spacy.matcher.phrasematcher import PhraseMatcher
-from spacy.tokens.span import Span
+from spacy.matcher import Matcher
+from spacy.matcher import PhraseMatcher
+from spacy.tokens import Span
 from Utility_Functions import Utility
 import networkx as nx
 import string
@@ -73,9 +73,9 @@ class Interpreter:
 
     def process_corpus(self, corpus, ontology_only=False):
         # Clean corpus with NLPre parsers
-        parsers = [dedash(), titlecaps(), separate_reference(), unidecoder()]
-        for parser in parsers:
-            corpus = parser(corpus)
+        # parsers = [dedash(), titlecaps(), separate_reference(), unidecoder()]
+        # for parser in parsers:
+        #     corpus = parser(corpus)
 
         doc = self.__nlp(corpus)
 
@@ -467,15 +467,23 @@ class Interpreter:
         """
         # Remove all preceding and trailing white space.
         doc = token.strip()
-        if len(doc) < 5:  # Abbreviations are more likely to be less than 5 characters long, to avoid noise.
-            # Prepare the document for processing and try a first pass with the NLPre library.
-            new_doc = doc.upper()
-            fulltext = fulltext.upper()
-            fulltext = fulltext.replace(doc, new_doc)
-            abbrevs = identify_parenthetical_phrases()(fulltext)
-            result = Interpreter.insert_phrase(abbrevs, new_doc)
-            if result is None:
-                result = Interpreter.__check_single_word_abbrev(fulltext, new_doc)
-            return result
+        if len(doc) < 5:
+            result = Interpreter.__check_single_word_abbrev(fulltext, doc.upper())
+            if result:
+                return result
+            else:
+                return doc
         else:
             return doc
+        # if len(doc) < 5:  # Abbreviations are more likely to be less than 5 characters long, to avoid noise.
+        #     # Prepare the document for processing and try a first pass with the NLPre library.
+        #     new_doc = doc.upper()
+        #     fulltext = fulltext.upper()
+        #     fulltext = fulltext.replace(doc, new_doc)
+        #     abbrevs = identify_parenthetical_phrases()(fulltext)
+        #     result = Interpreter.insert_phrase(abbrevs, new_doc)
+        #     if result is None:
+        #         result = Interpreter.__check_single_word_abbrev(fulltext, new_doc)
+        #     return result
+        # else:
+        #     return doc

@@ -14,7 +14,8 @@ import config
 import sys
 from pprint import pprint
 
-connection = DB.Connection(config.user, config.password, config.database, config.server, config.port)
+connection = DB.Connection(
+    config.user, config.password, config.database, config.server, config.port)
 meshTerms = None
 hpoTerms = None
 hpoSyns = None
@@ -49,7 +50,7 @@ def update_ontology_cache():
     EFO.set_terms()
 
 
-def process_studies(directory):
+def process_studies(directory, visualise=None):
     # Retrieve ontology terms for tagging
     get_ontology_terms()
     tagging_data = {"HPO": [], "MeSH": [], "EFO": []}
@@ -66,20 +67,30 @@ def process_studies(directory):
 
     # Load study data
     file_data = []
-    for filename in os.listdir(directory):
-        with open(directory + "/" + filename, 'r') as file:
-            file_data.append([filename, file.read()])
+    try:
+        for filename in os.listdir(directory):
+            with open(directory + "/" + filename, 'r') as file:
+                file_data.append([filename, file.read()])
+    except IOError as io:
+        sys.exit(F"IO Error: {io}")
+    except Exception as e:
+        sys.exit(F"An error occurred attempting to read publication files:\n {e}")
 
     from NLP import Interpreter
     lexicon = MasterLexicon().parse(tagging_data)
     nlp = Interpreter(lexicon)
 
-    for (pmid, xmlText) in file_data[0:1]:
-        print("-------------------------\nProcessing study " + str(pmid) + "\n-------------------------")
+    for (pmid, xmlText) in file_data[3:]:
+        print("-------------------------\nProcessing study " +
+              str(pmid) + "\n-------------------------")
         study = PreProcessing.strip_xml(pmid, xmlText)
-        doc = nlp.process_corpus(nlp.replace_all_abbreviations(study.get_fulltext()))
-        nlp.display_ents(doc)
-        nlp.display_structure([sent for sent in doc.sents])
+        doc = nlp.process_corpus(
+            nlp.replace_all_abbreviations(study.get_fulltext()))
+        if visualise:
+            if visualise == "ents":
+                nlp.display_ents(doc)
+            elif visualise == "sents":
+                nlp.display_structure([sent for sent in doc.sents])
         test = nlp.extract_phenotypes(doc)
         print("\nPhenotypes matched from study text:\n")
         pprint(test)
@@ -99,7 +110,8 @@ def process_studies(directory):
             if snp.misc_p_val:
                 output += F" | MISC => {snp.misc_p_val}"
             output += " | Phenotype => "
-            snp.phenotype = nlp.replace_abbreviations(snp.phenotype, study.original)
+            snp.phenotype = nlp.replace_abbreviations(
+                snp.phenotype, study.original)
             if snp.phenotype is None:
                 continue
             marker_count += 1
@@ -126,17 +138,29 @@ def main():
     args = sys.argv[1:]
     cores = 1
     docs = ""
+    skip = False
+    visualise = None
     for i in range(len(args)):
+        if skip:
+            skip = False
+            continue
         if args[i] == "-cores":
             cores = args[i + 1]
-        if args[i] == "-docs":
+            skip = True
+        elif args[i] == "-docs":
             docs = args[i + 1]
-        if args[i] == "-update-ont":
+            skip = True
+        elif args[i] == "-update-ont":
             update_ontology_cache()
             sys.exit("Ontology cache updated.")
+        elif args[i] == "-visualise":
+            visualise = args[i + 1]
+            skip = True
+        else:
+            sys.exit(F"Argument not recognised: {args[i]}")
     if docs == "":
         sys.exit("Document directory must be passed via -docs <path>")
-    process_studies(docs)
+    process_studies(docs, visualise)
 
 
 if __name__ == '__main__':

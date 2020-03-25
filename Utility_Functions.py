@@ -23,3 +23,13 @@ class Utility:
                 output.append(list_input.index(search))
                 list_input.remove(search)
         return output
+
+    @staticmethod
+    def expand_xpath_output(xpath_result):
+        if type(xpath_result) == list:
+            if xpath_result == []:
+                return None
+            else:
+                return xpath_result[0]
+        else:
+            return xpath_result

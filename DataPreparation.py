@@ -2,6 +2,7 @@ import re
 from lxml import etree
 from lxml.etree import tostring
 from DataStructures import Study, SNP, Table
+from Utility_Functions import Utility
 
 
 class PreProcessing:
@@ -30,7 +31,8 @@ class PreProcessing:
         results = []
         for i in range(int(tree.xpath("count(//contrib[@contrib-type='author'])"))):
             author = [tree.xpath("//contrib[@contrib-type='author'][" + str(i + 1) + "]//text()")[0],
-                      tree.xpath("//contrib[@contrib-type='author'][" + str(i + 1) + "]//text()")[1],
+                      tree.xpath(
+                          "//contrib[@contrib-type='author'][" + str(i + 1) + "]//text()")[1],
                       tree.xpath("//contrib[@contrib-type='author'][" + str(i + 1) + "]//text()")[-1:][0]]
             results.append(author)
         return results
@@ -56,7 +58,7 @@ class PreProcessing:
         @param tree: etree parsed xml root element
         @return: String containing the title of the publication.
         """
-        return tree.xpath("//article-title[1]/text()")[0]
+        return Utility.expand_xpath_output(tree.xpath("//article-title[1]/text()"))
 
     @staticmethod
     def __get_sections(tree):
@@ -71,10 +73,13 @@ class PreProcessing:
             children = t.getchildren()
             for child in children:
                 t.remove(child)
-        for i in range(int(tree.xpath("count(//body//sec)"))):  # Iterate through each section title
+        # Iterate through each section title
+        for i in range(int(tree.xpath("count(//body//sec)"))):
             content = ""
-            section_text = tree.xpath("//body/sec[" + str(i + 1) + "]//*[not(self::title)]/text()")
-            section_title = tree.xpath("//body/sec[" + str(i + 1) + "]/title/text()")
+            section_text = tree.xpath(
+                "//body/sec[" + str(i + 1) + "]//*[not(self::title)]/text()")
+            section_title = tree.xpath(
+                "//body/sec[" + str(i + 1) + "]/title/text()")
             for tmp in section_title:
                 content = content + tmp
             section_title = content
@@ -95,15 +100,18 @@ class PreProcessing:
         @param row_nums: List of Integers representing the row numbers to split the table at.
         @return: List of XML tables created by splitting the input table.
         """
-        for i in row_nums:
-            if type(i) != list:
-                print(xml_table.xpath(".//tbody//tr[position() = " + str(i) + "]//text()"))
-            else:
-                print("Between: \n")
-                print(xml_table.xpath(".//tbody//tr[position() = " + str(i[0]) + "]//text()"))
-                print("\nAnd:")
-                print(xml_table.xpath(".//tbody//tr[position() = " + str(i[1]) + "]//text()"))
-
+        # Debugging only
+        # for i in row_nums:
+            # if type(i) != list:
+            #     print(xml_table.xpath(
+            #         ".//tbody//tr[position() = " + str(i) + "]//text()"))
+            # else:
+            #     print("Between: \n")
+            #     print(xml_table.xpath(
+            #         ".//tbody//tr[position() = " + str(i[0]) + "]//text()"))
+            #     print("\nAnd:")
+            #     print(xml_table.xpath(
+            #         ".//tbody//tr[position() = " + str(i[1]) + "]//text()"))
         result = []
         first_table_xml = "<table><thead>"
         for x in xml_table.xpath(".//thead//tr"):
@@ -112,11 +120,13 @@ class PreProcessing:
         if type(row_nums[0]) != list:
             if row_nums[0] <= 3:
                 for elem in xml_table.xpath(".//tbody//tr[position() <" + str(row_nums[0]) + "]"):
-                    first_table_xml += tostring(elem, encoding="unicode", method="xml")
+                    first_table_xml += tostring(elem,
+                                                encoding="unicode", method="xml")
         else:
             if row_nums[0][1] <= 3:
                 for elem in xml_table.xpath(".//tbody//tr[position() <" + str(row_nums[0][1]) + "]"):
-                    first_table_xml += tostring(elem, encoding="unicode", method="xml")
+                    first_table_xml += tostring(elem,
+                                                encoding="unicode", method="xml")
         first_table_xml += "</thead><tbody>"
         for x in xml_table.xpath(".//tbody//tr[position() < " + str(row_nums[1][0]) + "]"):
             first_table_xml += tostring(x, encoding="unicode", method="xml")
@@ -128,15 +138,18 @@ class PreProcessing:
             new_table_xml = "<table><thead>"
             for elem in xml_table.xpath(".//tbody//tr[position() >=" + str(row_nums[i][0]) + " and position() <= " +
                                         str(row_nums[i][1]) + "]"):
-                new_table_xml += tostring(elem, encoding="unicode", method="xml")
+                new_table_xml += tostring(elem,
+                                          encoding="unicode", method="xml")
             new_table_xml += "</thead><tbody>"
             if i == (len(row_nums) - 1):
                 for elem in xml_table.xpath(".//tbody//tr[position() > " + str(row_nums[i][1]) + "]"):
-                    new_table_xml += tostring(elem, encoding="unicode", method="xml")
+                    new_table_xml += tostring(elem,
+                                              encoding="unicode", method="xml")
             else:
                 for elem in xml_table.xpath(".//tbody//tr[position() > " + str(row_nums[i][1]) +
                                             "and position() < " + str(row_nums[i + 1][0]) + "]"):
-                    new_table_xml += tostring(elem, encoding="unicode", method="xml")
+                    new_table_xml += tostring(elem,
+                                              encoding="unicode", method="xml")
 
             new_table_xml += "</tbody></table>"
             result.append(new_table_xml)
@@ -177,7 +190,7 @@ class PreProcessing:
         @param tree: etree parsed xml element
         @return: string containing the caption text
         """
-        return str(tree.xpath("../caption//p/text()")[0])
+        return Utility.expand_xpath_output(tree.xpath("../caption//p/text()"))
 
     @staticmethod
     def __validate_caption(caption):
@@ -186,10 +199,11 @@ class PreProcessing:
         @param caption:
         @return:
         """
-        if "candidate gene" in caption.lower():
-            return False
-        else:
-            return True
+        invalidation_list = ["candidate gene", "in/near", "genes"]
+        for item in invalidation_list:
+            if item in caption.lower():
+                return False
+        return True
 
     @staticmethod
     def __get_tables(tree):
@@ -300,7 +314,7 @@ class PreProcessing:
         study.abstract = PreProcessing.__get_abstract(tree)
         study.title = PreProcessing.__get_title(tree)
         study.authors = PreProcessing.__get_authors(tree)
-        study.sections = PreProcessing.__get_sections(tree)
+
 
         #  Back sections
         acknowledgements = ""
@@ -313,6 +327,9 @@ class PreProcessing:
         table_data = PreProcessing.__get_tables(tree)
         study.tables = table_data[0]
         study.set_snps(table_data[1])
+
+        # Sections
+        study.sections = PreProcessing.__get_sections(tree)
 
         #  Citations pending
 
