@@ -17,9 +17,9 @@ class Interpreter:
     __nlp = spacy.load("en_core_web_md", disable=["ner"])
     __nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
     __rsid_regex = [{"TEXT": {"REGEX": "(?:rs[0-9]{1,}){1}"}}]
-    __p_value_regex = r"((\(?\bp[ -=<]{1,}(val{1,}[ue]{0,})?[ <≥=×xX-]{0,}[ \(]?\d+[\.]?[\d]{0,}[-^*() \d×xX]{0,}))"
+    __p_value_regex = r"((\(?\b[pP][  =<-]{1,}(val{1,}[ue]{0,})?[  <≥=×xX-]{0,}[  \(]?\d+[\.]?[\d]{0,}[-−^*()  \d×xX]{0,}))"
     __p_value_regex_inline = r"(\d?\.?\d[ ]?[*×xX]{1}[ ]?\d{1,}[ ]?-\d{1,})"
-    __p_value_master_regex = r"((\(?\bp[ -=<]{1,}(val{1,}[ue]{0,})?[ <≥=×xX-]{0,}[ \(]?\d+[\.]?[\d]{0,}[-^*() \d×xX]{0,})|(\d?\.?\d[ ]?[*×xX]{1}[ ]?\d{1,}[ ]?-\d{1,}))"
+    __p_value_master_regex = r"((\(?\b[pP][  =<-]{1,}(val{1,}[ue]{0,})?[  <≥=×xX-]{0,}[  \(]?\d+[\.]?[\d]{0,}[-^*()  \d×xX]{0,})|(\d?\.?\d[  ]?[*×xX]{1}[  ]?\d{1,}[  ]?-\d{1,}))"
     __p_type_regex = r"(\(?GEE\)?)|(\(?FBAT\)?)"
     __SNP_regex = [{"TEXT": {"REGEX": r"([ATCG]{1}[a-z]{1,}[0-9]{1,}[ATCG]{1}[a-z]{1,})"}}]
     __gene_seq_regex = [{"TEXT": {"REGEX": "([ ][ACTG]{3,}[ ])"}}]
@@ -123,16 +123,25 @@ class Interpreter:
     def __filter_sents_by_entity(sents, entity_list):
         """
         Remove sentence objects from a list if they do not contain all of the provided entities.
-        @param sents: List of sentence objects
+        @param sents: List of sentence objects, with nested lists for OR conditions
         @param entity_list: List of entity label strings to search for
         @return: List of sentence objects containing all of the required entities.
         """
         output = []
         for sent in sents:
             missing_entity = False
+            ents = [x.label_ for x in sent.ents]
             for ent in entity_list:
-                ents = [x.label_ for x in sent.ents]
-                if ent not in ents:
+                if type(ent) == list:
+                    found_match = False
+                    for or_ent in ent:
+                        if or_ent in ents:
+                            found_match = True
+                            break
+                    if not found_match:
+                        missing_entity = True
+                        break
+                elif ent not in ents:
                     missing_entity = True
                     break
             if not missing_entity:
@@ -200,7 +209,7 @@ class Interpreter:
 
     def extract_phenotypes(self, doc):
         output = []
-        phenotype_sents = Interpreter.__filter_sents_by_entity(doc.sents, ["MeSH", "PVAL", "RSID"])
+        phenotype_sents = Interpreter.__filter_sents_by_entity(doc.sents, [["MeSH", "HPO"], ["PVAL", "PVAL-G"], "RSID"])
         results = self.calculate_sdp(phenotype_sents)
         return results
 
@@ -227,7 +236,7 @@ class Interpreter:
             immediate_relations = self.allocate_contiguous_phenotypes(sent)
 
             for phenotype in phenotypes:
-                # if phenotype.lower_ == 'olfactory receptors':
+                # if phenotype.lower_ == 'olfactory receptors': #DEBUGGING ONLY
                 #     Interpreter.display_structure(sent)
                 contains_snp = False
                 contains_pval = False

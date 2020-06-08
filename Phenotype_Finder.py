@@ -60,10 +60,10 @@ def process_studies(directory, visualise=None):
         tagging_data["HPO"].append(label)
     for (id, label) in mesh_data:
         tagging_data["MeSH"].append(label)
-    for (id, label) in efo_terms:
-        tagging_data["EFO"].append(label)
-    for (id, label) in efo_syns:
-        tagging_data["EFO"].append(label)
+    # for (id, label) in efo_terms:
+    #     tagging_data["EFO"].append(label)
+    # for (id, label) in efo_syns:
+    #     tagging_data["EFO"].append(label)
 
     # Load study data
     file_data = []
@@ -80,7 +80,7 @@ def process_studies(directory, visualise=None):
     lexicon = MasterLexicon().parse(tagging_data)
     nlp = Interpreter(lexicon)
 
-    for (pmid, xmlText) in file_data[3:]:
+    for (pmid, xmlText) in file_data[4:]:
         print("-------------------------\nProcessing study " +
               str(pmid) + "\n-------------------------")
         study = PreProcessing.strip_xml(pmid, xmlText)

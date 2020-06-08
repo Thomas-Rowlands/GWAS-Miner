@@ -224,9 +224,9 @@ class Table:
                         else:
                             back_counter -= 1
         # Debugging Only
-        # print(self.caption)
-        # print(self.table_num)
-        # pprint.pprint(valuable_fields)
+        print(self.caption)
+        print(self.table_num)
+        pprint.pprint(valuable_fields)
         return valuable_fields
 
     @staticmethod
@@ -406,3 +406,4 @@ class MasterLexicon:
         @return: Integer count of master lexicon vocabularies.
         """
         return len(self.master[key].keys())
+

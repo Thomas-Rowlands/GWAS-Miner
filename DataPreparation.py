@@ -3,7 +3,7 @@ from lxml import etree
 from lxml.etree import tostring
 from DataStructures import Study, SNP, Table
 from Utility_Functions import Utility
-
+import CharacterDealer
 
 class PreProcessing:
 
@@ -101,17 +101,17 @@ class PreProcessing:
         @return: List of XML tables created by splitting the input table.
         """
         # Debugging only
-        # for i in row_nums:
-            # if type(i) != list:
-            #     print(xml_table.xpath(
-            #         ".//tbody//tr[position() = " + str(i) + "]//text()"))
-            # else:
-            #     print("Between: \n")
-            #     print(xml_table.xpath(
-            #         ".//tbody//tr[position() = " + str(i[0]) + "]//text()"))
-            #     print("\nAnd:")
-            #     print(xml_table.xpath(
-            #         ".//tbody//tr[position() = " + str(i[1]) + "]//text()"))
+        for i in row_nums:
+            if type(i) != list:
+                print(xml_table.xpath(
+                    ".//tbody//tr[position() = " + str(i) + "]//text()"))
+            else:
+                print("Between: \n")
+                print(xml_table.xpath(
+                    ".//tbody//tr[position() = " + str(i[0]) + "]//text()"))
+                print("\nAnd:")
+                print(xml_table.xpath(
+                    ".//tbody//tr[position() = " + str(i[1]) + "]//text()"))
         result = []
         first_table_xml = "<table><thead>"
         for x in xml_table.xpath(".//thead//tr"):
@@ -190,7 +190,10 @@ class PreProcessing:
         @param tree: etree parsed xml element
         @return: string containing the caption text
         """
-        return Utility.expand_xpath_output(tree.xpath("../caption//p/text()"))
+        caption = Utility.expand_xpath_output(tree.xpath("../caption//p/text()"))
+        if caption == None:
+            caption = Utility.expand_xpath_output(tree.xpath("//table/../../caption//text()"))
+        return caption
 
     @staticmethod
     def __validate_caption(caption):
@@ -298,6 +301,18 @@ class PreProcessing:
         return results, snps
 
     @staticmethod
+    def __char_encoding_filter(input_string):
+        """
+        Removes all problematic characters from the input string.
+        @param input_string: The string to replace
+        @return: The input string with problematic characters replaced where appropriate, or removed.
+        """
+        spaces = [x.lower_ for x in CharacterDealer.spaces]
+        for space in spaces:
+            input_string = input_string.replace(space, " ")
+        return input_string
+
+    @staticmethod
     def strip_xml(pmid, xml):
         """
         Divides the XML document into study sections and tables
@@ -306,6 +321,7 @@ class PreProcessing:
         @return: Study object containing the split sections of the publication.
         """
         study = Study()
+        xml = __char_encoding_filter(xml)
         xml = re.sub("</", " </", xml)  # Ensure white space is present between nested tags
         study.original = xml
         parser = etree.XMLParser(encoding='utf-8')
