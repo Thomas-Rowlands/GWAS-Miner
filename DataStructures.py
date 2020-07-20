@@ -4,6 +4,9 @@ from collections import OrderedDict
 from lxml import etree
 import NLP
 from Utility_Functions import Utility
+import logging
+
+logger = logging.getLogger("Phenotype Finder")
 
 def convert_to_list(num):
     result = []
@@ -224,9 +227,9 @@ class Table:
                         else:
                             back_counter -= 1
         # Debugging Only
-        print(self.caption)
-        print(self.table_num)
-        pprint.pprint(valuable_fields)
+        # logger.info(self.caption)
+        # logger.info(self.table_num)
+        # logger.info(valuable_fields)
         return valuable_fields
 
     @staticmethod
@@ -299,6 +302,8 @@ class Table:
         :param table_num: (Optional) The table's integer identifier
         :return: 2 Dictionaries, the table map and the validated table data
         """
+        if type(elem) == str:
+            elem = etree.fromstring(elem)
         header = Utility.expand_xpath_output(elem.xpath(".//thead"))
         body = Utility.expand_xpath_output(elem.xpath(".//tbody"))
         header_row_count = int(elem.xpath("count(.//thead//tr)"))

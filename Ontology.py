@@ -7,7 +7,9 @@ import json
 import config
 import csv
 import codecs
+import logging
 
+logger = logging.getLogger("Phenotype Finder")
 
 class EFO:
     efo_namespace = rdflib.namespace.Namespace("http://www.ebi.ac.uk/efo/efo.owl")
@@ -25,7 +27,7 @@ class EFO:
                     if id not in results:
                         results[id] = [label, exactSyn]
                     else:
-                        print("Mistakes were made...")
+                        logger.warning("EFO ID was not found...")
                 json.dump(results, out_file)
         except IOError as io:
             sys.exit(F"The following IO error occurred querying EFO terms: {io.strerror}")
@@ -168,11 +170,11 @@ class Mesh:
             with gzip.open('mesh.nt.gz', 'rb') as input_file:
                 with open('mesh.nt', 'wb') as output_file:
                     shutil.copyfileobj(input_file, output_file)
-            print("MeSH file updated")
+            logger.info("MeSH file updated")
             Mesh.set_descriptors()
-            print("New MeSH data extracted.")
+            logger.info("New MeSH data extracted.")
         else:
-            print("Already using the latest MeSH file.")
+            logger.info("Already using the latest MeSH file.")
         return True
 
 

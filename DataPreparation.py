@@ -4,8 +4,11 @@ from lxml.etree import tostring
 from DataStructures import Study, SNP, Table
 from Utility_Functions import Utility
 import CharacterDealer
+import logging
 
 class PreProcessing:
+
+    __logger = logging.getLogger("Phenotype Finder")
 
     # Retrieves rs identifiers from input string
     @staticmethod
@@ -101,17 +104,17 @@ class PreProcessing:
         @return: List of XML tables created by splitting the input table.
         """
         # Debugging only
-        for i in row_nums:
-            if type(i) != list:
-                print(xml_table.xpath(
-                    ".//tbody//tr[position() = " + str(i) + "]//text()"))
-            else:
-                print("Between: \n")
-                print(xml_table.xpath(
-                    ".//tbody//tr[position() = " + str(i[0]) + "]//text()"))
-                print("\nAnd:")
-                print(xml_table.xpath(
-                    ".//tbody//tr[position() = " + str(i[1]) + "]//text()"))
+        # for i in row_nums:
+        #     if type(i) != list:
+        #         PreProcessing.__logger.info(xml_table.xpath(
+        #             ".//tbody//tr[position() = " + str(i) + "]//text()"))
+        #     else:
+        #         PreProcessing.__logger.info("Between: \n")
+        #         PreProcessing.__logger.info(xml_table.xpath(
+        #             ".//tbody//tr[position() = " + str(i[0]) + "]//text()"))
+        #         PreProcessing.__logger.info("\nAnd:")
+        #         PreProcessing.__logger.info(xml_table.xpath(
+        #             ".//tbody//tr[position() = " + str(i[1]) + "]//text()"))
         result = []
         first_table_xml = "<table><thead>"
         for x in xml_table.xpath(".//thead//tr"):
@@ -321,7 +324,7 @@ class PreProcessing:
         @return: Study object containing the split sections of the publication.
         """
         study = Study()
-        xml = __char_encoding_filter(xml)
+        #xml = __char_encoding_filter(xml)
         xml = re.sub("</", " </", xml)  # Ensure white space is present between nested tags
         study.original = xml
         parser = etree.XMLParser(encoding='utf-8')

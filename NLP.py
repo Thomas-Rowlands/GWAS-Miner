@@ -2,7 +2,7 @@ import itertools
 import re
 from pprint import pprint
 import spacy
-#from nlpre import dedash, titlecaps, separate_reference, unidecoder, identify_parenthetical_phrases, replace_acronyms
+# from nlpre import dedash, titlecaps, separate_reference, unidecoder, identify_parenthetical_phrases, replace_acronyms
 from spacy import displacy
 from spacy.matcher import Matcher
 from spacy.matcher import PhraseMatcher
@@ -10,6 +10,7 @@ from spacy.tokens import Span
 from Utility_Functions import Utility
 import networkx as nx
 import string
+import logging
 
 
 class Interpreter:
@@ -21,11 +22,13 @@ class Interpreter:
     __p_value_regex_inline = r"(\d?\.?\d[ ]?[*×xX]{1}[ ]?\d{1,}[ ]?-\d{1,})"
     __p_value_master_regex = r"((\(?\b[pP][  =<-]{1,}(val{1,}[ue]{0,})?[  <≥=×xX-]{0,}[  \(]?\d+[\.]?[\d]{0,}[-^*()  \d×xX]{0,})|(\d?\.?\d[  ]?[*×xX]{1}[  ]?\d{1,}[  ]?-\d{1,}))"
     __p_type_regex = r"(\(?GEE\)?)|(\(?FBAT\)?)"
-    __SNP_regex = [{"TEXT": {"REGEX": r"([ATCG]{1}[a-z]{1,}[0-9]{1,}[ATCG]{1}[a-z]{1,})"}}]
+    __SNP_regex = [
+        {"TEXT": {"REGEX": r"([ATCG]{1}[a-z]{1,}[0-9]{1,}[ATCG]{1}[a-z]{1,})"}}]
     __gene_seq_regex = [{"TEXT": {"REGEX": "([ ][ACTG]{3,}[ ])"}}]
     __table_ref_regex = r"(table[- ]{0,}\d{1,})"
     __basic_matcher = None
     __phrase_matchers = []
+    __logger = logging.getLogger("Phenotype Finder")
 
     def __init__(self, lexicon, ontology_only=False):
         if not ontology_only:
@@ -38,7 +41,8 @@ class Interpreter:
         for entry in lexicon.keys():
             for sub_entry in sorted(lexicon[entry].keys(), reverse=True):
                 new_matcher = PhraseMatcher(self.__nlp.vocab, attr="LOWER")
-                patterns = list(self.__nlp.tokenizer.pipe(lexicon[entry][sub_entry]))
+                patterns = list(self.__nlp.tokenizer.pipe(
+                    lexicon[entry][sub_entry]))
                 new_matcher.add(entry, self.__on_match, *patterns)
                 self.__phrase_matchers.append(new_matcher)
 
@@ -54,7 +58,8 @@ class Interpreter:
         @param matches: list of matches found by the matcher object
         """
         match_id, start, end = matches[i]
-        entity = Span(doc, start, end, label=self.__nlp.vocab.strings[match_id])
+        entity = Span(doc, start, end,
+                      label=self.__nlp.vocab.strings[match_id])
         try:
             doc.ents += (entity,)
         except:
@@ -72,6 +77,15 @@ class Interpreter:
                     test = None
 
     def process_corpus(self, corpus, ontology_only=False):
+        """[Applies tokenization, entity recognition and dependency parsing to the supplied corpus.]
+
+        Args:
+            corpus ([string]): [corpus text for information extraction]
+            ontology_only (bool, optional): [Only apply ontology term matching to the supplied corpus]. Defaults to False.
+
+        Returns:
+            [SpaCy doc object]: [Parsed SpaCy doc object containing the processed input text with entities, tokens and dependencies.]
+        """
         # Clean corpus with NLPre parsers
         # parsers = [dedash(), titlecaps(), separate_reference(), unidecoder()]
         # for parser in parsers:
@@ -80,6 +94,7 @@ class Interpreter:
         doc = self.__nlp(corpus)
 
         old_ents, doc.ents = doc.ents, []
+
         #  Additional regex matches unnecessary when limited to ontology entities.
         if not ontology_only:
             self.__regex_match(self.__table_ref_regex, doc, "TABLE")
@@ -88,24 +103,33 @@ class Interpreter:
             # self.__regex_match(self.__p_value_master_regex, doc, "PVAL")
             self.__regex_match(self.__p_type_regex, doc, "PTYPE")
 
-        hyphenated_pattern = [{'POS': 'PROPN'}, {'IS_PUNCT': True, 'LOWER': '-'}, {'POS': 'VERB'}]
-        compound_pattern = [{'POS': 'NOUN', 'DEP': 'compound'}, {'POS': 'NOUN', 'DEP': 'compound'}, {'POS': 'NOUN'}]
-        self.__basic_matcher.add("JOIN", None, hyphenated_pattern, compound_pattern)
+        # Add matcher patterns for parsing hyphenated and compound words.
+        hyphenated_pattern = [{'POS': 'PROPN'}, {
+            'IS_PUNCT': True, 'LOWER': '-'}, {'POS': 'VERB'}]
+        compound_pattern = [{'POS': 'NOUN', 'DEP': 'compound'}, {
+            'POS': 'NOUN', 'DEP': 'compound'}, {'POS': 'NOUN'}]
+        self.__basic_matcher.add(
+            "JOIN", None, hyphenated_pattern, compound_pattern)
         self.__basic_matcher(doc)
 
         for matcher in self.__phrase_matchers:
             matcher(doc)
+
+        # Ensure that rule-matched entities override data model entities when needed.
         if not ontology_only:
             for ent in old_ents:
                 try:
                     doc.ents += (ent,)
                 except:  # Default SpaCy entities should never override others.
                     continue
+
+        # Ensure that multi-token entities are merged for extraction and association processing.
         self.__merge_spans(doc, "PVAL-G")
         self.__merge_spans(doc, "PVAL")
         self.__merge_spans(doc, "MeSH")
         self.__merge_spans(doc, "EFO")
         self.__merge_spans(doc, "HPO")
+
         return doc
 
     @staticmethod
@@ -196,6 +220,14 @@ class Interpreter:
         return contains_pval, contains_snp
 
     def allocate_contiguous_phenotypes(self, sent):
+        """[Identify phenotype entities bordering p-value entities]
+
+        Args:
+            sent ([SpaCy sent object]): [NLP processed sentence object]
+
+        Returns:
+            [list]: [list containing tuples of phenotypes with contiguous p-value entities]
+        """
         result = []
         prev_token = None
         for token in sent:
@@ -208,27 +240,48 @@ class Interpreter:
         return result
 
     def extract_phenotypes(self, doc):
-        output = []
-        phenotype_sents = Interpreter.__filter_sents_by_entity(doc.sents, [["MeSH", "HPO"], ["PVAL", "PVAL-G"], "RSID"])
+        """[Extract phenotype to genotype associations from the provided SpaCy doc object]
+
+        Args:
+            doc ([SpaCy doc object]): [SpaCy processed document containing entities for extraction]
+
+        Returns:
+            [dict]: [Dictionary containing extracted phenotype, SNP and p-values associated together based on SDP calculation.]
+        """
+        phenotype_sents = Interpreter.__filter_sents_by_entity(
+            doc.sents, [["MeSH", "HPO"], ["PVAL", "PVAL-G"], "RSID"])
         results = self.calculate_sdp(phenotype_sents)
         return results
 
     def calculate_sdp(self, phenotype_sents):
+        """[Calculates the shortest dependency path for each phenotype/SNP/p-value combination, returning the shortest for each one.]
+
+        Args:
+            phenotype_sents ([list]): [List of SpaCy sent objects containing phenotype entities.]
+
+        Returns:
+            [dict]: [Dictionary containing extracted phenotype, SNP and p-values associated together based on SDP calculation.]
+        """
         results = {}
         # Iterate through each sentence containing a phenotype named entity label
         for sent in phenotype_sents:
             edges = []
             for token in sent:
-                for child in token.children:  # TODO: Re-label duplicates with some easily but uniquely identifiable id.
+                # TODO: Re-label duplicates with some easily but uniquely identifiable id.
+                for child in token.children:
                     token_text = F"{token.lower_}<id{token.i}>"
                     child_text = F"{child.lower_}<id{child.i}>"
-                    edges.append(('{0}'.format(token_text), '{0}'.format(child_text)))
+                    edges.append(('{0}'.format(token_text),
+                                 '{0}'.format(child_text)))
 
             graph = nx.Graph(edges)
 
-            phenotypes = Interpreter.__validate_node_entities([x for x in sent.ents if x.label_ == 'MeSH'], graph.nodes)
-            snps = Interpreter.__validate_node_entities([x for x in sent.ents if x.label_ == 'RSID'], graph.nodes)
-            pvals = Interpreter.__validate_node_entities([x for x in sent.ents if x.label_ == 'PVAL'], graph.nodes)
+            phenotypes = Interpreter.__validate_node_entities(
+                [x for x in sent.ents if x.label_ == 'MeSH'], graph.nodes)
+            snps = Interpreter.__validate_node_entities(
+                [x for x in sent.ents if x.label_ == 'RSID'], graph.nodes)
+            pvals = Interpreter.__validate_node_entities(
+                [x for x in sent.ents if x.label_ == 'PVAL'], graph.nodes)
 
             phenotype_count = len(phenotypes)
             snp_count = len(snps)
@@ -249,34 +302,40 @@ class Interpreter:
                     subtree_count += 1
 
                 if not contains_snp and not contains_pval:
-                    contains_pval, contains_snp = Interpreter.__expand_sentence_dependency_search(phenotype[0][0])
+                    contains_pval, contains_snp = Interpreter.__expand_sentence_dependency_search(
+                        phenotype[0][0])
                 if not contains_pval and not contains_snp:
                     continue
 
                 # if phenotype[0].lower_ == "hematocrit":
                 #     Interpreter.display_structure(sent)
 
-                snp_distance = 4  # Maximum length of dependency path for association.
+                # Maximum length of dependency path for association.
+                snp_distance = 4
                 pval_distance = 4
                 rsid = None
                 pval = None
                 best_snp_distance = snp_distance + 1
                 best_pval_distance = pval_distance + 1
                 for snp in snps:  # Check shortest dependency path between each SNP and each phenotype & RSID.
-                    temp_distance = nx.shortest_path_length(graph, source=phenotype[1].lower(), target=snp[1].lower())
+                    temp_distance = nx.shortest_path_length(
+                        graph, source=phenotype[1].lower(), target=snp[1].lower())
                     if temp_distance <= snp_distance and temp_distance < best_snp_distance:
                         snp_distance = temp_distance
-                        rsid = nx.shortest_path(graph, source=phenotype[1].lower(), target=snp[1].lower())[-1]
+                        rsid = nx.shortest_path(
+                            graph, source=phenotype[1].lower(), target=snp[1].lower())[-1]
                         best_snp_distance = temp_distance
                     else:
                         continue
                 if not rsid:  # RSID must be present for an association to be made.
                     continue
                 for pvalue in pvals:
-                    temp_distance = nx.shortest_path_length(graph, source=rsid, target=pvalue[1].lower())
+                    temp_distance = nx.shortest_path_length(
+                        graph, source=rsid, target=pvalue[1].lower())
                     if temp_distance <= pval_distance and temp_distance < best_pval_distance:
                         pval_distance = temp_distance
-                        pval = nx.shortest_path(graph, source=rsid, target=pvalue[1].lower())[-1]
+                        pval = nx.shortest_path(
+                            graph, source=rsid, target=pvalue[1].lower())[-1]
                         best_pval_distance = temp_distance
                     else:
                         continue
@@ -290,10 +349,19 @@ class Interpreter:
 
     @staticmethod
     def count_entities(doc, label):
+        """[Counts the number of named entities matching the provided label string]
+
+        Args:
+            doc ([SpaCy doc object]): SpaCy processed document containing entities to count]
+            label ([string]): [Label of entities that will be counted e.g. 'MeSH'.]
+
+        Returns:
+            [int]: [Total number of entities found matching the supplied label]
+        """
         count = 0
         for ent in doc.ents:
             if ent.label_ == label:
-                print(ent.lower_)
+                Interpreter.__logger.info((ent.lower_))
                 count += 1
         return count
 
@@ -314,21 +382,22 @@ class Interpreter:
         @param word: The base word object to search from
         @return: The word accompanied by it's reliant siblings
         """
-        result = {"original": str(word), "index": word.i, "l_words": [], "replacement": str(word)}
+        result={"original": str(word), "index": word.i,
+                                "l_words": [], "replacement": str(word)}
         while word.n_lefts > 0:
-            left_word = doc[word.i - 1]
+            left_word=doc[word.i - 1]
             if left_word.dep_ == "punct":
-                result["replacement"] = F"{left_word}{result['replacement']}"
+                result["replacement"]=F"{left_word}{result['replacement']}"
                 result["l_words"].append(left_word.idx)
-                left_word = doc[word.i - 2]
+                left_word=doc[word.i - 2]
             if left_word.dep_ in ["compound", "npadvmod"] and word.n_lefts > 0:
                 result[
-                    "replacement"] = F"{left_word}{'' if (result['replacement'][0:1] == '-') else ' '}{result['replacement']}"
+                    "replacement"]=F"{left_word}{'' if (result['replacement'][0:1] == '-') else ' '}{result['replacement']}"
                 result["l_words"].append(left_word.idx)
-            word = left_word
+            word=left_word
         result['l_words'].sort()
         if result['l_words']:
-            result['l_words'] = result['l_words'][:1][0]
+            result['l_words']=result['l_words'][:1][0]
         return result
 
     @staticmethod
@@ -338,24 +407,25 @@ class Interpreter:
         @param doc: The sentence string to be changed
         @return: List of new sentences generated from the input statement
         """
-        results = []
-        temp_word = ""
-        temp_word_two = ""
-        is_changed = False
+        results=[]
+        temp_word=""
+        temp_word_two=""
+        is_changed=False
         for word in doc:
             if word.dep_ == "amod":  # adjectival modifier
-                temp_word = Interpreter.merge_reliant(doc, word)
-                temp_word_two = Interpreter.merge_reliant(doc, word.head)
+                temp_word=Interpreter.merge_reliant(doc, word)
+                temp_word_two=Interpreter.merge_reliant(doc, word.head)
                 results.append({"original": str(word), "index": word.idx,
                                 "l_words": [temp_word['l_words'], temp_word_two['l_words']],
                                 "replacement": F"{temp_word['replacement']} {temp_word_two['replacement']}"})
-                is_changed = True
+                is_changed=True
         if not is_changed:
             return None
-        new_text = doc.text
-        output = {"items": [], "statements": []}
+        new_text=doc.text
+        output={"items": [], "statements": []}
         for result in results:
-            output["statements"].append(F"{new_text[:results[0]['l_words'][0]]}{result['replacement']}.")
+            output["statements"].append(
+                F"{new_text[:results[0]['l_words'][0]]}{result['replacement']}.")
             output['items'].append(result['replacement'])
         return output
 
@@ -365,8 +435,8 @@ class Interpreter:
         Start running the Displacy visualization of the tokenized sentences identified by the NLP pipeline.
         @param doc: The NLP processed document.
         """
-        options = {"compact": True}
-        # pprint([doc[match[1]:match[2]] for match in matches])
+        options={"compact": True}
+        # __logger.info([doc[match[1]:match[2]] for match in matches])
         displacy.serve(sentence_spans, style="dep", options=options)
 
     @staticmethod
@@ -375,14 +445,14 @@ class Interpreter:
         Start running the Displacy visualization of the named entities recognised by the NLP pipeline.
         @param doc: The NLP processed document.
         """
-        colors = {"MESH": "rgb(247, 66, 145)", "EFO": "rgb(247, 66, 145)", "HP": "rgb(147, 66, 245)",
+        colors={"MESH": "rgb(247, 66, 145)", "EFO": "rgb(247, 66, 145)", "HP": "rgb(147, 66, 245)",
                   "RSID": "rgb(245, 66, 72)",
                   "PVAL": "rgb(102, 255, 51)", "PTYPE": "rgb(51, 102, 255)", "SNP": "rgb(0, 255, 204)"}
-        options = {"colors": colors}
+        options={"colors": colors}
         displacy.serve(doc, style="ent", options=options)
 
     def onto_match(self, doc):
-        doc = self.process_corpus(doc, ontology_only=True)
+        doc=self.process_corpus(doc, ontology_only=True)
         return [(x.text, x.label_) for x in doc.ents]
 
     @staticmethod
@@ -395,7 +465,7 @@ class Interpreter:
         """
         for abbrev in abbrevs:
             if abbrev[1] == token:
-                result = ""
+                result=""
                 for word in abbrev[0]:
                     result += word + " "
                 return result[:-1]
@@ -410,21 +480,24 @@ class Interpreter:
         @return: The expanded text for the abbreviation.
         """
         # Identify first letter of the first word for the abbreviation
-        result = ""
-        first_char = token[0:1]
-        first_char_count = token.count(first_char)  # Get the number of occurrences of this letter in abbreviation.
+        result=""
+        first_char=token[0:1]
+        # Get the number of occurrences of this letter in abbreviation.
+        first_char_count=token.count(first_char)
         # Locate abbreviations in parenthesis
-        search_regex = r"([ \-'\n\w0-9]+\n?\({0}[^a-zA-Z]{0,}\))".replace("{0}", re.escape(
+        search_regex=r"([ \-'\n\w0-9]+\n?\({0}[^a-zA-Z]{0,}\))".replace("{0}", re.escape(
             token))  # r"([ \-'\na-zA-Z0-9]+\n?\({0}\))".format(re.escape(token))
-        declaration_match = re.search(search_regex, fulltext, re.IGNORECASE | re.MULTILINE)
+        declaration_match=re.search(
+            search_regex, fulltext, re.IGNORECASE | re.MULTILINE)
         if declaration_match is None:  # No declaration found for token
             return None
         # First match SHOULD be the declaration of this abbreviation.
         # Split REGEX match to a list of words
-        split_sent = declaration_match.group(0).lower().replace(" )", ")").replace("( ", "(").split(" ")
-        found_counter = 0
-        found_indexes = []
-        i = len(split_sent) - 2  # Indexing + ignore the actual abbreviation
+        split_sent=declaration_match.group(0).lower().replace(
+            " )", ")").replace("( ", "(").split(" ")
+        found_counter=0
+        found_indexes=[]
+        i=len(split_sent) - 2  # Indexing + ignore the actual abbreviation
         #  Moving backwards from the abbreviation, count each word in the sentence matching the first character.
         while i >= 0:
             if split_sent[i][0:1].lower() == first_char.lower():
@@ -436,7 +509,7 @@ class Interpreter:
             found_indexes.sort()
             for x in split_sent[found_indexes[(first_char_count - found_counter)]:-1]:
                 result += x + " "
-        result = result.strip()
+        result=result.strip()
         if result:
             return result
         else:
@@ -449,21 +522,24 @@ class Interpreter:
         @param fulltext: The document containing the abbreviations and their declarations
         @return: String containing the expanded version of the abbreviation.
         """
-        changes = []
-        pattern = r"([^ \"',.(-]\b)?([a-z]{0,})([A-Z]{2,})([a-z]{0,})(\b[^;,.'\" )-]?)"  # r"([^(-]\b[a-z]{0,}[A-Z]{2,}[a-z]{0,}\b[^)-])"
+        changes=[]
+        # r"([^(-]\b[a-z]{0,}[A-Z]{2,}[a-z]{0,}\b[^)-])"
+        pattern=r"([^ \"',.(-]\b)?([a-z]{0,})([A-Z]{2,})([a-z]{0,})(\b[^;,.'\" )-]?)"
         for match in re.findall(pattern, fulltext):
-            target = ""
+            target=""
             if type(match) == str:
-                target = match
+                target=match
             else:
-                target = match[2]
-            target = target.strip()
+                target=match[2]
+            target=target.strip()
             if target not in [x for [x, y] in changes]:
-                changes.append([target, Interpreter.replace_abbreviations(target, fulltext)])
+                changes.append(
+                    [target, Interpreter.replace_abbreviations(target, fulltext)])
         for change in changes:
             if change[1]:
-                fulltext = fulltext.replace(change[0], F" {change[1]} ")
-        pprint(changes)
+                if change[1] != change[0]:
+                    fulltext=fulltext.replace(change[0], F" {change[1]} ")
+        #Interpreter.__logger.info(changes) #  Can error due to strange encodings used.
         return fulltext
 
     @staticmethod
@@ -475,9 +551,10 @@ class Interpreter:
         @return: String containing the expanded version of the abbreviation.
         """
         # Remove all preceding and trailing white space.
-        doc = token.strip()
+        doc=token.strip()
         if len(doc) < 5:
-            result = Interpreter.__check_single_word_abbrev(fulltext, doc.upper())
+            result=Interpreter.__check_single_word_abbrev(
+                fulltext, doc.upper())
             if result:
                 return result
             else:

@@ -2,14 +2,15 @@ import re
 import sys
 from collections import OrderedDict
 from pprint import pprint
-
 from lxml import etree
-
 from DataStructures import SNP, Table
+import logging
+
+logger = logging.getLogger("Phenotype Finder")
 
 def parse_table_data(elem, table_num=None):
     table = Table(elem, table_num=table_num)
-    print("\n TABLE - " + str(table_num) + "\n")
+    logger.info("\n TABLE - " + str(table_num) + "\n")
     # end of experimental block
 
     # for row_num in range(header_row_count):
@@ -52,17 +53,17 @@ def parse_table_data(elem, table_num=None):
     #         snp = "".join(rows[o].xpath(".//td[" + str(snp_col) + "]//text()")).replace(" ", "")
     #         misc_p_value = "".join(rows[o].xpath(".//td[" + str(misc_p_val_col) + "]//text()")).replace(" ", "")
     #         if not re.search(r"(?:rs[0-9]{1,}){1}", snp):  # SNP validation
-    #             print("INVALID SNP: " + snp + " table " + str(table_num))
+    #             logger.info("INVALID SNP: " + snp + " table " + str(table_num))
     #             if table_num == 5:
     #                 sys.exit("Column: " + str(snp_col))
     #             continue
     #         elif (len(gee_p_value) < 4) and (len(fbat_p_value) < 4):  # P-validation
     #             continue
     #         elif not re.search(p_pattern, gee_p_value) and (len(fbat_p_value) < 4):
-    #             print("IGNORED: " + gee_p_value + " ___ " + fbat_p_value)
+    #             logger.info("IGNORED: " + gee_p_value + " ___ " + fbat_p_value)
     #             continue
     #         elif not re.search(p_pattern, fbat_p_value) and (len(gee_p_value) < 4):
-    #             print("IGNORED: " + gee_p_value + " ___ " + fbat_p_value)
+    #             logger.info("IGNORED: " + gee_p_value + " ___ " + fbat_p_value)
     #             continue
     #         newSNP = SNP()
     #         newSNP.rs_identifier = snp
