@@ -27,7 +27,6 @@ hpo2Mesh = None
 
 test = time.strftime("%Y%m%d-%H%M%S")
 
-logging.basicConfig(filename=F"logs/{test}.log", level=logging.INFO)
 logger = logging.getLogger("Phenotype Finder")
 
 def get_ontology_terms():
@@ -166,6 +165,16 @@ def main():
     docs = ""
     skip = False
     visualise = None
+
+    # Setup folder for log files.
+    if (not os.path.isdir("logs")):
+        try:
+            os.makedirs("logs")
+        except:
+            sys.exit("Unable to create logs folder")
+
+    logging.basicConfig(filename=F"logs/{test}.log", level=logging.INFO)
+
     for i in range(len(args)):
         if skip:
             skip = False
