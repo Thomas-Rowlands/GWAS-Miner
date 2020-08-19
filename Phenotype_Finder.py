@@ -9,14 +9,16 @@ Main access point,
 import os
 import DB
 import Utility_Functions
-from Ontology import HPO, Mesh, EFO
 from DataPreparation import PreProcessing
-from DataStructures import Study, MasterLexicon
+from Ontology import HPO, Mesh, EFO
+from DataStructures import MasterLexicon
 import config
 import sys
-from pprint import pprint, pformat
+from pprint import pformat
 import logging
 import time
+import Experimental
+from rtgo import ReadyThready
 
 connection = DB.Connection(
     config.user, config.password, config.database, config.server, config.port)
@@ -29,6 +31,7 @@ test = time.strftime("%Y%m%d-%H%M%S")
 
 logger = logging.getLogger("Phenotype Finder")
 
+
 def get_ontology_terms():
     """[Assigns ontology data from cache files ready for processing]
     """
@@ -39,12 +42,16 @@ def get_ontology_terms():
     # Mesh.update_mesh_file() #  Could be dangerous to use if structural changes are made.
 
     # Retrieve MeSH & HPO terms/descriptors/concepts
-    mesh_data = Mesh.get_descriptors()
-    hpo_data = HPO.get_hpo_from_cache()
-    efo_terms, efo_syns = EFO.get_efo_from_cache()
 
     # Retrieve HPO synonyms
-    hpo_syns = HPO.get_syns()
+    logger.info("Starting ontology data loading.")
+    ont_data = ReadyThready.go_cluster([Mesh.get_descriptors, HPO.get_hpo_from_cache,
+                                        EFO.get_efo_from_cache, HPO.get_syns])
+    mesh_data = ont_data[0]
+    hpo_data = ont_data[1]
+    efo_terms, efo_syns = ont_data[2]
+    hpo_syns = ont_data[3]
+    logger.info("Finished ontology data loading.")
 
     # Retrieve HPO to Mesh mappings
     # query_string = """SELECT hpoID, meshID
@@ -57,10 +64,13 @@ def get_ontology_terms():
 def update_ontology_cache():
     """[Updates the ontology cache files with data from the source ontology files.]
     """
-    Mesh.set_descriptors()
-    HPO.set_terms()
-    HPO.set_hpo_synonyms()
-    EFO.set_terms()
+    logger.info("Updating ontology cache files.")
+    funcs = [Mesh.set_descriptors,
+             HPO.set_terms,
+             HPO.set_hpo_synonyms,
+             EFO.set_terms]
+    ReadyThready.go_cluster(funcs)
+    logger.info("Finished updating ontology cache files.")
 
 
 def process_studies(directory, visualise=None):
@@ -79,12 +89,10 @@ def process_studies(directory, visualise=None):
         tagging_data["HPO"].append(label)
     for (id, label) in mesh_data:
         tagging_data["MeSH"].append(label)
-    for (id, label) in efo_terms:
-        tagging_data["EFO"].append(label)
-    for (id, label) in efo_syns:
-        tagging_data["EFO"].append(label)
-
-
+    # for (id, label) in efo_terms:
+    #     tagging_data["EFO"].append(label)
+    # for (id, label) in efo_syns:
+    #     tagging_data["EFO"].append(label)
 
     # Structure ontology data ready for NLP tagging
     from NLP import Interpreter
@@ -94,35 +102,31 @@ def process_studies(directory, visualise=None):
     nlp = Interpreter(lexicon)
 
     # Process each publication file in turn
-    for filename in os.listdir(directory):
-        file_data = []
-        try:
-            with open(directory + "/" + filename, 'r') as file:
-                file_data.append([filename, file.read()])
-        except IOError as io:
-            sys.exit(F"IO Error: {io}")
-        except Exception as e:
-            sys.exit(
-                F"An error occurred attempting to read publication files:\n {e}")
-
-        for (pmid, xmlText) in file_data:
-            logger.info("-------------------------\nProcessing study " +
-                str(pmid) + "\n-------------------------")
-            study = PreProcessing.strip_xml(pmid, xmlText)
-            doc = nlp.process_corpus(
-                nlp.replace_all_abbreviations(study.get_fulltext()))
-            if visualise:
-                if visualise == "ents":
-                    nlp.display_ents(doc)
-                elif visualise == "sents":
-                    nlp.display_structure([sent for sent in doc.sents])
-            test = nlp.extract_phenotypes(doc)
-            logger.info("\nPhenotypes matched from study text:\n")
-            logger.info(pformat(test))
-            logger.info("\nPhenotypes matched from results tables:\n")
-            marker_count = 0
-            ontology_matches = 0
-            temp = []
+    for file_name in os.listdir(F"{directory}/full_text"):
+        study = Experimental.load_study(directory, file_name)
+        if not study:
+            continue
+        logger.info(F"Processing PMC {study.pmid}")
+        # study = PreProcessing.strip_xml(pmid, xmlText) # unused while testing ICL files
+        doc = nlp.process_corpus(
+            nlp.replace_all_abbreviations(study.get_fulltext()))
+        #print(study.get_fulltext())
+       # nlp.display_ents(doc)
+        if visualise:
+            if visualise == "ents":
+                nlp.display_ents(doc)
+            elif visualise == "sents":
+                nlp.display_structure([sent for sent in doc.sents])
+        blah = []
+        for sent in doc.sents:
+            blah.append(sent)
+        test = nlp.extract_phenotypes(doc)
+        if test:
+            logger.info(F"Phenotypes matched from study text: {pformat(test)}")
+        marker_count = 0
+        ontology_matches = 0
+        temp = []
+        if study.get_snps():
             for snp in study.get_snps():
                 if (not snp.rs_identifier) or (not snp.gee_p_val) or (snp.phenotype is None):
                     continue
@@ -135,8 +139,8 @@ def process_studies(directory, visualise=None):
                 if snp.misc_p_val:
                     output += F" | MISC => {snp.misc_p_val}"
                 output += " | Phenotype => "
-                snp.phenotype = nlp.replace_abbreviations(
-                    snp.phenotype, study.original)
+                # snp.phenotype = nlp.replace_abbreviations( May not be needed now, testing required.
+                #     snp.phenotype, study.get_fulltext)
                 if snp.phenotype is None:
                     continue
                 marker_count += 1
@@ -148,15 +152,17 @@ def process_studies(directory, visualise=None):
                 else:
                     output += F"{snp.phenotype}<NO MATCH>"
                 logger.info(output)
-            logger.info(Utility_Functions.Utility.remove_duplicates(temp))
-            logger.info("Total markers /w P-vals: " + str(marker_count))
+            logger.info(F"Phenotypes matched from results tables: {Utility_Functions.Utility.remove_duplicates(temp)}")
+            logger.info(F"Total markers /w P-vals: {str(marker_count)}")
             logger.info(F"Total markers matched to an ontology: {ontology_matches}")
-            # corpus = study.abstract
-            # for section in study.sections:
-            #    corpus += " " + section[:][1]
-            # nlp.process_corpus(corpus)
-            # nlp.process_table_corpus(study.tables)
-            # sys.exit("Stopping after 1st study")
+        else:
+            logger.info(F"No markers found for PMC{study.pmid}")
+        # corpus = study.abstract
+        # for section in study.sections:
+        #    corpus += " " + section[:][1]
+        # nlp.process_corpus(corpus)
+        # nlp.process_table_corpus(study.tables)
+        # sys.exit("Stopping after 1st study")
 
 
 def main():
@@ -167,13 +173,14 @@ def main():
     visualise = None
 
     # Setup folder for log files.
-    if (not os.path.isdir("logs")):
+    if not os.path.isdir("logs"):
         try:
             os.makedirs("logs")
         except:
             sys.exit("Unable to create logs folder")
 
-    logging.basicConfig(filename=F"logs/{test}.log", level=logging.INFO)
+    logging.basicConfig(filename=F"logs/{test}.log", format="%(asctime)s %(levelname)-8s %(message)s",
+                        level=logging.INFO)
 
     for i in range(len(args)):
         if skip:
@@ -193,7 +200,7 @@ def main():
             skip = True
         else:
             sys.exit(F"Argument not recognised: {args[i]}")
-    
+
     if docs == "":
         sys.exit("Document directory must be passed via -docs <path>")
     process_studies(docs, visualise)

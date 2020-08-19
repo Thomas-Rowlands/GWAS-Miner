@@ -19,7 +19,7 @@ class Interpreter:
     __nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
     __rsid_regex = [{"TEXT": {"REGEX": "(?:rs[0-9]{1,}){1}"}}]
     __p_value_regex = r"((\(?\b[pP][  =<-]{1,}(val{1,}[ue]{0,})?[  <≥=×xX-]{0,}[  \(]?\d+[\.]?[\d]{0,}[-−^*()  \d×xX]{0,}))"
-    __p_value_regex_inline = r"(\d?\.?\d[ ]?[*×xX]{1}[ ]?\d{1,}[ ]?-\d{1,})"
+    __p_value_regex_inline = r"(\d?\..?\d[ ]?[*×xX]{1}[ ]?\d{1,}[ (]?[-−]\d{1,}[ )]?)" # r"(\d?\.?\d[ ]?[*×xX]{1}[ ]?\d{1,}[ ]?-\d{1,})"
     __p_value_master_regex = r"((\(?\b[pP][  =<-]{1,}(val{1,}[ue]{0,})?[  <≥=×xX-]{0,}[  \(]?\d+[\.]?[\d]{0,}[-^*()  \d×xX]{0,})|(\d?\.?\d[  ]?[*×xX]{1}[  ]?\d{1,}[  ]?-\d{1,}))"
     __p_type_regex = r"(\(?GEE\)?)|(\(?FBAT\)?)"
     __SNP_regex = [
@@ -272,7 +272,7 @@ class Interpreter:
                     token_text = F"{token.lower_}<id{token.i}>"
                     child_text = F"{child.lower_}<id{child.i}>"
                     edges.append(('{0}'.format(token_text),
-                                 '{0}'.format(child_text)))
+                                  '{0}'.format(child_text)))
 
             graph = nx.Graph(edges)
 
@@ -382,22 +382,22 @@ class Interpreter:
         @param word: The base word object to search from
         @return: The word accompanied by it's reliant siblings
         """
-        result={"original": str(word), "index": word.i,
-                                "l_words": [], "replacement": str(word)}
+        result = {"original": str(word), "index": word.i,
+                  "l_words": [], "replacement": str(word)}
         while word.n_lefts > 0:
-            left_word=doc[word.i - 1]
+            left_word = doc[word.i - 1]
             if left_word.dep_ == "punct":
-                result["replacement"]=F"{left_word}{result['replacement']}"
+                result["replacement"] = F"{left_word}{result['replacement']}"
                 result["l_words"].append(left_word.idx)
-                left_word=doc[word.i - 2]
+                left_word = doc[word.i - 2]
             if left_word.dep_ in ["compound", "npadvmod"] and word.n_lefts > 0:
                 result[
-                    "replacement"]=F"{left_word}{'' if (result['replacement'][0:1] == '-') else ' '}{result['replacement']}"
+                    "replacement"] = F"{left_word}{'' if (result['replacement'][0:1] == '-') else ' '}{result['replacement']}"
                 result["l_words"].append(left_word.idx)
-            word=left_word
+            word = left_word
         result['l_words'].sort()
         if result['l_words']:
-            result['l_words']=result['l_words'][:1][0]
+            result['l_words'] = result['l_words'][:1][0]
         return result
 
     @staticmethod
@@ -407,22 +407,22 @@ class Interpreter:
         @param doc: The sentence string to be changed
         @return: List of new sentences generated from the input statement
         """
-        results=[]
-        temp_word=""
-        temp_word_two=""
-        is_changed=False
+        results = []
+        temp_word = ""
+        temp_word_two = ""
+        is_changed = False
         for word in doc:
             if word.dep_ == "amod":  # adjectival modifier
-                temp_word=Interpreter.merge_reliant(doc, word)
-                temp_word_two=Interpreter.merge_reliant(doc, word.head)
+                temp_word = Interpreter.merge_reliant(doc, word)
+                temp_word_two = Interpreter.merge_reliant(doc, word.head)
                 results.append({"original": str(word), "index": word.idx,
                                 "l_words": [temp_word['l_words'], temp_word_two['l_words']],
                                 "replacement": F"{temp_word['replacement']} {temp_word_two['replacement']}"})
-                is_changed=True
+                is_changed = True
         if not is_changed:
             return None
-        new_text=doc.text
-        output={"items": [], "statements": []}
+        new_text = doc.text
+        output = {"items": [], "statements": []}
         for result in results:
             output["statements"].append(
                 F"{new_text[:results[0]['l_words'][0]]}{result['replacement']}.")
@@ -435,7 +435,7 @@ class Interpreter:
         Start running the Displacy visualization of the tokenized sentences identified by the NLP pipeline.
         @param doc: The NLP processed document.
         """
-        options={"compact": True}
+        options = {"compact": True}
         # __logger.info([doc[match[1]:match[2]] for match in matches])
         displacy.serve(sentence_spans, style="dep", options=options)
 
@@ -445,14 +445,14 @@ class Interpreter:
         Start running the Displacy visualization of the named entities recognised by the NLP pipeline.
         @param doc: The NLP processed document.
         """
-        colors={"MESH": "rgb(247, 66, 145)", "EFO": "rgb(247, 66, 145)", "HP": "rgb(147, 66, 245)",
+        colors = {"MESH": "rgb(247, 66, 145)", "EFO": "rgb(247, 66, 145)", "HP": "rgb(147, 66, 245)",
                   "RSID": "rgb(245, 66, 72)",
                   "PVAL": "rgb(102, 255, 51)", "PTYPE": "rgb(51, 102, 255)", "SNP": "rgb(0, 255, 204)"}
-        options={"colors": colors}
+        options = {"colors": colors}
         displacy.serve(doc, style="ent", options=options)
 
     def onto_match(self, doc):
-        doc=self.process_corpus(doc, ontology_only=True)
+        doc = self.process_corpus(doc, ontology_only=True)
         return [(x.text, x.label_) for x in doc.ents]
 
     @staticmethod
@@ -465,7 +465,7 @@ class Interpreter:
         """
         for abbrev in abbrevs:
             if abbrev[1] == token:
-                result=""
+                result = ""
                 for word in abbrev[0]:
                     result += word + " "
                 return result[:-1]
@@ -480,24 +480,24 @@ class Interpreter:
         @return: The expanded text for the abbreviation.
         """
         # Identify first letter of the first word for the abbreviation
-        result=""
-        first_char=token[0:1]
+        result = ""
+        first_char = token[0:1]
         # Get the number of occurrences of this letter in abbreviation.
-        first_char_count=token.count(first_char)
+        first_char_count = token.count(first_char)
         # Locate abbreviations in parenthesis
-        search_regex=r"([ \-'\n\w0-9]+\n?\({0}[^a-zA-Z]{0,}\))".replace("{0}", re.escape(
+        search_regex = r"([ \-'\n\w0-9]+\n?\({0}[^a-zA-Z]{0,}\))".replace("{0}", re.escape(
             token))  # r"([ \-'\na-zA-Z0-9]+\n?\({0}\))".format(re.escape(token))
-        declaration_match=re.search(
+        declaration_match = re.search(
             search_regex, fulltext, re.IGNORECASE | re.MULTILINE)
         if declaration_match is None:  # No declaration found for token
             return None
         # First match SHOULD be the declaration of this abbreviation.
         # Split REGEX match to a list of words
-        split_sent=declaration_match.group(0).lower().replace(
+        split_sent = declaration_match.group(0).lower().replace(
             " )", ")").replace("( ", "(").split(" ")
-        found_counter=0
-        found_indexes=[]
-        i=len(split_sent) - 2  # Indexing + ignore the actual abbreviation
+        found_counter = 0
+        found_indexes = []
+        i = len(split_sent) - 2  # Indexing + ignore the actual abbreviation
         #  Moving backwards from the abbreviation, count each word in the sentence matching the first character.
         while i >= 0:
             if split_sent[i][0:1].lower() == first_char.lower():
@@ -509,7 +509,7 @@ class Interpreter:
             found_indexes.sort()
             for x in split_sent[found_indexes[(first_char_count - found_counter)]:-1]:
                 result += x + " "
-        result=result.strip()
+        result = result.strip()
         if result:
             return result
         else:
@@ -522,24 +522,24 @@ class Interpreter:
         @param fulltext: The document containing the abbreviations and their declarations
         @return: String containing the expanded version of the abbreviation.
         """
-        changes=[]
+        changes = []
         # r"([^(-]\b[a-z]{0,}[A-Z]{2,}[a-z]{0,}\b[^)-])"
-        pattern=r"([^ \"',.(-]\b)?([a-z]{0,})([A-Z]{2,})([a-z]{0,})(\b[^;,.'\" )-]?)"
+        pattern = r"([^ \"',.(-]\b)?([a-z]{0,})([A-Z]{2,})([a-z]{0,})(\b[^;,.'\" )-]?)"
         for match in re.findall(pattern, fulltext):
-            target=""
+            target = ""
             if type(match) == str:
-                target=match
+                target = match
             else:
-                target=match[2]
-            target=target.strip()
+                target = match[2]
+            target = target.strip()
             if target not in [x for [x, y] in changes]:
                 changes.append(
                     [target, Interpreter.replace_abbreviations(target, fulltext)])
         for change in changes:
             if change[1]:
                 if change[1] != change[0]:
-                    fulltext=fulltext.replace(change[0], F" {change[1]} ")
-        #Interpreter.__logger.info(changes) #  Can error due to strange encodings used.
+                    fulltext = fulltext.replace(change[0], F" {change[1]} ")
+        # Interpreter.__logger.info(changes) #  Can error due to strange encodings used.
         return fulltext
 
     @staticmethod
@@ -551,9 +551,9 @@ class Interpreter:
         @return: String containing the expanded version of the abbreviation.
         """
         # Remove all preceding and trailing white space.
-        doc=token.strip()
+        doc = token.strip()
         if len(doc) < 5:
-            result=Interpreter.__check_single_word_abbrev(
+            result = Interpreter.__check_single_word_abbrev(
                 fulltext, doc.upper())
             if result:
                 return result

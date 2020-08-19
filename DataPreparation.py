@@ -344,7 +344,7 @@ class PreProcessing:
 
         #  Tables
         table_data = PreProcessing.__get_tables(tree)
-        study.tables = table_data[0]
+        study.__tables = table_data[0]
         study.set_snps(table_data[1])
 
         # Sections
