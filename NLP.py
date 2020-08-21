@@ -11,11 +11,11 @@ from Utility_Functions import Utility
 import networkx as nx
 import string
 import logging
-
+import scispacy
 
 class Interpreter:
     __failed_matches = []
-    __nlp = spacy.load("en_core_web_md", disable=["ner"])
+    __nlp = spacy.load("en_core_sci_md", disable=["ner"])
     __nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
     __rsid_regex = [{"TEXT": {"REGEX": "(?:rs[0-9]{1,}){1}"}}]
     __p_value_regex = r"((\(?\b[pP][  =<-]{1,}(val{1,}[ue]{0,})?[  <≥=×xX-]{0,}[  \(]?\d+[\.]?[\d]{0,}[-−^*()  \d×xX]{0,}))"
