@@ -12,7 +12,7 @@ def load_study(directory, file_name):
     json_table_data = None
     pmc_id = None
     try:
-        with open(F"{directory}/full_text/{file_name}", 'r', encoding="utf-8") as file:
+        with open(F"{directory}/{file_name}", 'r', encoding="utf-8") as file:
             json_text_data = json.load(file)
     except IOError as io:
         logger.error(F"IO Error: {io}")
@@ -24,7 +24,7 @@ def load_study(directory, file_name):
     if json_text_data:
         pmc_id = file_name[3:-14]
         try:
-            with open(F"{directory}/tables/PMC{pmc_id}_tables.json", 'r', encoding="utf-8") as file:
+            with open(F"{directory}/{file_name.replace('_maintext', '_tables')}", 'r', encoding="utf-8") as file:
                 json_table_data = json.load(file)
         except IOError as io:
             logger.error(F"IO Error: {io}")
