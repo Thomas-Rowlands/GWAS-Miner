@@ -12,6 +12,7 @@ import networkx as nx
 import string
 import logging
 import scispacy
+from DataStructures import SNP
 
 class Interpreter:
     __failed_matches = []
@@ -262,7 +263,7 @@ class Interpreter:
         Returns:
             [dict]: [Dictionary containing extracted phenotype, SNP and p-values associated together based on SDP calculation.]
         """
-        results = {}
+        results = []
         # Iterate through each sentence containing a phenotype named entity label
         for sent in phenotype_sents:
             edges = []
@@ -341,10 +342,14 @@ class Interpreter:
                         continue
                 if not pval:
                     continue
-                if phenotype[0].lower_ not in results:
-                    results[phenotype[0].lower_] = []
-                results[phenotype[0].lower_].append([rsid[:rsid.find("<id")]])
-                results[phenotype[0].lower_].append([pval[:pval.find("<id")]])
+                result_snp = SNP(rsid[:rsid.find("<id")])
+                result_snp.phenotype = phenotype[0].lower_
+                result_snp.misc_p_val = pval[:pval.find("<id")]
+                results.append(result_snp)
+                # if phenotype[0].lower_ not in results:
+                #     results[phenotype[0].lower_] = []
+                # results[phenotype[0].lower_].append([rsid[:rsid.find("<id")]])
+                # results[phenotype[0].lower_].append([pval[:pval.find("<id")]])
         return results
 
     @staticmethod

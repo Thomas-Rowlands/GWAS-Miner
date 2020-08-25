@@ -6,107 +6,113 @@ Main access point,
 
 @author: Thomas Rowlands
 """
+import json
 import os
-import Utility_Functions
 from DataStructures import MasterLexicon
 import sys
-from pprint import pformat
 import logging
 import time
 import Experimental
 import Ontology
 import argparse
+from NLP import Interpreter
 
-test = time.strftime("%Y%m%d-%H%M%S")
+current_time = time.strftime("%Y%m%d-%H%M%S")
 logger = logging.getLogger("Phenotype Finder")
 lexicon = None
 gui = None
 
 
-def prepare_ontology_data():
+def __prepare_ontology_data(gui_ptr=None):
     global lexicon
     lexicon = MasterLexicon().parse(Ontology.get_tagging_data())
 
 
-def process_studies(directory, visualise=None):
+def load_nlp_object():
+    global lexicon
+    if not lexicon:
+        __prepare_ontology_data()
+    nlp = Interpreter(lexicon)
+    return nlp
+
+
+def update_gui_progress(qt_progress_signal, text):
+    if not qt_progress_signal:
+        return
+    qt_progress_signal.emit(text)
+
+
+def output_study_results(study, qt_finished_signal=None):
+    if len(study.get_snps()) == 0 and qt_finished_signal:
+        from GUI import QtFinishedResponse
+        response = QtFinishedResponse(False, F"PMC{study.pmid}")
+        qt_finished_signal.emit(response)
+        return
+    result_json = {"PMCID": study.pmid, "Mutations": [snp.__dict__ for snp in study.get_snps()]}
+    with open(F"output/PMC{study.pmid}_result.json", "w", encoding="utf-8") as out_file:
+        out_file.write(json.dumps(result_json, indent=4))
+    if qt_finished_signal:
+        from GUI import QtFinishedResponse
+        response = QtFinishedResponse(True, F"PMC{study.pmid}")
+        qt_finished_signal.emit(response)
+
+
+def process_study(nlp, study, visualise=None, qt_progress_signal=None, qt_finished_signal=None):
+    if not study:
+        return False
+    update_gui_progress(qt_progress_signal, F"Processing study {study.pmid}...")
+    doc = nlp.process_corpus(
+        nlp.replace_all_abbreviations(study.get_fulltext()))
+    if visualise:
+        update_gui_progress(qt_progress_signal, F"Launching visualisation of study {study.pmid}...")
+        if visualise == "ents":
+            nlp.display_ents(doc)
+        elif visualise == "sents":
+            nlp.display_structure([sent for sent in doc.sents])
+    blah = []  # for debugging only
+    for sent in doc.sents:
+        blah.append(sent)
+    update_gui_progress(qt_progress_signal, F"Identifying data from study {study.pmid}...")
+    study.set_snps(nlp.extract_phenotypes(doc))
+    marker_count = 0
+    ontology_matches = 0
+    temp = []
+    output_study_results(study, qt_finished_signal)
+    return True
+
+
+def prepare_study(directory, file_name):
+    study = Experimental.load_study(directory, file_name)
+    return study
+
+
+def process_studies(directory, visualise=None, qt_progress_signal=None, qt_finished_signal=None):
     """[Processes each file within the provided directory for GWAS information extraction.]
 
     Args: directory ([string]): [directory containing publication files.] visualise ([string], optional): [ents =
     entity visualisation, sents = dependency parsing visualisation]. Defaults to None.
     """
     # Structure ontology data ready for NLP tagging
-    from NLP import Interpreter
-    global lexicon
-    prepare_ontology_data()
+    update_gui_progress(qt_progress_signal, "Gathering ontology data...")
+    __prepare_ontology_data()
     # Initialise Interpreter module for NLP processing using master lexicon of ontology data.
-    nlp = Interpreter(lexicon)
+    update_gui_progress(qt_progress_signal, "Loading NLP pipeline...")
+    nlp = load_nlp_object()
 
     # Process each publication file in turn
     for file_name in os.listdir(directory):
         if not file_name.endswith("maintext.json"):
             continue
-        study = Experimental.load_study(directory, file_name)
+        study = prepare_study(directory, file_name)
         if not study:
+            from GUI import QtFinishedResponse
+            response = QtFinishedResponse(False, file_name)
+            qt_finished_signal.emit(response)
             continue
         logger.info(F"Processing PMC {study.pmid}")
-        if gui:
-            gui.update_progress_text(F"Processing {file_name}")
-        # study = PreProcessing.strip_xml(pmid, xmlText) # unused while testing ICL files
-        doc = nlp.process_corpus(
-            nlp.replace_all_abbreviations(study.get_fulltext()))
-        # print(study.get_fulltext())
-        # nlp.display_ents(doc)
-        if visualise:
-            if visualise == "ents":
-                nlp.display_ents(doc)
-            elif visualise == "sents":
-                nlp.display_structure([sent for sent in doc.sents])
-        blah = []
-        for sent in doc.sents:
-            blah.append(sent)
-        test = nlp.extract_phenotypes(doc)
-        if test:
-            logger.info(F"Phenotypes matched from study text: {pformat(test)}")
-        marker_count = 0
-        ontology_matches = 0
-        temp = []
-        if study.get_snps():
-            for snp in study.get_snps():
-                if (not snp.rs_identifier) or (not snp.gee_p_val) or (snp.phenotype is None):
-                    continue
-                output = snp.rs_identifier
-                temp.append(snp.rs_identifier)
-                if snp.gee_p_val:
-                    output += F" | GEE => {snp.gee_p_val}"
-                if snp.fbat_p_val:
-                    output += F" | FBAT => {snp.fbat_p_val}"
-                if snp.misc_p_val:
-                    output += F" | MISC => {snp.misc_p_val}"
-                output += " | Phenotype => "
-                # snp.phenotype = nlp.replace_abbreviations( May not be needed now, testing required.
-                #     snp.phenotype, study.get_fulltext)
-                if snp.phenotype is None:
-                    continue
-                marker_count += 1
-                matches = nlp.onto_match(snp.phenotype)
-                if matches:
-                    for match in matches:
-                        output += F"{match[0]}<{match[1]}>"
-                    ontology_matches += 1
-                else:
-                    output += F"{snp.phenotype}<NO MATCH>"
-                logger.info(output)
-            logger.info(F"Phenotypes matched from results tables: {Utility_Functions.Utility.remove_duplicates(temp)}")
-            logger.info(F"Total markers /w P-vals: {str(marker_count)}")
-            logger.info(F"Total markers matched to an ontology: {ontology_matches}")
-        else:
-            logger.info(F"No markers found for PMC{study.pmid}")
-        # corpus = study.abstract
-        # for section in study.sections:
-        #    corpus += " " + section[:][1]
-        # nlp.process_corpus(corpus)
-        # nlp.process_table_corpus(study.tables)
-        # sys.exit("Stopping after 1st study")
+        result = process_study(nlp, study, visualise, qt_progress_signal, qt_finished_signal)
+        if not result:
+            update_gui_progress(qt_progress_signal, F"Unable to process study {file_name}. Skipping...")
 
 
 def main():
@@ -124,7 +130,7 @@ def main():
 
     # Parse input arguments
     args = parser.parse_args()
-    cores = args.cores
+    cores = args.cores  # not yet implemented
     docs = args.docs
     visualise = args.visualise
     using_gui = args.interface
@@ -137,8 +143,15 @@ def main():
         except:
             sys.exit("Unable to create logs folder")
 
+    # Setup folder for output files.
+    if not os.path.isdir("output"):
+        try:
+            os.makedirs("output")
+        except:
+            sys.exit("Unable to create output folder")
+
     # Configure logger
-    logging.basicConfig(filename=F"logs/{test}.log", format="%(asctime)s %(levelname)-8s %(message)s",
+    logging.basicConfig(filename=F"logs/{current_time}.log", format="%(asctime)s %(levelname)-8s %(message)s",
                         level=logging.INFO)
 
     # Update ontology cache files if requested.

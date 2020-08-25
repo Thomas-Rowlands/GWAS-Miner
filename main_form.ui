@@ -1,17 +1,47 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
+ <author>Thomas Rowlands</author>
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>796</width>
+    <height>591</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>GWAS Miner</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QWidget {
+	background-color: rgb(44, 44, 59);
+	color: rgb(255, 255, 255);
+}
+QListWidget{
+	background-color: rgb(255, 255, 255);
+	color: rgb(0,0,0);
+}
+QListWidget::item::hover{
+	background-color: rgba(125, 62, 188, 150);
+}
+QListWidget::item::selected{
+	color: rgb(255,255,255);
+	background-color: rgb(103, 51, 154);
+}
+QPushButton{
+	background-color: rgb(84, 42, 126);
+}
+QProgressBar::chunk{
+	background-color: rgb(84, 42, 126);
+}
+QTabBar::tab{
+	background-color: rgba(125, 62, 188, 255);
+}
+QTabBar::tab::selected{
+	background-color: rgb(84, 42, 126);
+}</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QFrame" name="FileSelectionFrame">
@@ -29,7 +59,7 @@
     <property name="frameShadow">
      <enum>QFrame::Raised</enum>
     </property>
-    <widget class="QListWidget" name="study_file_listview">
+    <widget class="QListWidget" name="study_file_listwidget">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -55,7 +85,7 @@
        <x>190</x>
        <y>140</y>
        <width>81</width>
-       <height>21</height>
+       <height>24</height>
       </rect>
      </property>
      <property name="font">
@@ -65,16 +95,6 @@
      </property>
      <property name="text">
       <string>Browse Folder</string>
-     </property>
-    </widget>
-    <widget class="QListWidget" name="study_file_listview_2">
-     <property name="geometry">
-      <rect>
-       <x>475</x>
-       <y>170</y>
-       <width>311</width>
-       <height>291</height>
-      </rect>
      </property>
     </widget>
     <widget class="QLabel" name="study_input_directory_lbl">
@@ -101,8 +121,8 @@
     <widget class="QLabel" name="label">
      <property name="geometry">
       <rect>
-       <x>590</x>
-       <y>150</y>
+       <x>620</x>
+       <y>120</y>
        <width>81</width>
        <height>16</height>
       </rect>
@@ -120,8 +140,8 @@
     <widget class="QPushButton" name="run_nlp_btn">
      <property name="geometry">
       <rect>
-       <x>330</x>
-       <y>260</y>
+       <x>370</x>
+       <y>250</y>
        <width>75</width>
        <height>61</height>
       </rect>
@@ -139,7 +159,7 @@ Processing</string>
       <rect>
        <x>280</x>
        <y>390</y>
-       <width>181</width>
+       <width>241</width>
        <height>23</height>
       </rect>
      </property>
@@ -158,13 +178,56 @@ Processing</string>
       <rect>
        <x>280</x>
        <y>360</y>
-       <width>181</width>
+       <width>241</width>
        <height>16</height>
       </rect>
      </property>
      <property name="text">
       <string>Processing: </string>
      </property>
+    </widget>
+    <widget class="QTabWidget" name="result_tab_widget">
+     <property name="geometry">
+      <rect>
+       <x>530</x>
+       <y>150</y>
+       <width>256</width>
+       <height>311</height>
+      </rect>
+     </property>
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="results_success_tab">
+      <attribute name="title">
+       <string>Succeeded</string>
+      </attribute>
+      <widget class="QListWidget" name="result_file_listwidget">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>0</y>
+         <width>256</width>
+         <height>291</height>
+        </rect>
+       </property>
+      </widget>
+     </widget>
+     <widget class="QWidget" name="results_failed_tab">
+      <attribute name="title">
+       <string>Failed</string>
+      </attribute>
+      <widget class="QListWidget" name="results_failed_listwidget">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>0</y>
+         <width>256</width>
+         <height>291</height>
+        </rect>
+       </property>
+      </widget>
+     </widget>
     </widget>
    </widget>
   </widget>
@@ -173,7 +236,7 @@ Processing</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
+     <width>796</width>
      <height>22</height>
     </rect>
    </property>
