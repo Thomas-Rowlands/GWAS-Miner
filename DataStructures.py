@@ -1,6 +1,4 @@
 import re
-from lxml import etree
-from Utility_Functions import Utility
 import logging
 
 logger = logging.getLogger("Phenotype Finder")

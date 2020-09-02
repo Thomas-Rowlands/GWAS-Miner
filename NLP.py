@@ -435,25 +435,34 @@ class Interpreter:
         return output
 
     @staticmethod
-    def display_structure(sentence_spans):
+    def display_structure(sentence_spans, markup_only=False):
         """
         Start running the Displacy visualization of the tokenized sentences identified by the NLP pipeline.
         @param doc: The NLP processed document.
+        @param markup_only: If True, returns a HTML string instead of hosting.
         """
         options = {"compact": True}
         # __logger.info([doc[match[1]:match[2]] for match in matches])
+        if markup_only:
+            svgs = []
+            for sent in sentence_spans:
+                svgs.append(displacy.render(sent, style="dep", options=options))
+            return svgs
         displacy.serve(sentence_spans, style="dep", options=options)
 
     @staticmethod
-    def display_ents(doc):
+    def display_ents(doc, markup_only=False):
         """
         Start running the Displacy visualization of the named entities recognised by the NLP pipeline.
         @param doc: The NLP processed document.
+        @param markup_only: If True, returns a HTML string instead of hosting.
         """
         colors = {"MESH": "rgb(247, 66, 145)", "EFO": "rgb(247, 66, 145)", "HP": "rgb(147, 66, 245)",
                   "RSID": "rgb(245, 66, 72)",
                   "PVAL": "rgb(102, 255, 51)", "PTYPE": "rgb(51, 102, 255)", "SNP": "rgb(0, 255, 204)"}
         options = {"colors": colors}
+        if markup_only:
+            return displacy.render(doc, style="ent", page=True, options=options, jupyter=False)
         displacy.serve(doc, style="ent", options=options)
 
     def onto_match(self, doc):

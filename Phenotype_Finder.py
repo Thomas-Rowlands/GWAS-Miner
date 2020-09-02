@@ -20,7 +20,9 @@ from NLP import Interpreter
 current_time = time.strftime("%Y%m%d-%H%M%S")
 logger = logging.getLogger("Phenotype Finder")
 lexicon = None
+nlp = None
 gui = None
+is_cancelled = False
 
 
 def __prepare_ontology_data(gui_ptr=None):
@@ -28,11 +30,17 @@ def __prepare_ontology_data(gui_ptr=None):
     lexicon = MasterLexicon().parse(Ontology.get_tagging_data())
 
 
-def load_nlp_object():
-    global lexicon
+def load_nlp_object(qt_progress_signal=None, qt_finished_signal=None):
+    global lexicon, nlp
     if not lexicon:
+        update_gui_progress(qt_progress_signal, "Gathering Ontology Data...")
         __prepare_ontology_data()
-    nlp = Interpreter(lexicon)
+    if not nlp:
+        update_gui_progress(qt_progress_signal, "Loading NLP Pipeline...")
+        nlp = Interpreter(lexicon)
+        if qt_finished_signal:
+            qt_finished_signal.emit(True)
+            return
     return nlp
 
 
@@ -42,23 +50,37 @@ def update_gui_progress(qt_progress_signal, text):
     qt_progress_signal.emit(text)
 
 
-def output_study_results(study, qt_finished_signal=None):
-    if len(study.get_snps()) == 0 and qt_finished_signal:
+def output_study_results(study, qt_study_finished_signal=None):
+    if len(study.get_snps()) == 0 and qt_study_finished_signal:
         from GUI import QtFinishedResponse
         response = QtFinishedResponse(False, F"PMC{study.pmid}")
-        qt_finished_signal.emit(response)
+        qt_study_finished_signal.emit(response)
         return
     result_json = {"PMCID": study.pmid, "Mutations": [snp.__dict__ for snp in study.get_snps()]}
     with open(F"output/PMC{study.pmid}_result.json", "w", encoding="utf-8") as out_file:
         out_file.write(json.dumps(result_json, indent=4))
-    if qt_finished_signal:
+    if qt_study_finished_signal:
         from GUI import QtFinishedResponse
         response = QtFinishedResponse(True, F"PMC{study.pmid}")
+        qt_study_finished_signal.emit(response)
+
+
+def get_study_visualisations(study, qt_progress_signal=None, qt_finished_signal=None):
+    nlp = load_nlp_object(qt_progress_signal)
+    update_gui_progress(qt_progress_signal, F"Processing study {study.pmid}...")
+    doc = nlp.process_corpus(nlp.replace_all_abbreviations(study.get_fulltext()))
+    update_gui_progress(qt_progress_signal, "Generating HTML")
+    entities = nlp.display_ents(doc, True)
+    dependencies = nlp.display_structure([sent for sent in doc.sents], True)
+    if qt_finished_signal:
+        from GUI import QtFinishedResponse
+        response = QtFinishedResponse(True, F"PMC{study.pmid}", [entities, dependencies])
         qt_finished_signal.emit(response)
 
 
-def process_study(nlp, study, visualise=None, qt_progress_signal=None, qt_finished_signal=None):
-    if not study:
+def process_study(nlp, study, visualise=None, qt_progress_signal=None, qt_study_finished_signal=None):
+    global is_cancelled
+    if not study or is_cancelled:
         return False
     update_gui_progress(qt_progress_signal, F"Processing study {study.pmid}...")
     doc = nlp.process_corpus(
@@ -77,7 +99,7 @@ def process_study(nlp, study, visualise=None, qt_progress_signal=None, qt_finish
     marker_count = 0
     ontology_matches = 0
     temp = []
-    output_study_results(study, qt_finished_signal)
+    output_study_results(study, qt_study_finished_signal)
     return True
 
 
@@ -86,7 +108,7 @@ def prepare_study(directory, file_name):
     return study
 
 
-def process_studies(directory, visualise=None, qt_progress_signal=None, qt_finished_signal=None):
+def process_studies(directory, visualise=None, qt_progress_signal=None, qt_study_finished_signal=None):
     """[Processes each file within the provided directory for GWAS information extraction.]
 
     Args: directory ([string]): [directory containing publication files.] visualise ([string], optional): [ents =
@@ -95,24 +117,34 @@ def process_studies(directory, visualise=None, qt_progress_signal=None, qt_finis
     # Structure ontology data ready for NLP tagging
     update_gui_progress(qt_progress_signal, "Gathering ontology data...")
     __prepare_ontology_data()
+    if is_cancelled:
+        return
     # Initialise Interpreter module for NLP processing using master lexicon of ontology data.
     update_gui_progress(qt_progress_signal, "Loading NLP pipeline...")
+    if is_cancelled:
+        return
     nlp = load_nlp_object()
 
     # Process each publication file in turn
     for file_name in os.listdir(directory):
+        if is_cancelled:
+            return
         if not file_name.endswith("maintext.json"):
             continue
+        logger.info(F"Extracting data for file: {file_name}")
+        update_gui_progress(qt_progress_signal, F"Extracting data for file: {file_name}")
         study = prepare_study(directory, file_name)
         if not study:
             from GUI import QtFinishedResponse
             response = QtFinishedResponse(False, file_name)
-            qt_finished_signal.emit(response)
+            qt_study_finished_signal.emit(response)
             continue
         logger.info(F"Processing PMC {study.pmid}")
-        result = process_study(nlp, study, visualise, qt_progress_signal, qt_finished_signal)
+        result = process_study(nlp, study, visualise, qt_progress_signal, qt_study_finished_signal)
         if not result:
             update_gui_progress(qt_progress_signal, F"Unable to process study {file_name}. Skipping...")
+    if qt_study_finished_signal:
+        qt_study_finished_signal.emit(True)
 
 
 def main():
