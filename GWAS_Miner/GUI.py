@@ -7,10 +7,10 @@ from io import BytesIO
 from PyQt5 import uic
 from PyQt5.QtCore import QRunnable, pyqtSlot, QObject, pyqtSignal, QThreadPool, Qt
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtSvg import QGraphicsSvgItem, QSvgWidget
-from PyQt5.QtWidgets import QApplication, QFileDialog, QPushButton, QGraphicsScene, QLabel, QFrame
+from PyQt5.QtSvg import QGraphicsSvgItem
+from PyQt5.QtWidgets import QApplication, QFileDialog, QPushButton, QGraphicsScene
 
-import Phenotype_Finder
+from GWAS_Miner import Phenotype_Finder
 
 from svglib.svglib import svg2rlg
 from reportlab.graphics import renderPM
@@ -18,7 +18,7 @@ from reportlab.graphics import renderPM
 
 class MainForm:
     def __init__(self):
-        self.Form, self.Window = uic.loadUiType("res/gwas_miner.ui")
+        self.Form, self.Window = uic.loadUiType("GWAS_Miner/res/gwas_miner.ui")
         self.app = QApplication([])
         self.app.setAttribute(Qt.AA_EnableHighDpiScaling, True)
         self.window = self.Window()
@@ -46,9 +46,9 @@ class MainForm:
         self.form.loading_svg.setHidden(True)
         splash_loading_scene = QGraphicsScene()
         main_loading_scene = QGraphicsScene()
-        splash_loading_svg = QGraphicsSvgItem("res/loading.svg")
+        splash_loading_svg = QGraphicsSvgItem("GWAS_Miner/res/loading.svg")
         splash_loading_svg.setScale(0.4)
-        main_loading_svg = QGraphicsSvgItem("res/loading.svg")
+        main_loading_svg = QGraphicsSvgItem("GWAS_Miner/res/loading.svg")
         main_loading_svg.setScale(0.4)
         splash_loading_scene.addItem(splash_loading_svg)
         main_loading_scene.addItem(main_loading_svg)
@@ -65,6 +65,22 @@ class MainForm:
         self.form.analyse_study_btn.clicked.connect(self.analyse_study_btn_handler)
         self.form.dependency_next_btn.clicked.connect(self.get_next_dependency)
         self.form.dependency_previous_btn.clicked.connect(self.get_previous_dependency)
+        self.form.update_ontology_cache_action.triggered.connect(self.update_ontology_cache_handler)
+        self.form.quit_action.triggered.connect(self.quit_action_handler)
+
+    def quit_action_handler(self):
+        sys.exit("Quitting...")
+
+    def set_splash_loading_text(self, text):
+        self.form.loading_label.setText(text)
+
+    def update_ontology_cache_handler(self):
+        from GWAS_Miner import Ontology
+        self.set_splash_loading_text("Updating ontology data...")
+        self.run_worker(Ontology.update_ontology_cache, None, self.ontology_updated_callback, disable_controls=True)
+
+    def ontology_updated_callback(self, response=None):
+        self.navigate_to_page(1)
 
     def get_next_dependency(self):
         if self.dependency_index < len(self.dependency_svgs):
@@ -178,9 +194,9 @@ class MainForm:
             Phenotype_Finder.is_cancelled = False
             self.form.run_nlp_btn.setText("Stop \nProcessing")
             self.run_worker(Phenotype_Finder.process_studies, (self.form.study_directory_input.text(), None),
-                            self.study_processing_finished_callback, True)
-
-    def convert_svg_textpath(self, svg):
+                            self.update_results_files, False)
+    @staticmethod
+    def convert_svg_textpath(svg):
         skip = True
         coords = []
         result = svg
@@ -196,12 +212,11 @@ class MainForm:
             line_stop_coord = coord[2].split(",")
             x = (float(line_start_coord[0]) + float(line_stop_coord[0])) / 2
             y = (float(line_start_coord[1]) + float(line_stop_coord[1])) / 2
-            result = re.sub(r"(<textPath[^>]+.)", F"<tspan class=\"displacy-label\" fill=\"currentColor\" x=\"{x - 10}\" y=\"{y - 8}\">", result, count=1)
+            result = re.sub(r"(<textPath[^>]+.)",
+                            F"<tspan class=\"displacy-label\" fill=\"currentColor\" x=\"{x - 10}\" y=\"{y - 8}\">",
+                            result, count=1)
         result = result.replace("</textPath>", "</tspan>")
-        # result = re.sub(r"(height=\"[0-9\.]+\")", "height=\"300\"", result, count=1)
-        # result = re.sub(r"(height: [0-9\.]+px)", "height: 300px", result, count=1)
         return result
-
 
     def convert_svg_to_png(self, svg):
         return_val = None

@@ -8,14 +8,13 @@ Main access point,
 """
 import json
 import os
-from DataStructures import MasterLexicon
+from GWAS_Miner.DataStructures import MasterLexicon
 import sys
 import logging
 import time
-import Experimental
-import Ontology
+from GWAS_Miner import Ontology, Experimental
 import argparse
-from NLP import Interpreter
+from GWAS_Miner.NLP import Interpreter
 
 current_time = time.strftime("%Y%m%d-%H%M%S")
 logger = logging.getLogger("Phenotype Finder")
@@ -52,7 +51,7 @@ def update_gui_progress(qt_progress_signal, text):
 
 def output_study_results(study, qt_study_finished_signal=None):
     if len(study.get_snps()) == 0 and qt_study_finished_signal:
-        from GUI import QtFinishedResponse
+        from GWAS_Miner.GUI import QtFinishedResponse
         response = QtFinishedResponse(False, F"PMC{study.pmid}")
         qt_study_finished_signal.emit(response)
         return
@@ -60,7 +59,7 @@ def output_study_results(study, qt_study_finished_signal=None):
     with open(F"output/PMC{study.pmid}_result.json", "w", encoding="utf-8") as out_file:
         out_file.write(json.dumps(result_json, indent=4))
     if qt_study_finished_signal:
-        from GUI import QtFinishedResponse
+        from GWAS_Miner.GUI import QtFinishedResponse
         response = QtFinishedResponse(True, F"PMC{study.pmid}")
         qt_study_finished_signal.emit(response)
 
@@ -73,7 +72,7 @@ def get_study_visualisations(study, qt_progress_signal=None, qt_finished_signal=
     entities = nlp.display_ents(doc, True)
     dependencies = nlp.display_structure([sent for sent in doc.sents], True)
     if qt_finished_signal:
-        from GUI import QtFinishedResponse
+        from GWAS_Miner.GUI import QtFinishedResponse
         response = QtFinishedResponse(True, F"PMC{study.pmid}", [entities, dependencies])
         qt_finished_signal.emit(response)
 
@@ -96,9 +95,6 @@ def process_study(nlp, study, visualise=None, qt_progress_signal=None, qt_study_
         blah.append(sent)
     update_gui_progress(qt_progress_signal, F"Identifying data from study {study.pmid}...")
     study.set_snps(nlp.extract_phenotypes(doc))
-    marker_count = 0
-    ontology_matches = 0
-    temp = []
     output_study_results(study, qt_study_finished_signal)
     return True
 
@@ -121,9 +117,10 @@ def process_studies(directory, visualise=None, qt_progress_signal=None, qt_study
         return
     # Initialise Interpreter module for NLP processing using master lexicon of ontology data.
     update_gui_progress(qt_progress_signal, "Loading NLP pipeline...")
+    nlp = load_nlp_object()
+
     if is_cancelled:
         return
-    nlp = load_nlp_object()
 
     # Process each publication file in turn
     for file_name in os.listdir(directory):
@@ -135,7 +132,7 @@ def process_studies(directory, visualise=None, qt_progress_signal=None, qt_study
         update_gui_progress(qt_progress_signal, F"Extracting data for file: {file_name}")
         study = prepare_study(directory, file_name)
         if not study:
-            from GUI import QtFinishedResponse
+            from GWAS_Miner.GUI import QtFinishedResponse
             response = QtFinishedResponse(False, file_name)
             qt_study_finished_signal.emit(response)
             continue
@@ -192,7 +189,7 @@ def main():
 
     # Begin running either the GUI or processing studies immediately.
     if using_gui:
-        from GUI import MainForm
+        from GWAS_Miner.GUI import MainForm
         global gui
         gui = MainForm()
         gui.open()

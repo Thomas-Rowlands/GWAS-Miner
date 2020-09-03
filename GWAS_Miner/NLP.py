@@ -1,26 +1,23 @@
-import itertools
 import re
-from pprint import pprint
 import spacy
 # from nlpre import dedash, titlecaps, separate_reference, unidecoder, identify_parenthetical_phrases, replace_acronyms
 from spacy import displacy
 from spacy.matcher import Matcher
 from spacy.matcher import PhraseMatcher
 from spacy.tokens import Span
-from Utility_Functions import Utility
 import networkx as nx
-import string
 import logging
-import scispacy
-from DataStructures import SNP
+from GWAS_Miner.DataStructures import SNP
+
 
 class Interpreter:
     __failed_matches = []
     __nlp = spacy.load("en_core_sci_md", disable=["ner"])
     __nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
     __rsid_regex = [{"TEXT": {"REGEX": "(?:rs[0-9]{1,}){1}"}}]
+    __p_value_regex_list = []
     __p_value_regex = r"((\(?\b[pP][  =<-]{1,}(val{1,}[ue]{0,})?[  <≥=×xX-]{0,}[  \(]?\d+[\.]?[\d]{0,}[-−^*()  \d×xX]{0,}))"
-    __p_value_regex_inline = r"(\d?\..?\d[ ]?[*×xX]{1}[ ]?\d{1,}[ (]?[-−]\d{1,}[ )]?)" # r"(\d?\.?\d[ ]?[*×xX]{1}[ ]?\d{1,}[ ]?-\d{1,})"
+    __p_value_regex_inline = r"(\d?\..?\d[ ]?[*×xX]{1}[ ]?\d{1,}[ (]?[-−]\d{1,}[ )]?)"  # r"(\d?\.?\d[ ]?[*×xX]{1}[ ]?\d{1,}[ ]?-\d{1,})"
     __p_value_master_regex = r"((\(?\b[pP][  =<-]{1,}(val{1,}[ue]{0,})?[  <≥=×xX-]{0,}[  \(]?\d+[\.]?[\d]{0,}[-^*()  \d×xX]{0,})|(\d?\.?\d[  ]?[*×xX]{1}[  ]?\d{1,}[  ]?-\d{1,}))"
     __p_type_regex = r"(\(?GEE\)?)|(\(?FBAT\)?)"
     __SNP_regex = [
@@ -33,7 +30,15 @@ class Interpreter:
 
     def __init__(self, lexicon, ontology_only=False):
         if not ontology_only:
+            self.set_p_value_regex()
             self.__add_matchers(lexicon)
+
+    def set_p_value_regex(self):
+        Interpreter.__p_value_regex_list.append("((\(?\b[pP][  =<-]{1,}(val{1,}[ue]{0,})?[  <≥=×xX-]{0,}[  \(]?\d+[\.]?[\d]{0,}[-−_^*()  \d×xX]{0,}))")
+        Interpreter.__p_value_regex_list.append("(\d?\..?\d[ ]?[*×xX]{1}[ ]?\d{1,}[ (]?[-−]\d{1,}[ )]?)")
+        Interpreter.__p_value_regex_list.append("((\(?\b[pP][  =<-]{1,}(val{1,}[ue]{0,})?[  <≥=×xX-]{0,}[  \(]?\d+[\.]?[\d]{0,}[-^*()  \d×xX]{0,})|(\d?\.?\d[  ]?[*×xX]{1}[  ]?\d{1,}[  ]?-\d{1,}))")
+        Interpreter.__p_value_regex_list.append("([pP][- ]{1,2}[val]{0,3}[ue]{0,}[^0-9]{0,9})([0-9]+)([0-9.e-]+)")
+        Interpreter.__p_value_regex_list.append("([pP][VAL]{0,3}[ =]+[xX× _\-−]+[0-9]+)")
 
     def __add_matchers(self, lexicon):
         self.__basic_matcher = Matcher(self.__nlp.vocab, validate=True)
@@ -98,9 +103,11 @@ class Interpreter:
 
         #  Additional regex matches unnecessary when limited to ontology entities.
         if not ontology_only:
+            for rule in Interpreter.__p_value_regex_list:
+                self.__regex_match(rule, doc, "PVAL")
             self.__regex_match(self.__table_ref_regex, doc, "TABLE")
-            self.__regex_match(self.__p_value_regex, doc, "PVAL-G")
-            self.__regex_match(self.__p_value_regex_inline, doc, "PVAL")
+            # self.__regex_match(self.__p_value_regex, doc, "PVAL-G")
+            # self.__regex_match(self.__p_value_regex_inline, doc, "PVAL")
             # self.__regex_match(self.__p_value_master_regex, doc, "PVAL")
             self.__regex_match(self.__p_type_regex, doc, "PTYPE")
 

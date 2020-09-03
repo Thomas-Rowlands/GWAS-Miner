@@ -14,6 +14,12 @@
     <height>797</height>
    </rect>
   </property>
+  <property name="minimumSize">
+   <size>
+    <width>800</width>
+    <height>600</height>
+   </size>
+  </property>
   <property name="windowTitle">
    <string>GWAS Miner</string>
   </property>
@@ -78,7 +84,25 @@ QSvgWidget{
      <verstretch>0</verstretch>
     </sizepolicy>
    </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
    <layout class="QHBoxLayout" name="horizontalLayout_5">
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
     <item>
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="minimumSize">
@@ -88,7 +112,7 @@ QSvgWidget{
        </size>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="loading_page">
        <layout class="QGridLayout" name="gridLayout_6">
@@ -171,7 +195,33 @@ QSvgWidget{
              </property>
             </widget>
            </item>
-           <item row="0" column="1">
+           <item row="1" column="0">
+            <spacer name="horizontalSpacer_3">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item row="1" column="2">
+            <spacer name="horizontalSpacer_4">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item row="0" column="0" colspan="3">
             <widget class="QLabel" name="loading_label">
              <property name="minimumSize">
               <size>
@@ -199,33 +249,10 @@ QSvgWidget{
              <property name="alignment">
               <set>Qt::AlignCenter</set>
              </property>
+             <property name="wordWrap">
+              <bool>true</bool>
+             </property>
             </widget>
-           </item>
-           <item row="1" column="0">
-            <spacer name="horizontalSpacer_3">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-           <item row="1" column="2">
-            <spacer name="horizontalSpacer_4">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
            </item>
           </layout>
          </widget>
@@ -335,7 +362,7 @@ QSvgWidget{
            <item row="4" column="3" rowspan="2">
             <widget class="QTabWidget" name="result_tab_widget">
              <property name="currentIndex">
-              <number>1</number>
+              <number>0</number>
              </property>
              <widget class="QWidget" name="results_success_tab">
               <attribute name="title">
@@ -522,7 +549,6 @@ Study</string>
           <zorder>study_input_directory_lbl</zorder>
           <zorder>label</zorder>
           <zorder>result_tab_widget</zorder>
-          <zorder>verticalLayoutWidget_2</zorder>
          </widget>
         </item>
        </layout>
@@ -758,8 +784,8 @@ p, li { white-space: pre-wrap; }
                      <rect>
                       <x>0</x>
                       <y>0</y>
-                      <width>1083</width>
-                      <height>610</height>
+                      <width>83</width>
+                      <height>31</height>
                      </rect>
                     </property>
                     <property name="sizePolicy">
@@ -817,6 +843,7 @@ p, li { white-space: pre-wrap; }
     <property name="title">
      <string>File</string>
     </property>
+    <addaction name="update_ontology_cache_action"/>
     <addaction name="separator"/>
     <addaction name="quit_action"/>
    </widget>
@@ -829,7 +856,6 @@ p, li { white-space: pre-wrap; }
    <addaction name="menuFile"/>
    <addaction name="menuHelp"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
   <action name="actionAbout">
    <property name="text">
     <string>About</string>
@@ -838,6 +864,11 @@ p, li { white-space: pre-wrap; }
   <action name="quit_action">
    <property name="text">
     <string>Quit</string>
+   </property>
+  </action>
+  <action name="update_ontology_cache_action">
+   <property name="text">
+    <string>Update Ontology Cache</string>
    </property>
   </action>
  </widget>

@@ -4,13 +4,25 @@ import rdflib
 import owlready2
 from lxml import etree
 import json
-import config
+from GWAS_Miner import config
 import csv
 import codecs
 import logging
 from rtgo import ReadyThready
 
 logger = logging.getLogger("Phenotype Finder")
+
+
+def validate_data(ont_data):
+    if ont_data:
+        for i in ont_data:
+            if not i:
+                return False
+    else:
+        return False
+    if len(ont_data[2]) != 2:
+        return False
+    return True
 
 
 def get_tagging_data():
@@ -25,6 +37,13 @@ def get_tagging_data():
     logger.info("Starting ontology data loading.")
     ont_data = ReadyThready.go_cluster([Mesh.get_descriptors, HPO.get_hpo_from_cache,
                                         EFO.get_efo_from_cache, HPO.get_syns])
+    if not validate_data(ont_data):
+        update_ontology_cache()
+        ont_data = ReadyThready.go_cluster([Mesh.get_descriptors, HPO.get_hpo_from_cache,
+                                            EFO.get_efo_from_cache, HPO.get_syns])
+        if not validate_data(ont_data):
+            logger.error("Critical failure to extract ontology data.")
+            sys.exit("Critical failure to extract ontology data.")
     mesh_data = ont_data[0]
     hpo_data = ont_data[1]
     efo_terms, efo_syns = ont_data[2]
@@ -50,7 +69,8 @@ def get_tagging_data():
     #     tagging_data["EFO"].append(label)
     return tagging_data
 
-def update_ontology_cache():
+
+def update_ontology_cache(qt_progress_signal=None, qt_finished_signal=None):
     """[Updates the ontology cache files with data from the source ontology files.]
     """
     logger.info("Updating ontology cache files.")
@@ -59,6 +79,10 @@ def update_ontology_cache():
              HPO.set_hpo_synonyms,
              EFO.set_terms]
     ReadyThready.go_cluster(funcs)
+    if qt_finished_signal:
+        from GWAS_Miner.GUI import QtFinishedResponse
+        response = QtFinishedResponse(True, "Updated ontology data.")
+        qt_finished_signal.emit(response)
     logger.info("Finished updating ontology cache files.")
 
 
@@ -72,7 +96,7 @@ class EFO:
         try:
             g.parse(config.efo_file)
             efo_ontology_terms = g.query(config.efo_terms_statement, initNs=EFO.efo_namespaces)
-            with open("ontology_data/efo_terms.json", "a") as out_file:
+            with open("ontology_data/efo_terms.json", "w") as out_file:
                 results = {}
                 for (id, label, exactSyn) in efo_ontology_terms:
                     if id not in results:

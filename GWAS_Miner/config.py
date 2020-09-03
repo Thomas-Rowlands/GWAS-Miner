@@ -1,18 +1,9 @@
-# connection details
-server = "127.0.0.1"
-database = "ontology_partial"
-study_db = "study_0219_partial"
-user = "root"
-password = "Maggie7803GB!"
-port = 3306
-
 # files
 hpo_file = "ontology_data/hp.owl"
 mesh_file = "mesh.nt"
 efo_file = "ontology_data/efo.owl"
 
 # Ontology SPARQL Queries
-
 efo_terms_statement = """
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX go: <http://www.geneontology.org/formats/oboInOwl#>
@@ -54,7 +45,3 @@ WHERE { ?temp rdf:type owl:Class .
         ?id <http://www.geneontology.org/formats/oboInOwl#hasExactSynonym> ?synonym .
         }
 """
-
-study_query = """SELECT identifier, Title, StudyAbstract
-	FROM Study
-    WHERE StudyAbstract NOT IN ("", "Not supplied");"""
