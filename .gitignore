@@ -3,3 +3,5 @@
 **/study_data
 **/__pycache__
 **/.idea
+**/output
+**/GWAS_Miner.egg-info

@@ -7,8 +7,10 @@ from spacy.matcher import PhraseMatcher
 from spacy.tokens import Span
 import networkx as nx
 import logging
-from GWAS_Miner.DataStructures import SNP
 
+from GWAS_Miner import config
+from GWAS_Miner.DataStructures import SNP
+import GWAS_Miner.config
 
 class Interpreter:
     __failed_matches = []
@@ -30,15 +32,7 @@ class Interpreter:
 
     def __init__(self, lexicon, ontology_only=False):
         if not ontology_only:
-            self.set_p_value_regex()
             self.__add_matchers(lexicon)
-
-    def set_p_value_regex(self):
-        Interpreter.__p_value_regex_list.append("((\(?\b[pP][  =<-]{1,}(val{1,}[ue]{0,})?[  <≥=×xX-]{0,}[  \(]?\d+[\.]?[\d]{0,}[-−_^*()  \d×xX]{0,}))")
-        Interpreter.__p_value_regex_list.append("(\d?\..?\d[ ]?[*×xX]{1}[ ]?\d{1,}[ (]?[-−]\d{1,}[ )]?)")
-        Interpreter.__p_value_regex_list.append("((\(?\b[pP][  =<-]{1,}(val{1,}[ue]{0,})?[  <≥=×xX-]{0,}[  \(]?\d+[\.]?[\d]{0,}[-^*()  \d×xX]{0,})|(\d?\.?\d[  ]?[*×xX]{1}[  ]?\d{1,}[  ]?-\d{1,}))")
-        Interpreter.__p_value_regex_list.append("([pP][- ]{1,2}[val]{0,3}[ue]{0,}[^0-9]{0,9})([0-9]+)([0-9.e-]+)")
-        Interpreter.__p_value_regex_list.append("([pP][VAL]{0,3}[ =]+[xX× _\-−]+[0-9]+)")
 
     def __add_matchers(self, lexicon):
         self.__basic_matcher = Matcher(self.__nlp.vocab, validate=True)
@@ -103,8 +97,12 @@ class Interpreter:
 
         #  Additional regex matches unnecessary when limited to ontology entities.
         if not ontology_only:
-            for rule in Interpreter.__p_value_regex_list:
-                self.__regex_match(rule, doc, "PVAL")
+            for ent_label in config.regex_entity_patterns:
+                if isinstance(config.regex_entity_patterns[ent_label], list):
+                    for pattern in config.regex_entity_patterns[ent_label]:
+                        self.__regex_match(pattern, doc, ent_label)
+                else:
+                    self.__regex_match(config.regex_entity_patterns[ent_label], doc, ent_label)
             self.__regex_match(self.__table_ref_regex, doc, "TABLE")
             # self.__regex_match(self.__p_value_regex, doc, "PVAL-G")
             # self.__regex_match(self.__p_value_regex_inline, doc, "PVAL")
@@ -442,13 +440,17 @@ class Interpreter:
         return output
 
     @staticmethod
-    def display_structure(sentence_spans, markup_only=False):
+    def display_structure(sentence_spans, markup_only=False, theme="light"):
         """
         Start running the Displacy visualization of the tokenized sentences identified by the NLP pipeline.
         @param doc: The NLP processed document.
         @param markup_only: If True, returns a HTML string instead of hosting.
         """
-        options = {"compact": True}
+        options = None
+        if theme.lower() == "light":
+            options = {"compact": True}
+        else:
+            options = {"compact": True, "bg": "#19232D", "color": "white"}
         # __logger.info([doc[match[1]:match[2]] for match in matches])
         if markup_only:
             svgs = []
@@ -458,15 +460,21 @@ class Interpreter:
         displacy.serve(sentence_spans, style="dep", options=options)
 
     @staticmethod
-    def display_ents(doc, markup_only=False):
+    def display_ents(doc, markup_only=False, theme="light"):
         """
         Start running the Displacy visualization of the named entities recognised by the NLP pipeline.
         @param doc: The NLP processed document.
         @param markup_only: If True, returns a HTML string instead of hosting.
         """
-        colors = {"MESH": "rgb(247, 66, 145)", "EFO": "rgb(247, 66, 145)", "HP": "rgb(147, 66, 245)",
-                  "RSID": "rgb(245, 66, 72)",
-                  "PVAL": "rgb(102, 255, 51)", "PTYPE": "rgb(51, 102, 255)", "SNP": "rgb(0, 255, 204)"}
+        colors = None
+        if theme == "light":
+            colors = {"MESH": "rgb(247, 66, 145)", "EFO": "rgb(247, 66, 145)", "HPO": "rgb(147, 66, 245)",
+                      "RSID": "rgb(245, 66, 72)",
+                      "PVAL": "rgb(102, 255, 51)", "PTYPE": "rgb(51, 102, 255)", "SNP": "rgb(0, 255, 204)"}
+        else:
+            colors = {"MESH": "rgb(217, 36, 115)", "EFO": "rgb(217, 36, 115)", "HPO": "rgb(117, 36, 215)",
+                      "RSID": "rgb(215, 36, 42)",
+                      "PVAL": "rgb(72, 225, 21)", "PTYPE": "rgb(21, 72, 225)", "SNP": "rgb(0, 225, 174)"}
         options = {"colors": colors}
         if markup_only:
             return displacy.render(doc, style="ent", page=True, options=options, jupyter=False)
@@ -475,6 +483,22 @@ class Interpreter:
     def onto_match(self, doc):
         doc = self.process_corpus(doc, ontology_only=True)
         return [(x.text, x.label_) for x in doc.ents]
+
+    @staticmethod
+    def get_phenotype_stats(doc, lexicon):
+
+        results = {}
+        for ent in doc.ents:
+            if ent.label_ in ["MeSH", "HPO"]:
+                if ent.lower_ in results:
+                    results[ent.lower_]["Count"] += 1
+                else:
+                    results[ent.lower_] = {}
+                    results[ent.lower_]["Count"] = 1
+                    results[ent.lower_]["Ontology"] = ent.label_
+                    space_count = ent.lower_.count(" ")
+
+        return results
 
     @staticmethod
     def insert_phrase(abbrevs, token):

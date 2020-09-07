@@ -1,4 +1,4 @@
-# files
+# Ontology files
 hpo_file = "ontology_data/hp.owl"
 mesh_file = "mesh.nt"
 efo_file = "ontology_data/efo.owl"
@@ -31,7 +31,8 @@ WHERE { ?temp rdf:type owl:Class .
         }
 """
 
-hpo_syns_statement = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+hpo_syns_statement = """
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
@@ -45,3 +46,15 @@ WHERE { ?temp rdf:type owl:Class .
         ?id <http://www.geneontology.org/formats/oboInOwl#hasExactSynonym> ?synonym .
         }
 """
+
+# NLP Variables
+regex_entity_patterns = {
+    "PVAL": [
+        r"((\(?\b[pP][  =<-]{1,}(val{1,}[ue]{0,})?[  <≥=×xX-]{0,}[  \(]?\d+[\.]?[\d]{0,}[-−_^*()  \d×xX]{0,}))",
+        r"(\d?\..?\d[ ]?[*×xX]{1}[ ]?\d{1,}[ (]?[-−]\d{1,}[ )]?)",
+        r"((\(?\b[pP][  =<-]{1,}(val{1,}[ue]{0,})?[  <≥=×xX-]{0,}[  \(]?\d+[\.]?[\d]{0,}[-^*()  \d×xX]{0,"
+        r"})|(\d?\.?\d[  ]?[*×xX]{1}[  ]?\d{1,}[  ]?-\d{1,}))",
+        "([pP][- ]{1,2}[val]{0,3}[ue]{0,}[^0-9]{0,9})([0-9]+)([0-9.e-]+)",
+        r"([pP][VAL]{0,3}[ =]+[xX× _\-−]+[0-9]+)"
+    ]
+}

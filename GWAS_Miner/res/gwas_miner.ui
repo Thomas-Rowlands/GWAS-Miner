@@ -24,55 +24,7 @@
    <string>GWAS Miner</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">QWidget {
-	background-color: rgb(44, 44, 59);
-	color: rgb(255, 255, 255);
-}
-QListWidget{
-	background-color: rgb(255, 255, 255);
-	color: rgb(0,0,0);
-}
-QListWidget::item::hover{
-	background-color: rgba(125, 62, 188, 150);
-}
-QListWidget::item::selected{
-	color: rgb(255,255,255);
-	background-color: rgb(103, 51, 154);
-}
-QPushButton{
-	background-color: rgb(84, 42, 126);
-}
-QProgressBar::chunk{
-	background-color: rgb(84, 42, 126);
-}
-QTabBar::tab{
-	background-color: rgba(125, 62, 188, 255);
-}
-QTabBar::tab::selected{
-	background-color: rgb(84, 42, 126);
-}
-QMenuBar{
-	background-color: rgb(109, 52, 144);
-}
-QMenuBar::item:selected{
-	background-color: rgb(140, 67, 185);
-}
-QMenu::item:selected{
-	background-color:  rgb(140, 67, 185);
-}
-QMenu{
-	background-color: rgb(109, 52, 144);
-}
-QLabel{
-	background-color: rgba(0,0,0,0);
-}
-QTextBrowser{
-	background-color:rgb(255,255,255);
-}
-QSvgWidget{
-	background-color:white;
-	color:black;
-}</string>
+   <string notr="true"/>
   </property>
   <property name="unifiedTitleAndToolBarOnMac">
    <bool>true</bool>
@@ -112,7 +64,7 @@ QSvgWidget{
        </size>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="loading_page">
        <layout class="QGridLayout" name="gridLayout_6">
@@ -140,7 +92,7 @@ QSvgWidget{
            </sizepolicy>
           </property>
           <property name="styleSheet">
-           <string notr="true">background-color: rgb(0, 0, 0);</string>
+           <string notr="true"/>
           </property>
           <property name="frameShape">
            <enum>QFrame::StyledPanel</enum>
@@ -168,8 +120,8 @@ QSvgWidget{
             <widget class="QGraphicsView" name="test_loading_graphicsview">
              <property name="minimumSize">
               <size>
-               <width>50</width>
-               <height>50</height>
+               <width>70</width>
+               <height>70</height>
               </size>
              </property>
              <property name="maximumSize">
@@ -179,7 +131,8 @@ QSvgWidget{
               </size>
              </property>
              <property name="styleSheet">
-              <string notr="true">background-color:transparent;</string>
+              <string notr="true">background-color: transparent;
+border:none;</string>
              </property>
              <property name="frameShape">
               <enum>QFrame::NoFrame</enum>
@@ -225,8 +178,8 @@ QSvgWidget{
             <widget class="QLabel" name="loading_label">
              <property name="minimumSize">
               <size>
-               <width>300</width>
-               <height>20</height>
+               <width>450</width>
+               <height>43</height>
               </size>
              </property>
              <property name="font">
@@ -325,6 +278,9 @@ QSvgWidget{
              <property name="text">
               <string>Input Files</string>
              </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
             </widget>
            </item>
            <item row="2" column="3">
@@ -338,15 +294,31 @@ QSvgWidget{
              <property name="text">
               <string>Result Files</string>
              </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
             </widget>
            </item>
            <item row="3" column="0">
             <layout class="QHBoxLayout" name="horizontalLayout_4">
              <item>
-              <widget class="QLineEdit" name="study_directory_input"/>
+              <widget class="QLineEdit" name="study_directory_input">
+               <property name="minimumSize">
+                <size>
+                 <width>205</width>
+                 <height>0</height>
+                </size>
+               </property>
+              </widget>
              </item>
              <item>
               <widget class="QPushButton" name="study_directory_btn">
+               <property name="minimumSize">
+                <size>
+                 <width>77</width>
+                 <height>0</height>
+                </size>
+               </property>
                <property name="font">
                 <font>
                  <family>Segoe UI</family>
@@ -361,6 +333,12 @@ QSvgWidget{
            </item>
            <item row="4" column="3" rowspan="2">
             <widget class="QTabWidget" name="result_tab_widget">
+             <property name="minimumSize">
+              <size>
+               <width>150</width>
+               <height>100</height>
+              </size>
+             </property>
              <property name="currentIndex">
               <number>0</number>
              </property>
@@ -433,7 +411,14 @@ QSvgWidget{
             </widget>
            </item>
            <item row="5" column="0" colspan="2">
-            <widget class="QListWidget" name="study_file_listwidget"/>
+            <widget class="QListWidget" name="study_file_listwidget">
+             <property name="minimumSize">
+              <size>
+               <width>250</width>
+               <height>100</height>
+              </size>
+             </property>
+            </widget>
            </item>
            <item row="5" column="2">
             <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -451,11 +436,14 @@ QSvgWidget{
              </property>
              <item>
               <widget class="QFrame" name="main_controls_frame">
+               <property name="minimumSize">
+                <size>
+                 <width>200</width>
+                 <height>250</height>
+                </size>
+               </property>
                <property name="styleSheet">
-                <string notr="true">QFrame{
-	background-color: rgb(62, 62, 83);
-	border: 0.15em solid rgb(0, 140, 0);
-}</string>
+                <string notr="true"/>
                </property>
                <property name="frameShape">
                 <enum>QFrame::StyledPanel</enum>
@@ -474,7 +462,7 @@ QSvgWidget{
                  <widget class="QPushButton" name="run_nlp_btn">
                   <property name="minimumSize">
                    <size>
-                    <width>0</width>
+                    <width>75</width>
                     <height>50</height>
                    </size>
                   </property>
@@ -488,7 +476,7 @@ Processing</string>
                  <widget class="QPushButton" name="analyse_study_btn">
                   <property name="minimumSize">
                    <size>
-                    <width>0</width>
+                    <width>75</width>
                     <height>50</height>
                    </size>
                   </property>
@@ -500,6 +488,12 @@ Study</string>
                 </item>
                 <item row="2" column="0" colspan="2">
                  <widget class="QGraphicsView" name="loading_svg">
+                  <property name="minimumSize">
+                   <size>
+                    <width>80</width>
+                    <height>80</height>
+                   </size>
+                  </property>
                   <property name="styleSheet">
                    <string notr="true">border:none</string>
                   </property>
@@ -521,7 +515,7 @@ Study</string>
                   </property>
                   <property name="minimumSize">
                    <size>
-                    <width>0</width>
+                    <width>50</width>
                     <height>20</height>
                    </size>
                   </property>
@@ -592,7 +586,7 @@ Study</string>
             <widget class="QPushButton" name="visualise_back_btn">
              <property name="minimumSize">
               <size>
-               <width>0</width>
+               <width>75</width>
                <height>30</height>
               </size>
              </property>
@@ -604,7 +598,7 @@ Study</string>
            <item row="3" column="0">
             <widget class="QTabWidget" name="tabWidget">
              <property name="currentIndex">
-              <number>0</number>
+              <number>1</number>
              </property>
              <widget class="QWidget" name="entities_tab">
               <attribute name="title">
@@ -632,14 +626,13 @@ Study</string>
                   <font>
                    <family>Calibri</family>
                    <pointsize>10</pointsize>
-                   <weight>9</weight>
+                   <weight>50</weight>
                    <italic>false</italic>
                    <bold>false</bold>
                   </font>
                  </property>
                  <property name="styleSheet">
-                  <string notr="true">color:black;
-font: 75 10pt &quot;Calibri&quot;;</string>
+                  <string notr="true"/>
                  </property>
                  <property name="frameShape">
                   <enum>QFrame::NoFrame</enum>
@@ -651,8 +644,8 @@ font: 75 10pt &quot;Calibri&quot;;</string>
                   <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Calibri'; font-size:10pt; font-weight:72; font-style:normal;&quot;&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-weight:400;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Calibri'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                 </widget>
                </item>
@@ -784,8 +777,8 @@ p, li { white-space: pre-wrap; }
                      <rect>
                       <x>0</x>
                       <y>0</y>
-                      <width>83</width>
-                      <height>31</height>
+                      <width>1101</width>
+                      <height>649</height>
                      </rect>
                     </property>
                     <property name="sizePolicy">
@@ -803,6 +796,9 @@ p, li { white-space: pre-wrap; }
                          <height>0</height>
                         </size>
                        </property>
+                       <property name="styleSheet">
+                        <string notr="true">background-color:transparent;</string>
+                       </property>
                        <property name="text">
                         <string/>
                        </property>
@@ -819,10 +815,198 @@ p, li { white-space: pre-wrap; }
                </item>
               </layout>
              </widget>
+             <widget class="QWidget" name="visualisation_stats_tab">
+              <attribute name="title">
+               <string>Stats</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_8">
+               <item row="0" column="2">
+                <widget class="QTableWidget" name="visualise_stats_table">
+                 <property name="frameShape">
+                  <enum>QFrame::NoFrame</enum>
+                 </property>
+                 <property name="frameShadow">
+                  <enum>QFrame::Plain</enum>
+                 </property>
+                 <property name="sizeAdjustPolicy">
+                  <enum>QAbstractScrollArea::AdjustToContents</enum>
+                 </property>
+                 <property name="editTriggers">
+                  <set>QAbstractItemView::NoEditTriggers</set>
+                 </property>
+                 <property name="sortingEnabled">
+                  <bool>true</bool>
+                 </property>
+                 <column>
+                  <property name="text">
+                   <string>Phenotype</string>
+                  </property>
+                 </column>
+                 <column>
+                  <property name="text">
+                   <string>Matches</string>
+                  </property>
+                 </column>
+                 <column>
+                  <property name="text">
+                   <string>Ontology</string>
+                  </property>
+                 </column>
+                 <column>
+                  <property name="text">
+                   <string>Identifier</string>
+                  </property>
+                 </column>
+                </widget>
+               </item>
+              </layout>
+             </widget>
             </widget>
            </item>
           </layout>
          </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="settings_page">
+       <layout class="QGridLayout" name="gridLayout_9">
+        <item row="1" column="2">
+         <spacer name="horizontalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="1" column="0">
+         <spacer name="horizontalSpacer">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="0" column="1">
+         <spacer name="verticalSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="1" column="1">
+         <widget class="QFrame" name="settings_frame">
+          <property name="frameShape">
+           <enum>QFrame::StyledPanel</enum>
+          </property>
+          <property name="frameShadow">
+           <enum>QFrame::Raised</enum>
+          </property>
+          <layout class="QFormLayout" name="formLayout">
+           <property name="horizontalSpacing">
+            <number>50</number>
+           </property>
+           <property name="verticalSpacing">
+            <number>57</number>
+           </property>
+           <property name="leftMargin">
+            <number>30</number>
+           </property>
+           <property name="rightMargin">
+            <number>30</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="QLabel" name="settings_theme_lbl">
+             <property name="minimumSize">
+              <size>
+               <width>38</width>
+               <height>20</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>Theme:</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QComboBox" name="theme_combobox">
+             <property name="minimumSize">
+              <size>
+               <width>75</width>
+               <height>20</height>
+              </size>
+             </property>
+             <item>
+              <property name="text">
+               <string>Light</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Dark</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QPushButton" name="settings_save_btn">
+             <property name="minimumSize">
+              <size>
+               <width>75</width>
+               <height>23</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>Save</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QPushButton" name="settings_cancel_btn">
+             <property name="minimumSize">
+              <size>
+               <width>75</width>
+               <height>23</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>Cancel</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <spacer name="verticalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
         </item>
        </layout>
       </widget>
@@ -845,6 +1029,8 @@ p, li { white-space: pre-wrap; }
     </property>
     <addaction name="update_ontology_cache_action"/>
     <addaction name="separator"/>
+    <addaction name="settings_action"/>
+    <addaction name="separator"/>
     <addaction name="quit_action"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
@@ -860,15 +1046,41 @@ p, li { white-space: pre-wrap; }
    <property name="text">
     <string>About</string>
    </property>
+   <property name="menuRole">
+    <enum>QAction::AboutRole</enum>
+   </property>
   </action>
   <action name="quit_action">
    <property name="text">
     <string>Quit</string>
    </property>
+   <property name="menuRole">
+    <enum>QAction::QuitRole</enum>
+   </property>
+   <property name="iconVisibleInMenu">
+    <bool>false</bool>
+   </property>
   </action>
   <action name="update_ontology_cache_action">
    <property name="text">
     <string>Update Ontology Cache</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::ApplicationSpecificRole</enum>
+   </property>
+   <property name="iconVisibleInMenu">
+    <bool>false</bool>
+   </property>
+  </action>
+  <action name="settings_action">
+   <property name="text">
+    <string>Settings</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::PreferencesRole</enum>
+   </property>
+   <property name="iconVisibleInMenu">
+    <bool>false</bool>
    </property>
   </action>
  </widget>

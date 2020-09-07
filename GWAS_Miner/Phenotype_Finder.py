@@ -15,25 +15,43 @@ import time
 from GWAS_Miner import Ontology, Experimental
 import argparse
 from GWAS_Miner.NLP import Interpreter
+from configparser import ConfigParser
+
+
+def __load_config():
+    """
+    Retrieve configurable settings from the config.ini file.
+    """
+    config_settings = ConfigParser()
+    try:
+        config_settings.read("GWAS_Miner/settings/config.ini")
+    except FileNotFoundError:
+        sys.exit(F"Could not locate the config file, has it been moved/deleted?")
+    except IOError as e:
+        sys.exit(F"Error reading config file: {e}")
+    return config_settings
+
+
+def __prepare_ontology_data():
+    lexicon_output = MasterLexicon().parse(Ontology.get_tagging_data())
+    return lexicon_output
+
 
 current_time = time.strftime("%Y%m%d-%H%M%S")
 logger = logging.getLogger("Phenotype Finder")
-lexicon = None
+config = __load_config()
+lexicon = __prepare_ontology_data()
 nlp = None
 gui = None
+theme = config.get(section="preferences", option="theme")
 is_cancelled = False
-
-
-def __prepare_ontology_data(gui_ptr=None):
-    global lexicon
-    lexicon = MasterLexicon().parse(Ontology.get_tagging_data())
 
 
 def load_nlp_object(qt_progress_signal=None, qt_finished_signal=None):
     global lexicon, nlp
     if not lexicon:
         update_gui_progress(qt_progress_signal, "Gathering Ontology Data...")
-        __prepare_ontology_data()
+        lexicon = __prepare_ontology_data()
     if not nlp:
         update_gui_progress(qt_progress_signal, "Loading NLP Pipeline...")
         nlp = Interpreter(lexicon)
@@ -65,36 +83,37 @@ def output_study_results(study, qt_study_finished_signal=None):
 
 
 def get_study_visualisations(study, qt_progress_signal=None, qt_finished_signal=None):
-    nlp = load_nlp_object(qt_progress_signal)
+    nlp_object = load_nlp_object(qt_progress_signal)
     update_gui_progress(qt_progress_signal, F"Processing study {study.pmid}...")
-    doc = nlp.process_corpus(nlp.replace_all_abbreviations(study.get_fulltext()))
+    doc = nlp_object.process_corpus(nlp_object.replace_all_abbreviations(study.get_fulltext()))
+    phenotype_stats = nlp_object.get_phenotype_stats(doc, lexicon)
     update_gui_progress(qt_progress_signal, "Generating HTML")
-    entities = nlp.display_ents(doc, True)
-    dependencies = nlp.display_structure([sent for sent in doc.sents], True)
+    entities = nlp_object.display_ents(doc, True, theme)
+    dependencies = nlp_object.display_structure([sent for sent in doc.sents], True, theme)
     if qt_finished_signal:
         from GWAS_Miner.GUI import QtFinishedResponse
-        response = QtFinishedResponse(True, F"PMC{study.pmid}", [entities, dependencies])
+        response = QtFinishedResponse(True, F"PMC{study.pmid}", [entities, dependencies, phenotype_stats])
         qt_finished_signal.emit(response)
 
 
-def process_study(nlp, study, visualise=None, qt_progress_signal=None, qt_study_finished_signal=None):
+def process_study(nlp_object, study, visualise=None, qt_progress_signal=None, qt_study_finished_signal=None):
     global is_cancelled
     if not study or is_cancelled:
         return False
     update_gui_progress(qt_progress_signal, F"Processing study {study.pmid}...")
-    doc = nlp.process_corpus(
-        nlp.replace_all_abbreviations(study.get_fulltext()))
+    doc = nlp_object.process_corpus(
+        nlp_object.replace_all_abbreviations(study.get_fulltext()))
     if visualise:
         update_gui_progress(qt_progress_signal, F"Launching visualisation of study {study.pmid}...")
         if visualise == "ents":
-            nlp.display_ents(doc)
+            nlp_object.display_ents(doc, theme=theme)
         elif visualise == "sents":
-            nlp.display_structure([sent for sent in doc.sents])
+            nlp_object.display_structure([sent for sent in doc.sents], theme=theme)
     blah = []  # for debugging only
     for sent in doc.sents:
         blah.append(sent)
     update_gui_progress(qt_progress_signal, F"Identifying data from study {study.pmid}...")
-    study.set_snps(nlp.extract_phenotypes(doc))
+    study.set_snps(nlp_object.extract_phenotypes(doc))
     output_study_results(study, qt_study_finished_signal)
     return True
 
@@ -117,7 +136,7 @@ def process_studies(directory, visualise=None, qt_progress_signal=None, qt_study
         return
     # Initialise Interpreter module for NLP processing using master lexicon of ontology data.
     update_gui_progress(qt_progress_signal, "Loading NLP pipeline...")
-    nlp = load_nlp_object()
+    nlp_object = load_nlp_object()
 
     if is_cancelled:
         return
@@ -137,7 +156,7 @@ def process_studies(directory, visualise=None, qt_progress_signal=None, qt_study
             qt_study_finished_signal.emit(response)
             continue
         logger.info(F"Processing PMC {study.pmid}")
-        result = process_study(nlp, study, visualise, qt_progress_signal, qt_study_finished_signal)
+        result = process_study(nlp_object, study, visualise, qt_progress_signal, qt_study_finished_signal)
         if not result:
             update_gui_progress(qt_progress_signal, F"Unable to process study {file_name}. Skipping...")
     if qt_study_finished_signal:
@@ -159,7 +178,7 @@ def main():
 
     # Parse input arguments
     args = parser.parse_args()
-    cores = args.cores  # not yet implemented
+    # cores = args.cores  # not yet implemented
     docs = args.docs
     visualise = args.visualise
     using_gui = args.interface
@@ -169,15 +188,15 @@ def main():
     if not os.path.isdir("logs"):
         try:
             os.makedirs("logs")
-        except:
-            sys.exit("Unable to create logs folder")
+        except IOError as e:
+            sys.exit(F"Unable to create logs folder: {e}")
 
     # Setup folder for output files.
     if not os.path.isdir("output"):
         try:
             os.makedirs("output")
-        except:
-            sys.exit("Unable to create output folder")
+        except IOError as e:
+            sys.exit(F"Unable to create output folder: {e}")
 
     # Configure logger
     logging.basicConfig(filename=F"logs/{current_time}.log", format="%(asctime)s %(levelname)-8s %(message)s",

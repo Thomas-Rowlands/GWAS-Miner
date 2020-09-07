@@ -5,10 +5,11 @@ import traceback
 from io import BytesIO
 
 from PyQt5 import uic
-from PyQt5.QtCore import QRunnable, pyqtSlot, QObject, pyqtSignal, QThreadPool, Qt
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtCore import QRunnable, pyqtSlot, QObject, pyqtSignal, QThreadPool, Qt, QTimer
+from PyQt5.QtGui import QPixmap, QShowEvent
 from PyQt5.QtSvg import QGraphicsSvgItem
-from PyQt5.QtWidgets import QApplication, QFileDialog, QPushButton, QGraphicsScene
+from PyQt5.QtWidgets import QApplication, QFileDialog, QPushButton, QGraphicsScene, QTableWidgetItem
+from PyQt5.uic.properties import QtGui
 
 from GWAS_Miner import Phenotype_Finder
 
@@ -24,6 +25,7 @@ class MainForm:
         self.window = self.Window()
         self.form = self.Form()
         self.form.setupUi(self.window)
+        self.center()
         # Set widget attributes/visibility
         self.__setup_interface()
         # Assign event handlers
@@ -40,6 +42,11 @@ class MainForm:
         """
         Initialise user interface elements
         """
+        theme = "light_theme.qss"
+        if Phenotype_Finder.config.get(section="preferences", option="theme").lower() == "dark":
+            theme = "dark_theme.qss"
+        with open(F'GWAS_Miner/res/{theme}') as file:
+            self.window.setStyleSheet(file.read())
         self.form.stackedWidget.setGeometry(0, 0, self.window.width(), self.window.height())
         self.navigate_to_page(0)
         self.form.status_lbl.setHidden(True)
@@ -54,6 +61,14 @@ class MainForm:
         main_loading_scene.addItem(main_loading_svg)
         self.form.test_loading_graphicsview.setScene(splash_loading_scene)
         self.form.loading_svg.setScene(main_loading_scene)
+
+    def center(self):
+        frameGm = self.window.frameGeometry()
+        screen = QApplication.desktop().screenNumber(
+            QApplication.desktop().cursor().pos())
+        centerPoint = QApplication.desktop().screenGeometry(screen).center()
+        frameGm.moveCenter(centerPoint)
+        self.window.move(frameGm.topLeft())
 
     def __add_handlers(self):
         """
@@ -80,14 +95,23 @@ class MainForm:
         self.run_worker(Ontology.update_ontology_cache, None, self.ontology_updated_callback, disable_controls=True)
 
     def ontology_updated_callback(self, response=None):
+        """
+        Return to the Main frame.
+        """
         self.navigate_to_page(1)
 
     def get_next_dependency(self):
+        """
+        Display the next dependency visualisation.
+        """
         if self.dependency_index < len(self.dependency_svgs):
             self.dependency_index += 1
             self.render_dependency_svg(self.dependency_index)
 
     def get_previous_dependency(self):
+        """
+        Display the previous dependency visualisation.
+        """
         if self.dependency_index > 0:
             self.dependency_index -= 1
             self.render_dependency_svg(self.dependency_index)
@@ -95,6 +119,7 @@ class MainForm:
     def navigate_to_page(self, page_number):
         """
         Sets the current index of the stack widget
+        0 = Loading, 1 = main, 2 = study visualisation, 3 = settings
         """
         self.form.stackedWidget.setCurrentIndex(page_number)
 
@@ -221,7 +246,10 @@ class MainForm:
     def convert_svg_to_png(self, svg):
         return_val = None
         rlg = svg2rlg(BytesIO(bytes(self.convert_svg_textpath(svg), encoding="utf-8")))
-        return_val = renderPM.drawToString(rlg, fmt="PNG")
+        if Phenotype_Finder.theme == "light":
+            return_val = renderPM.drawToString(rlg, fmt="PNG")
+        else:
+            return_val = renderPM.drawToString(rlg, fmt="PNG", bg=0x19232D)
         return return_val
 
     def render_dependency_svg(self, index):
@@ -242,12 +270,41 @@ class MainForm:
         return result
 
     def visualisation_finished_callback(self, response):
-        entity_html = self.reformat_html(response.html[0])
+        entity_html = self.reformat_html(response.data[0])
         self.form.entity_visualisation_browser.setHtml(entity_html)
         self.dependency_svgs.clear()
         self.dependency_index = 0
-        self.dependency_svgs = response.html[1]
+        self.form.dependency_image_label.setStyleSheet("background-color: transparent;")
+        self.dependency_svgs = response.data[1]
         self.render_dependency_svg(0)
+        self.form.visualise_stats_table.setRowCount(0)
+        # Always disable sorting before changing contents to avoid missing data bug.
+        self.form.visualise_stats_table.setSortingEnabled(False)
+        for i in range(len(response.data[2])):
+            phenotype = list(response.data[2].keys())[i]
+            ontology = response.data[2][phenotype]["Ontology"]
+            count = response.data[2][phenotype]["Count"]
+
+            phenotype_cell = QTableWidgetItem()
+            count_cell = QTableWidgetItem()
+            ontology_cell = QTableWidgetItem()
+
+            phenotype_cell.setTextAlignment(Qt.AlignCenter)
+            count_cell.setTextAlignment(Qt.AlignCenter)
+            ontology_cell.setTextAlignment(Qt.AlignCenter)
+
+            phenotype_cell.setData(Qt.DisplayRole, phenotype)
+            count_cell.setData(Qt.DisplayRole, count)
+            ontology_cell.setData(Qt.DisplayRole, ontology)
+
+            self.form.visualise_stats_table.insertRow(i)
+            self.form.visualise_stats_table.setItem(i, 0, phenotype_cell)
+            self.form.visualise_stats_table.setItem(i, 1, count_cell)
+            self.form.visualise_stats_table.setItem(i, 2, ontology_cell)
+
+        self.form.visualise_stats_table.resizeColumnsToContents()
+        self.form.visualise_stats_table.setSortingEnabled(True)
+        self.form.visualise_stats_table.sortByColumn(1, Qt.SortOrder(1))
         self.navigate_to_page(2)
         self.form.loading_svg.hide()
         self.form.status_lbl.setText("Ready")
@@ -290,10 +347,10 @@ class WorkerSignals(QObject):
 
 
 class QtFinishedResponse:
-    def __init__(self, status, text, html=None):
+    def __init__(self, status, text, data=None):
         self.status = status  # Bool
         self.text = text  # String
-        self.html = html
+        self.data = data
 
 
 class Worker(QRunnable):

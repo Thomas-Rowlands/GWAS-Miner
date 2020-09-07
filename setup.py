@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="GWAS_Miner-QuantumJava", # Replace with your own username
+    name="GWAS_Miner",  # Replace with your own username
     version="0.0.1",
     author="Thomas Rowlands",
     author_email="thomas.s.rowlands@gmail.com",
@@ -13,6 +13,9 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/Thomas-Rowlands/GWAS-Miner/tree/Dev1",
     packages=setuptools.find_packages(),
+    dependency_links=[
+        'https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.2.5/en_core_sci_md-0.2.5.tar.gz'
+    ],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
