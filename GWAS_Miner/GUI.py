@@ -11,7 +11,7 @@ from PyQt5.QtSvg import QGraphicsSvgItem
 from PyQt5.QtWidgets import QApplication, QFileDialog, QPushButton, QGraphicsScene, QTableWidgetItem
 from PyQt5.uic.properties import QtGui
 
-from GWAS_Miner import Phenotype_Finder
+from GWAS_Miner import GWASMiner
 
 from svglib.svglib import svg2rlg
 from reportlab.graphics import renderPM
@@ -34,7 +34,7 @@ class MainForm:
         self.is_cancelled = False
         self.is_running = False
         self.worker = None
-        self.run_worker(Phenotype_Finder.load_nlp_object, None, self.study_processing_finished_callback, True)
+        self.run_worker(GWASMiner.load_nlp_object, None, self.study_processing_finished_callback, True)
         self.dependency_svgs = []
         self.dependency_index = 0
 
@@ -47,7 +47,7 @@ class MainForm:
         Initialise user interface elements
         """
         theme = "light_theme.qss"
-        if Phenotype_Finder.config.get(section="preferences", option="theme").lower() == "dark":
+        if GWASMiner.config.get(section="preferences", option="theme").lower() == "dark":
             theme = "dark_theme.qss"
         self.__load_style(theme)
         self.form.stackedWidget.setGeometry(0, 0, self.window.width(), self.window.height())
@@ -93,16 +93,16 @@ class MainForm:
         self.navigate_to_page(1)
 
     def settings_save_handler(self):
-        previous_theme = Phenotype_Finder.config.get("preferences", "theme")
+        previous_theme = GWASMiner.config.get("preferences", "theme")
         new_theme = self.form.theme_combobox.currentText()
-        Phenotype_Finder.config.set("preferences", "theme", new_theme)
+        GWASMiner.config.set("preferences", "theme", new_theme)
         if previous_theme != new_theme:
             self.__load_style(F"{new_theme.lower()}_theme.qss")
-        Phenotype_Finder.save_config()
+        GWASMiner.save_config()
         self.navigate_to_page(1)
 
     def settings_action_handler(self):
-        if Phenotype_Finder.config.get("preferences", "theme").lower() == "light":
+        if GWASMiner.config.get("preferences", "theme").lower() == "light":
             self.form.theme_combobox.setCurrentText("Light")
         else:
             self.form.theme_combobox.setCurrentText("Dark")
@@ -162,9 +162,9 @@ class MainForm:
         """
         if disable_controls:
             self.toggle_controls(False)
-        study = Phenotype_Finder.prepare_study(self.form.study_directory_input.text(), file)
+        study = GWASMiner.prepare_study(self.form.study_directory_input.text(), file)
         self.form.loading_svg.setHidden(False)
-        self.worker = Worker(Phenotype_Finder.get_study_visualisations, [study])
+        self.worker = Worker(GWASMiner.get_study_visualisations, [study])
         self.worker.signals.progress_update.connect(self.set_progress_text)
         self.worker.signals.error.connect(self.set_progress_text)
         self.worker.signals.finished.connect(self.visualisation_finished_callback)
@@ -234,7 +234,7 @@ class MainForm:
         """
         if self.is_running:
             self.is_running = False
-            Phenotype_Finder.is_cancelled = True
+            GWASMiner.is_cancelled = True
             self.form.run_nlp_btn.setEnabled(False)
             self.set_progress_text("Cancelling...")
             self.form.run_nlp_btn.setText("Please \nWait...")
@@ -242,9 +242,9 @@ class MainForm:
             if not self.validate_directory(self.form.study_directory_input.text()):
                 return
             self.is_running = True
-            Phenotype_Finder.is_cancelled = False
+            GWASMiner.is_cancelled = False
             self.form.run_nlp_btn.setText("Stop \nProcessing")
-            self.run_worker(Phenotype_Finder.process_studies, (self.form.study_directory_input.text(), None),
+            self.run_worker(GWASMiner.process_studies, (self.form.study_directory_input.text(), None),
                             self.update_results_files, False)
     @staticmethod
     def convert_svg_textpath(svg):
@@ -272,7 +272,7 @@ class MainForm:
     def convert_svg_to_png(self, svg):
         return_val = None
         rlg = svg2rlg(BytesIO(bytes(self.convert_svg_textpath(svg), encoding="utf-8")))
-        if Phenotype_Finder.theme() == "light":
+        if GWASMiner.theme() == "light":
             return_val = renderPM.drawToString(rlg, fmt="PNG")
         else:
             return_val = renderPM.drawToString(rlg, fmt="PNG", bg=0x19232D)
@@ -354,7 +354,7 @@ class MainForm:
             self.set_progress_text(result.text)
             self.form.loading_svg.setHidden(True)
             self.is_running = False
-            Phenotype_Finder.is_cancelled = False
+            GWASMiner.is_cancelled = False
             self.form.run_nlp_btn.setText("Start \nProcessing")
             return
         if result.status:
