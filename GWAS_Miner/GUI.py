@@ -38,6 +38,10 @@ class MainForm:
         self.dependency_svgs = []
         self.dependency_index = 0
 
+    def __load_style(self, theme):
+        with open(F'GWAS_Miner/res/{theme}') as file:
+            self.window.setStyleSheet(file.read())
+
     def __setup_interface(self):
         """
         Initialise user interface elements
@@ -45,8 +49,7 @@ class MainForm:
         theme = "light_theme.qss"
         if Phenotype_Finder.config.get(section="preferences", option="theme").lower() == "dark":
             theme = "dark_theme.qss"
-        with open(F'GWAS_Miner/res/{theme}') as file:
-            self.window.setStyleSheet(file.read())
+        self.__load_style(theme)
         self.form.stackedWidget.setGeometry(0, 0, self.window.width(), self.window.height())
         self.navigate_to_page(0)
         self.form.status_lbl.setHidden(True)
@@ -82,8 +85,31 @@ class MainForm:
         self.form.dependency_previous_btn.clicked.connect(self.get_previous_dependency)
         self.form.update_ontology_cache_action.triggered.connect(self.update_ontology_cache_handler)
         self.form.quit_action.triggered.connect(self.quit_action_handler)
+        self.form.settings_action.triggered.connect(self.settings_action_handler)
+        self.form.settings_save_btn.clicked.connect(self.settings_save_handler)
+        self.form.settings_cancel_btn.clicked.connect(self.settings_cancel_handler)
 
-    def quit_action_handler(self):
+    def settings_cancel_handler(self):
+        self.navigate_to_page(1)
+
+    def settings_save_handler(self):
+        previous_theme = Phenotype_Finder.config.get("preferences", "theme")
+        new_theme = self.form.theme_combobox.currentText()
+        Phenotype_Finder.config.set("preferences", "theme", new_theme)
+        if previous_theme != new_theme:
+            self.__load_style(F"{new_theme.lower()}_theme.qss")
+        Phenotype_Finder.save_config()
+        self.navigate_to_page(1)
+
+    def settings_action_handler(self):
+        if Phenotype_Finder.config.get("preferences", "theme").lower() == "light":
+            self.form.theme_combobox.setCurrentText("Light")
+        else:
+            self.form.theme_combobox.setCurrentText("Dark")
+        self.navigate_to_page(3)
+
+    @staticmethod
+    def quit_action_handler():
         sys.exit("Quitting...")
 
     def set_splash_loading_text(self, text):
@@ -246,7 +272,7 @@ class MainForm:
     def convert_svg_to_png(self, svg):
         return_val = None
         rlg = svg2rlg(BytesIO(bytes(self.convert_svg_textpath(svg), encoding="utf-8")))
-        if Phenotype_Finder.theme == "light":
+        if Phenotype_Finder.theme() == "light":
             return_val = renderPM.drawToString(rlg, fmt="PNG")
         else:
             return_val = renderPM.drawToString(rlg, fmt="PNG", bg=0x19232D)
@@ -324,6 +350,13 @@ class MainForm:
         self.form.status_lbl.setHidden(False)
 
     def update_results_files(self, result):
+        if result.data == 1:
+            self.set_progress_text(result.text)
+            self.form.loading_svg.setHidden(True)
+            self.is_running = False
+            Phenotype_Finder.is_cancelled = False
+            self.form.run_nlp_btn.setText("Start \nProcessing")
+            return
         if result.status:
             self.form.result_file_listwidget.addItem(result.text)
             self.form.result_tab_widget.setTabText(0, F"Succeeded ({self.form.result_file_listwidget.count()})")

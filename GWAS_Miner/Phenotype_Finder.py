@@ -43,8 +43,16 @@ config = __load_config()
 lexicon = __prepare_ontology_data()
 nlp = None
 gui = None
-theme = config.get(section="preferences", option="theme")
 is_cancelled = False
+
+
+def theme():
+    return config.get(section="preferences", option="theme").lower()
+
+
+def save_config():
+    with open("GWAS_Miner/settings/config.ini", "w") as f_out:
+        config.write(f_out)
 
 
 def load_nlp_object(qt_progress_signal=None, qt_finished_signal=None):
@@ -88,8 +96,8 @@ def get_study_visualisations(study, qt_progress_signal=None, qt_finished_signal=
     doc = nlp_object.process_corpus(nlp_object.replace_all_abbreviations(study.get_fulltext()))
     phenotype_stats = nlp_object.get_phenotype_stats(doc, lexicon)
     update_gui_progress(qt_progress_signal, "Generating HTML")
-    entities = nlp_object.display_ents(doc, True, theme)
-    dependencies = nlp_object.display_structure([sent for sent in doc.sents], True, theme)
+    entities = nlp_object.display_ents(doc, True, theme())
+    dependencies = nlp_object.display_structure([sent for sent in doc.sents], True, theme())
     if qt_finished_signal:
         from GWAS_Miner.GUI import QtFinishedResponse
         response = QtFinishedResponse(True, F"PMC{study.pmid}", [entities, dependencies, phenotype_stats])
@@ -106,9 +114,9 @@ def process_study(nlp_object, study, visualise=None, qt_progress_signal=None, qt
     if visualise:
         update_gui_progress(qt_progress_signal, F"Launching visualisation of study {study.pmid}...")
         if visualise == "ents":
-            nlp_object.display_ents(doc, theme=theme)
+            nlp_object.display_ents(doc, theme=theme())
         elif visualise == "sents":
-            nlp_object.display_structure([sent for sent in doc.sents], theme=theme)
+            nlp_object.display_structure([sent for sent in doc.sents], theme=theme())
     blah = []  # for debugging only
     for sent in doc.sents:
         blah.append(sent)
@@ -129,6 +137,8 @@ def process_studies(directory, visualise=None, qt_progress_signal=None, qt_study
     Args: directory ([string]): [directory containing publication files.] visualise ([string], optional): [ents =
     entity visualisation, sents = dependency parsing visualisation]. Defaults to None.
     """
+    if qt_progress_signal:
+        from GWAS_Miner.GUI import QtFinishedResponse
     # Structure ontology data ready for NLP tagging
     update_gui_progress(qt_progress_signal, "Gathering ontology data...")
     __prepare_ontology_data()
@@ -151,7 +161,6 @@ def process_studies(directory, visualise=None, qt_progress_signal=None, qt_study
         update_gui_progress(qt_progress_signal, F"Extracting data for file: {file_name}")
         study = prepare_study(directory, file_name)
         if not study:
-            from GWAS_Miner.GUI import QtFinishedResponse
             response = QtFinishedResponse(False, file_name)
             qt_study_finished_signal.emit(response)
             continue
@@ -160,7 +169,8 @@ def process_studies(directory, visualise=None, qt_progress_signal=None, qt_study
         if not result:
             update_gui_progress(qt_progress_signal, F"Unable to process study {file_name}. Skipping...")
     if qt_study_finished_signal:
-        qt_study_finished_signal.emit(True)
+        response = QtFinishedResponse(True, "Finished processing.", 1)
+        qt_study_finished_signal.emit(response)
 
 
 def main():
