@@ -12,6 +12,7 @@ from GWAS_Miner import config
 from GWAS_Miner.DataStructures import SNP
 import GWAS_Miner.config
 
+
 class Interpreter:
     __failed_matches = []
     __nlp = spacy.load("en_core_sci_md", disable=["ner"])

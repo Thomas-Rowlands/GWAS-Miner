@@ -13,8 +13,19 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/Thomas-Rowlands/GWAS-Miner/tree/Dev1",
     packages=setuptools.find_packages(),
-    dependency_links=[
-        'https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.2.5/en_core_sci_md-0.2.5.tar.gz'
+    install_requires=[
+        "python-dateutil",
+        "rdflib",
+        "owlready2",
+        "lxml",
+        "jsonschema",
+        "rtgo",
+        "networkx",
+        "spacy",
+        "en_core_sci_md @ https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.2.5/en_core_sci_md-0.2.5.tar.gz",
+        "traceback",
+        "svglib",
+        "reportlab"
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
