@@ -137,23 +137,28 @@ def process_studies(directory, visualise=None, qt_progress_signal=None, qt_study
     Args: directory ([string]): [directory containing publication files.] visualise ([string], optional): [ents =
     entity visualisation, sents = dependency parsing visualisation]. Defaults to None.
     """
+    cancel_response = None
     if qt_progress_signal:
         from GWAS_Miner.GUI import QtFinishedResponse
+        cancel_response = QtFinishedResponse(True, "Cancelled.", 1)
     # Structure ontology data ready for NLP tagging
     update_gui_progress(qt_progress_signal, "Gathering ontology data...")
     __prepare_ontology_data()
     if is_cancelled:
+        qt_study_finished_signal.emit(cancel_response)
         return
     # Initialise Interpreter module for NLP processing using master lexicon of ontology data.
     update_gui_progress(qt_progress_signal, "Loading NLP pipeline...")
     nlp_object = load_nlp_object()
 
     if is_cancelled:
+        qt_study_finished_signal.emit(cancel_response)
         return
 
     # Process each publication file in turn
     for file_name in os.listdir(directory):
         if is_cancelled:
+            qt_study_finished_signal.emit(cancel_response)
             return
         if not file_name.endswith("maintext.json"):
             continue
@@ -218,6 +223,7 @@ def main():
 
     # Begin running either the GUI or processing studies immediately.
     if using_gui:
+        os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
         from GWAS_Miner.GUI import MainForm
         global gui
         gui = MainForm()

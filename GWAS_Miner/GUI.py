@@ -5,16 +5,14 @@ import traceback
 from io import BytesIO
 
 from PyQt5 import uic
-from PyQt5.QtCore import QRunnable, pyqtSlot, QObject, pyqtSignal, QThreadPool, Qt, QTimer
-from PyQt5.QtGui import QPixmap, QShowEvent
+from PyQt5.QtCore import QRunnable, pyqtSlot, QObject, pyqtSignal, QThreadPool, Qt
+from PyQt5.QtGui import QPixmap
 from PyQt5.QtSvg import QGraphicsSvgItem
 from PyQt5.QtWidgets import QApplication, QFileDialog, QPushButton, QGraphicsScene, QTableWidgetItem
-from PyQt5.uic.properties import QtGui
+from reportlab.graphics import renderPM
+from svglib.svglib import svg2rlg
 
 from GWAS_Miner import GWASMiner
-
-from svglib.svglib import svg2rlg
-from reportlab.graphics import renderPM
 
 
 class MainForm:
@@ -34,7 +32,7 @@ class MainForm:
         self.is_cancelled = False
         self.is_running = False
         self.worker = None
-        self.run_worker(GWASMiner.load_nlp_object, None, self.study_processing_finished_callback, True)
+        self.run_worker(GWASMiner.load_nlp_object, None, self.initial_loading_finished_callback, True)
         self.dependency_svgs = []
         self.dependency_index = 0
 
@@ -66,12 +64,12 @@ class MainForm:
         self.form.loading_svg.setScene(main_loading_scene)
 
     def center(self):
-        frameGm = self.window.frameGeometry()
+        frame_gm = self.window.frameGeometry()
         screen = QApplication.desktop().screenNumber(
             QApplication.desktop().cursor().pos())
-        centerPoint = QApplication.desktop().screenGeometry(screen).center()
-        frameGm.moveCenter(centerPoint)
-        self.window.move(frameGm.topLeft())
+        center_point = QApplication.desktop().screenGeometry(screen).center()
+        frame_gm.moveCenter(center_point)
+        self.window.move(frame_gm.topLeft())
 
     def __add_handlers(self):
         """
@@ -200,7 +198,7 @@ class MainForm:
             if not path or not valid:
                 self.set_progress_text("Please select a valid directory.")
                 return False
-        except FileNotFoundError as f:
+        except FileNotFoundError:
             self.set_progress_text("Invalid directory.")
             return False
         return True
@@ -241,17 +239,20 @@ class MainForm:
         else:
             if not self.validate_directory(self.form.study_directory_input.text()):
                 return
+            self.form.result_file_listwidget.clear()
+            self.form.results_failed_listwidget.clear()
             self.is_running = True
             GWASMiner.is_cancelled = False
             self.form.run_nlp_btn.setText("Stop \nProcessing")
             self.run_worker(GWASMiner.process_studies, (self.form.study_directory_input.text(), None),
                             self.update_results_files, False)
+
     @staticmethod
     def convert_svg_textpath(svg):
         skip = True
         coords = []
         result = svg
-        #TODO Reduce the height of the SVG and scale all Y values to compensate
+        # TODO Reduce the height of the SVG and scale all Y values to compensate
         # Get the starting coordinate of the relationship link
         for match in re.findall(r'(?<=d="M)([0-9,. ]+)', result):
             skip = not skip
@@ -283,8 +284,10 @@ class MainForm:
         qp.loadFromData(self.convert_svg_to_png(self.dependency_svgs[index]))
         self.form.dependency_image_label.setPixmap(qp)
         self.update_dependency_index_text()
-        self.form.dependency_scrollarea.horizontalScrollBar().setValue(self.form.dependency_scrollarea.horizontalScrollBar().maximum() / 2)
-        self.form.dependency_scrollarea.verticalScrollBar().setValue(self.form.dependency_scrollarea.verticalScrollBar().maximum())
+        self.form.dependency_scrollarea.horizontalScrollBar().setValue(
+            self.form.dependency_scrollarea.horizontalScrollBar().maximum() / 2)
+        self.form.dependency_scrollarea.verticalScrollBar().setValue(
+            self.form.dependency_scrollarea.verticalScrollBar().maximum())
 
     def update_dependency_index_text(self):
         self.form.dependency_index_label.setText(F"{self.dependency_index + 1} of {len(self.dependency_svgs) + 1}")
@@ -335,14 +338,11 @@ class MainForm:
         self.form.loading_svg.hide()
         self.form.status_lbl.setText("Ready")
 
-    def study_processing_finished_callback(self, status):
-        if self.is_cancelled:
-            self.form.status_lbl.setText("Cancelled.")
-        else:
-            self.form.status_lbl.setText("Complete.")
+    def initial_loading_finished_callback(self, status):
         self.form.loading_svg.setHidden(True)
         self.toggle_controls(True)
         self.form.run_nlp_btn.setText("Begin \nProcessing")
+        self.set_progress_text("")
         self.navigate_to_page(1)
 
     def set_progress_text(self, progress):
@@ -356,13 +356,14 @@ class MainForm:
             self.is_running = False
             GWASMiner.is_cancelled = False
             self.form.run_nlp_btn.setText("Start \nProcessing")
+            self.form.run_nlp_btn.setEnabled(True)
             return
         if result.status:
             self.form.result_file_listwidget.addItem(result.text)
             self.form.result_tab_widget.setTabText(0, F"Succeeded ({self.form.result_file_listwidget.count()})")
         else:
             self.form.results_failed_listwidget.addItem(result.text)
-            self.form.result_tab_widget.setTabText(1, F"Failed ({self.form.results_failed_listwidget.count()})")
+            self.form.result_tab_widget.setTabText(1, F"Succeeded (no results) ({self.form.results_failed_listwidget.count()})")
 
     def open(self):
         self.window.show()
@@ -392,11 +393,10 @@ class Worker(QRunnable):
 
     Inherits from QRunnable to handler worker thread setup, signals and wrap-up.
 
-    :param callback: The function callback to run on this worker thread. Supplied args and
+    :param fn: The function callback to run on this worker thread. Supplied args and
                      kwargs will be passed through to the runner.
-    :type callback: function
+    :type fn: function
     :param args: Arguments to pass to the callback function
-    :param kwargs: Keywords to pass to the callback function
 
     """
 
@@ -423,5 +423,4 @@ class Worker(QRunnable):
                 self.fn(*self.args, self.progress_callback, self.finished_callback)
         except:
             traceback.print_exc()
-            exctype, value = sys.exc_info()[:2]
             self.signals.error.emit(traceback.format_exc())

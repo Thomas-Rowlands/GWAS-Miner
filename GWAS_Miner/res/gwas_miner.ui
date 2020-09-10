@@ -315,8 +315,8 @@ border:none;</string>
               <widget class="QPushButton" name="study_directory_btn">
                <property name="minimumSize">
                 <size>
-                 <width>77</width>
-                 <height>0</height>
+                 <width>80</width>
+                 <height>20</height>
                 </size>
                </property>
                <property name="font">
@@ -375,9 +375,9 @@ border:none;</string>
                </item>
               </layout>
              </widget>
-             <widget class="QWidget" name="results_failed_tab">
+             <widget class="QWidget" name="results_none_found_tab">
               <attribute name="title">
-               <string>Failed</string>
+               <string>Succeeded (no results)</string>
               </attribute>
               <layout class="QVBoxLayout" name="verticalLayout_6">
                <property name="leftMargin">
@@ -405,6 +405,38 @@ border:none;</string>
                   </widget>
                  </item>
                 </layout>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="results_error_tab">
+              <attribute name="title">
+               <string>Errors</string>
+              </attribute>
+              <layout class="QVBoxLayout" name="verticalLayout">
+               <property name="spacing">
+                <number>0</number>
+               </property>
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item>
+                <widget class="QListWidget" name="results_failed_listwidget_2">
+                 <property name="frameShape">
+                  <enum>QFrame::NoFrame</enum>
+                 </property>
+                 <property name="frameShadow">
+                  <enum>QFrame::Plain</enum>
+                 </property>
+                </widget>
                </item>
               </layout>
              </widget>
@@ -457,6 +489,9 @@ border:none;</string>
                 </property>
                 <property name="rightMargin">
                  <number>40</number>
+                </property>
+                <property name="horizontalSpacing">
+                 <number>10</number>
                 </property>
                 <item row="0" column="0">
                  <widget class="QPushButton" name="run_nlp_btn">
@@ -777,8 +812,8 @@ p, li { white-space: pre-wrap; }
                      <rect>
                       <x>0</x>
                       <y>0</y>
-                      <width>1101</width>
-                      <height>649</height>
+                      <width>81</width>
+                      <height>31</height>
                      </rect>
                     </property>
                     <property name="sizePolicy">
