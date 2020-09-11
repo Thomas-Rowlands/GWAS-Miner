@@ -363,7 +363,7 @@ class MainForm:
             self.form.result_tab_widget.setTabText(0, F"Succeeded ({self.form.result_file_listwidget.count()})")
         else:
             self.form.results_failed_listwidget.addItem(result.text)
-            self.form.result_tab_widget.setTabText(1, F"Succeeded (no results) ({self.form.results_failed_listwidget.count()})")
+            self.form.result_tab_widget.setTabText(1, F"No Results ({self.form.results_failed_listwidget.count()})")
 
     def open(self):
         self.window.show()
