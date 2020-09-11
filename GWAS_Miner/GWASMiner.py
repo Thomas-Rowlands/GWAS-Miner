@@ -6,22 +6,19 @@ Main access point,
 
 @author: Thomas Rowlands
 """
-import json
-import os
-from GWAS_Miner.DataStructures import MasterLexicon
-import sys
+#import json
+#from GWAS_Miner.DataStructures import MasterLexicon
 import logging
-import time
-from GWAS_Miner import Ontology, Experimental
-import argparse
-from GWAS_Miner.NLP import Interpreter
-from configparser import ConfigParser
+#from GWAS_Miner.NLP import Interpreter
+#from configparser import ConfigParser
 
 
 def __load_config():
     """
     Retrieve configurable settings from the config.ini file.
     """
+    from configparser import ConfigParser
+    import sys
     config_settings = ConfigParser()
     try:
         config_settings.read("GWAS_Miner/settings/config.ini")
@@ -33,11 +30,13 @@ def __load_config():
 
 
 def __prepare_ontology_data():
+    from GWAS_Miner.DataStructures import  MasterLexicon
+    from GWAS_Miner import Ontology
     lexicon_output = MasterLexicon().parse(Ontology.get_tagging_data())
     return lexicon_output
 
 
-current_time = time.strftime("%Y%m%d-%H%M%S")
+
 logger = logging.getLogger("Phenotype Finder")
 config = __load_config()
 lexicon = __prepare_ontology_data()
@@ -56,6 +55,7 @@ def save_config():
 
 
 def load_nlp_object(qt_progress_signal=None, qt_finished_signal=None):
+    from GWAS_Miner.NLP import Interpreter
     global lexicon, nlp
     if not lexicon:
         update_gui_progress(qt_progress_signal, "Gathering Ontology Data...")
@@ -76,6 +76,7 @@ def update_gui_progress(qt_progress_signal, text):
 
 
 def output_study_results(study, qt_study_finished_signal=None):
+    import json
     if len(study.get_snps()) == 0 and qt_study_finished_signal:
         from GWAS_Miner.GUI import QtFinishedResponse
         response = QtFinishedResponse(False, F"PMC{study.pmid}")
@@ -127,6 +128,7 @@ def process_study(nlp_object, study, visualise=None, qt_progress_signal=None, qt
 
 
 def prepare_study(directory, file_name):
+    from GWAS_Miner import Experimental
     study = Experimental.load_study(directory, file_name)
     return study
 
@@ -137,6 +139,7 @@ def process_studies(directory, visualise=None, qt_progress_signal=None, qt_study
     Args: directory ([string]): [directory containing publication files.] visualise ([string], optional): [ents =
     entity visualisation, sents = dependency parsing visualisation]. Defaults to None.
     """
+    import os
     cancel_response = None
     if qt_progress_signal:
         from GWAS_Miner.GUI import QtFinishedResponse
@@ -179,6 +182,9 @@ def process_studies(directory, visualise=None, qt_progress_signal=None, qt_study
 
 
 def main():
+    import argparse
+    import os
+    import sys
     # Configure command line arguments
     parser = argparse.ArgumentParser(description='GWAS Information Extraction')
     parser.add_argument('-c', '--cores', type=int, default=1, help='Number of CPU cores to utilise. 0 = Max '
@@ -213,12 +219,17 @@ def main():
         except IOError as e:
             sys.exit(F"Unable to create output folder: {e}")
 
+
+
     # Configure logger
+    import time
+    current_time = time.strftime("%Y%m%d-%H%M%S")
     logging.basicConfig(filename=F"logs/{current_time}.log", format="%(asctime)s %(levelname)-8s %(message)s",
                         level=logging.INFO)
 
     # Update ontology cache files if requested.
     if update_ont:
+        from GWAS_Miner import Ontology
         Ontology.update_ontology_cache()
 
     # Begin running either the GUI or processing studies immediately.

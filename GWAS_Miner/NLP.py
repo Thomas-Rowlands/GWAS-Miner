@@ -18,18 +18,13 @@ class Interpreter:
     __nlp = spacy.load("en_core_sci_md", disable=["ner"])
     __nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
     __rsid_regex = [{"TEXT": {"REGEX": "(?:rs[0-9]{1,}){1}"}}]
-    __p_value_regex_list = []
-    __p_value_regex = r"((\(?\b[pP][  =<-]{1,}(val{1,}[ue]{0,})?[  <≥=×xX-]{0,}[  \(]?\d+[\.]?[\d]{0,}[-−^*()  \d×xX]{0,}))"
-    __p_value_regex_inline = r"(\d?\..?\d[ ]?[*×xX]{1}[ ]?\d{1,}[ (]?[-−]\d{1,}[ )]?)"  # r"(\d?\.?\d[ ]?[*×xX]{1}[ ]?\d{1,}[ ]?-\d{1,})"
-    __p_value_master_regex = r"((\(?\b[pP][  =<-]{1,}(val{1,}[ue]{0,})?[  <≥=×xX-]{0,}[  \(]?\d+[\.]?[\d]{0,}[-^*()  \d×xX]{0,})|(\d?\.?\d[  ]?[*×xX]{1}[  ]?\d{1,}[  ]?-\d{1,}))"
-    __p_type_regex = r"(\(?GEE\)?)|(\(?FBAT\)?)"
     __SNP_regex = [
         {"TEXT": {"REGEX": r"([ATCG]{1}[a-z]{1,}[0-9]{1,}[ATCG]{1}[a-z]{1,})"}}]
     __gene_seq_regex = [{"TEXT": {"REGEX": "([ ][ACTG]{3,}[ ])"}}]
-    __table_ref_regex = r"(table[- ]{0,}\d{1,})"
     __basic_matcher = None
     __phrase_matchers = []
     __logger = logging.getLogger("Phenotype Finder")
+    __entity_labels = ["MeSH", "HPO"]
 
     def __init__(self, lexicon, ontology_only=False):
         if not ontology_only:
@@ -102,13 +97,10 @@ class Interpreter:
                 if isinstance(config.regex_entity_patterns[ent_label], list):
                     for pattern in config.regex_entity_patterns[ent_label]:
                         self.__regex_match(pattern, doc, ent_label)
+                        self.__entity_labels.append(ent_label)
                 else:
                     self.__regex_match(config.regex_entity_patterns[ent_label], doc, ent_label)
-            self.__regex_match(self.__table_ref_regex, doc, "TABLE")
-            # self.__regex_match(self.__p_value_regex, doc, "PVAL-G")
-            # self.__regex_match(self.__p_value_regex_inline, doc, "PVAL")
-            # self.__regex_match(self.__p_value_master_regex, doc, "PVAL")
-            self.__regex_match(self.__p_type_regex, doc, "PTYPE")
+                    self.__entity_labels.append(ent_label)
 
         # Add matcher patterns for parsing hyphenated and compound words.
         hyphenated_pattern = [{'POS': 'PROPN'}, {
@@ -131,11 +123,8 @@ class Interpreter:
                     continue
 
         # Ensure that multi-token entities are merged for extraction and association processing.
-        self.__merge_spans(doc, "PVAL-G")
-        self.__merge_spans(doc, "PVAL")
-        self.__merge_spans(doc, "MeSH")
-        self.__merge_spans(doc, "EFO")
-        self.__merge_spans(doc, "HPO")
+        for ent_label in self.__entity_labels:
+            self.__merge_spans(doc, ent_label)
 
         return doc
 

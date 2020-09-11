@@ -1,7 +1,5 @@
 import os
-import re
 import sys
-import traceback
 from io import BytesIO
 
 from PyQt5 import uic
@@ -249,6 +247,7 @@ class MainForm:
 
     @staticmethod
     def convert_svg_textpath(svg):
+        import re
         skip = True
         coords = []
         result = svg
@@ -422,5 +421,6 @@ class Worker(QRunnable):
             else:
                 self.fn(*self.args, self.progress_callback, self.finished_callback)
         except:
+            import traceback
             traceback.print_exc()
             self.signals.error.emit(traceback.format_exc())
