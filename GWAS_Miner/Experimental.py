@@ -4,6 +4,7 @@ import logging
 
 logger = logging.getLogger("Phenotype Finder")
 
+
 def validate_json_maintext(json_data):
     title = list(json_data.keys())[0]
     if not json_data[title]:

@@ -10,7 +10,6 @@ import logging
 
 from GWAS_Miner import config
 from GWAS_Miner.DataStructures import SNP
-import GWAS_Miner.config
 
 
 class Interpreter:

@@ -6,8 +6,8 @@ from GWAS_Miner.Utility_Functions import Utility
 from GWAS_Miner import CharacterDealer
 import logging
 
-class PreProcessing:
 
+class PreProcessing:
     __logger = logging.getLogger("Phenotype Finder")
 
     # Retrieves rs identifiers from input string
@@ -324,7 +324,7 @@ class PreProcessing:
         @return: Study object containing the split sections of the publication.
         """
         study = Study()
-        #xml = __char_encoding_filter(xml)
+        # xml = __char_encoding_filter(xml)
         xml = re.sub("</", " </", xml)  # Ensure white space is present between nested tags
         study.original = xml
         parser = etree.XMLParser(encoding='utf-8')
@@ -333,7 +333,6 @@ class PreProcessing:
         study.abstract = PreProcessing.__get_abstract(tree)
         study.title = PreProcessing.__get_title(tree)
         study.authors = PreProcessing.__get_authors(tree)
-
 
         #  Back sections
         acknowledgements = ""

@@ -84,6 +84,17 @@ class MainForm:
         self.form.settings_action.triggered.connect(self.settings_action_handler)
         self.form.settings_save_btn.clicked.connect(self.settings_save_handler)
         self.form.settings_cancel_btn.clicked.connect(self.settings_cancel_handler)
+        self.form.result_file_listwidget.itemDoubleClicked.connect(self.result_double_click_handler)
+        self.form.result_view_back_btn.clicked.connect(self.result_back_btn_click_handler)
+
+    def result_back_btn_click_handler(self):
+        self.navigate_to_page(1)
+        self.form.result_viewer_textbrowser.clear()
+
+    def result_double_click_handler(self, item):
+        with open(F"output/{item.text()}_result.json", "r", encoding="utf-8") as f_in:
+            self.form.result_viewer_textbrowser.setText(f_in.read())
+        self.navigate_to_page(4)
 
     def settings_cancel_handler(self):
         self.navigate_to_page(1)
@@ -239,6 +250,8 @@ class MainForm:
                 return
             self.form.result_file_listwidget.clear()
             self.form.results_failed_listwidget.clear()
+            self.form.result_tab_widget.setTabText(0, F"Succeeded")
+            self.form.result_tab_widget.setTabText(1, F"No Results")
             self.is_running = True
             GWASMiner.is_cancelled = False
             self.form.run_nlp_btn.setText("Stop \nProcessing")

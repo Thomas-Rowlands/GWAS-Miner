@@ -6,11 +6,7 @@ Main access point,
 
 @author: Thomas Rowlands
 """
-#import json
-#from GWAS_Miner.DataStructures import MasterLexicon
 import logging
-#from GWAS_Miner.NLP import Interpreter
-#from configparser import ConfigParser
 
 
 def __load_config():
