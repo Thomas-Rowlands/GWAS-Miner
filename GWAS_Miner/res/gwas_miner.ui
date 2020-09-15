@@ -64,7 +64,7 @@
        </size>
       </property>
       <property name="currentIndex">
-       <number>4</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="loading_page">
        <layout class="QGridLayout" name="gridLayout_6">
@@ -362,13 +362,68 @@ border:none;</string>
                <item>
                 <layout class="QVBoxLayout" name="verticalLayout_3">
                  <item>
-                  <widget class="QListWidget" name="result_file_listwidget">
+                  <widget class="QTableWidget" name="result_file_tablewidget">
+                   <property name="minimumSize">
+                    <size>
+                     <width>250</width>
+                     <height>100</height>
+                    </size>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true"/>
+                   </property>
                    <property name="frameShape">
                     <enum>QFrame::NoFrame</enum>
                    </property>
                    <property name="frameShadow">
                     <enum>QFrame::Plain</enum>
                    </property>
+                   <property name="editTriggers">
+                    <set>QAbstractItemView::NoEditTriggers</set>
+                   </property>
+                   <property name="dragDropOverwriteMode">
+                    <bool>false</bool>
+                   </property>
+                   <property name="showGrid">
+                    <bool>false</bool>
+                   </property>
+                   <property name="gridStyle">
+                    <enum>Qt::NoPen</enum>
+                   </property>
+                   <property name="cornerButtonEnabled">
+                    <bool>false</bool>
+                   </property>
+                   <attribute name="horizontalHeaderVisible">
+                    <bool>false</bool>
+                   </attribute>
+                   <attribute name="horizontalHeaderCascadingSectionResizes">
+                    <bool>true</bool>
+                   </attribute>
+                   <attribute name="horizontalHeaderDefaultSectionSize">
+                    <number>60</number>
+                   </attribute>
+                   <attribute name="horizontalHeaderHighlightSections">
+                    <bool>false</bool>
+                   </attribute>
+                   <attribute name="horizontalHeaderMinimumSectionSize">
+                    <number>10</number>
+                   </attribute>
+                   <attribute name="verticalHeaderVisible">
+                    <bool>false</bool>
+                   </attribute>
+                   <attribute name="verticalHeaderHighlightSections">
+                    <bool>false</bool>
+                   </attribute>
+                   <column>
+                    <property name="text">
+                     <string>study</string>
+                    </property>
+                   </column>
+                   <column>
+                    <property name="text">
+                     <string>view</string>
+                    </property>
+                   </column>
                   </widget>
                  </item>
                 </layout>
@@ -442,16 +497,6 @@ border:none;</string>
              </widget>
             </widget>
            </item>
-           <item row="5" column="0" colspan="2">
-            <widget class="QListWidget" name="study_file_listwidget">
-             <property name="minimumSize">
-              <size>
-               <width>250</width>
-               <height>100</height>
-              </size>
-             </property>
-            </widget>
-           </item>
            <item row="5" column="2">
             <layout class="QVBoxLayout" name="verticalLayout_2">
              <property name="leftMargin">
@@ -474,6 +519,9 @@ border:none;</string>
                  <height>250</height>
                 </size>
                </property>
+               <property name="layoutDirection">
+                <enum>Qt::LeftToRight</enum>
+               </property>
                <property name="styleSheet">
                 <string notr="true"/>
                </property>
@@ -484,63 +532,7 @@ border:none;</string>
                 <enum>QFrame::Raised</enum>
                </property>
                <layout class="QGridLayout" name="gridLayout_4">
-                <property name="leftMargin">
-                 <number>40</number>
-                </property>
-                <property name="rightMargin">
-                 <number>40</number>
-                </property>
-                <property name="horizontalSpacing">
-                 <number>10</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="QPushButton" name="run_nlp_btn">
-                  <property name="minimumSize">
-                   <size>
-                    <width>75</width>
-                    <height>50</height>
-                   </size>
-                  </property>
-                  <property name="text">
-                   <string>Begin 
-Processing</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QPushButton" name="analyse_study_btn">
-                  <property name="minimumSize">
-                   <size>
-                    <width>75</width>
-                    <height>50</height>
-                   </size>
-                  </property>
-                  <property name="text">
-                   <string>Visualise 
-Study</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="2" column="0" colspan="2">
-                 <widget class="QGraphicsView" name="loading_svg">
-                  <property name="minimumSize">
-                   <size>
-                    <width>80</width>
-                    <height>80</height>
-                   </size>
-                  </property>
-                  <property name="styleSheet">
-                   <string notr="true">border:none</string>
-                  </property>
-                  <property name="frameShape">
-                   <enum>QFrame::NoFrame</enum>
-                  </property>
-                  <property name="frameShadow">
-                   <enum>QFrame::Plain</enum>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="0" colspan="2">
+                <item row="4" column="0">
                  <widget class="QLabel" name="status_lbl">
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -568,13 +560,108 @@ Study</string>
                   </property>
                  </widget>
                 </item>
+                <item row="6" column="0">
+                 <widget class="QGraphicsView" name="loading_svg">
+                  <property name="minimumSize">
+                   <size>
+                    <width>80</width>
+                    <height>80</height>
+                   </size>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">border:none</string>
+                  </property>
+                  <property name="frameShape">
+                   <enum>QFrame::NoFrame</enum>
+                  </property>
+                  <property name="frameShadow">
+                   <enum>QFrame::Plain</enum>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="0" alignment="Qt::AlignHCenter">
+                 <widget class="QPushButton" name="run_nlp_btn">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="minimumSize">
+                   <size>
+                    <width>75</width>
+                    <height>50</height>
+                   </size>
+                  </property>
+                  <property name="maximumSize">
+                   <size>
+                    <width>7</width>
+                    <height>16777215</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string>Begin 
+Processing</string>
+                  </property>
+                 </widget>
+                </item>
                </layout>
               </widget>
              </item>
             </layout>
            </item>
+           <item row="5" column="0" colspan="2">
+            <widget class="QTableWidget" name="study_file_tablewidget">
+             <property name="minimumSize">
+              <size>
+               <width>250</width>
+               <height>100</height>
+              </size>
+             </property>
+             <property name="showGrid">
+              <bool>false</bool>
+             </property>
+             <property name="gridStyle">
+              <enum>Qt::NoPen</enum>
+             </property>
+             <property name="cornerButtonEnabled">
+              <bool>false</bool>
+             </property>
+             <attribute name="horizontalHeaderVisible">
+              <bool>false</bool>
+             </attribute>
+             <attribute name="horizontalHeaderCascadingSectionResizes">
+              <bool>true</bool>
+             </attribute>
+             <attribute name="horizontalHeaderDefaultSectionSize">
+              <number>60</number>
+             </attribute>
+             <attribute name="horizontalHeaderHighlightSections">
+              <bool>false</bool>
+             </attribute>
+             <attribute name="horizontalHeaderMinimumSectionSize">
+              <number>10</number>
+             </attribute>
+             <attribute name="verticalHeaderVisible">
+              <bool>false</bool>
+             </attribute>
+             <attribute name="verticalHeaderHighlightSections">
+              <bool>false</bool>
+             </attribute>
+             <column>
+              <property name="text">
+               <string>file</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>analyse</string>
+              </property>
+             </column>
+            </widget>
+           </item>
           </layout>
-          <zorder>study_file_listwidget</zorder>
+          <zorder>study_file_tablewidget</zorder>
           <zorder>study_input_directory_lbl</zorder>
           <zorder>label</zorder>
           <zorder>result_tab_widget</zorder>

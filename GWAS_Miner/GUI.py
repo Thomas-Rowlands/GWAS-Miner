@@ -3,14 +3,16 @@ import sys
 from io import BytesIO
 
 from PyQt5 import uic
-from PyQt5.QtCore import QRunnable, pyqtSlot, QObject, pyqtSignal, QThreadPool, Qt
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtCore import QRunnable, pyqtSlot, QObject, pyqtSignal, QThreadPool, Qt, QSize
+from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtSvg import QGraphicsSvgItem
-from PyQt5.QtWidgets import QApplication, QFileDialog, QPushButton, QGraphicsScene, QTableWidgetItem
+from PyQt5.QtWidgets import QApplication, QFileDialog, QPushButton, QGraphicsScene, QTableWidgetItem, QListWidgetItem, \
+    QBoxLayout, QLabel, QHeaderView
 from reportlab.graphics import renderPM
 from svglib.svglib import svg2rlg
 
 from GWAS_Miner import GWASMiner
+from functools import partial
 
 
 class MainForm:
@@ -76,7 +78,6 @@ class MainForm:
         self.form.study_directory_btn.clicked.connect(self.get_file_directory)
         self.form.run_nlp_btn.clicked.connect(self.run_nlp_btn_handler)
         self.form.visualise_back_btn.clicked.connect(self.visualise_back_btn_handler)
-        self.form.analyse_study_btn.clicked.connect(self.analyse_study_btn_handler)
         self.form.dependency_next_btn.clicked.connect(self.get_next_dependency)
         self.form.dependency_previous_btn.clicked.connect(self.get_previous_dependency)
         self.form.update_ontology_cache_action.triggered.connect(self.update_ontology_cache_handler)
@@ -84,15 +85,14 @@ class MainForm:
         self.form.settings_action.triggered.connect(self.settings_action_handler)
         self.form.settings_save_btn.clicked.connect(self.settings_save_handler)
         self.form.settings_cancel_btn.clicked.connect(self.settings_cancel_handler)
-        self.form.result_file_listwidget.itemDoubleClicked.connect(self.result_double_click_handler)
         self.form.result_view_back_btn.clicked.connect(self.result_back_btn_click_handler)
 
     def result_back_btn_click_handler(self):
         self.navigate_to_page(1)
         self.form.result_viewer_textbrowser.clear()
 
-    def result_double_click_handler(self, item):
-        with open(F"output/{item.text()}_result.json", "r", encoding="utf-8") as f_in:
+    def view_result(self, file):
+        with open(F"output/{file}_result.json", "r", encoding="utf-8") as f_in:
             self.form.result_viewer_textbrowser.setText(f_in.read())
         self.navigate_to_page(4)
 
@@ -177,14 +177,6 @@ class MainForm:
         self.worker.signals.finished.connect(self.visualisation_finished_callback)
         self.threadpool.start(self.worker)
 
-    def analyse_study_btn_handler(self):
-        """
-        Event handler for analyse study button.
-        Begins the study visualisation rendering process.
-        """
-        if self.form.study_file_listwidget.selectedItems():
-            self.render_study_visualisation(self.form.study_file_listwidget.selectedItems()[0].text())
-
     def get_file_directory(self):
         """
         Opens a folder selection dialog and adds each file within the selected folder
@@ -192,11 +184,30 @@ class MainForm:
         """
         path = QFileDialog.getExistingDirectory(caption='Select Study Directory')
         self.form.study_directory_input.setText(path)
-        self.form.study_file_listwidget.clear()
+        self.form.study_file_tablewidget.setRowCount(0)
         if self.validate_directory(path):
             for file in os.listdir(self.form.study_directory_input.text()):
                 if file.endswith("_maintext.json"):
-                    self.form.study_file_listwidget.addItem(file)
+                    analyse_btn = QPushButton()
+                    analyse_icon = QIcon("GWAS_Miner/res/icons/statistics.png")
+                    analyse_btn.setIcon(analyse_icon)
+                    analyse_btn.clicked.connect(partial(self.render_study_visualisation, file))  # partial is essential
+                    study = QTableWidgetItem()
+
+                    study.setTextAlignment(Qt.AlignCenter)
+
+                    study.setData(Qt.DisplayRole, file)
+
+                    row_index = self.form.study_file_tablewidget.rowCount()
+
+                    self.form.study_file_tablewidget.insertRow(row_index)
+                    self.form.study_file_tablewidget.setItem(row_index, 0, study)
+                    self.form.study_file_tablewidget.setCellWidget(row_index, 1, analyse_btn)
+
+                    header = self.form.study_file_tablewidget.horizontalHeader()
+                    analyse_btn.setFixedWidth(30)
+                    header.resizeSection(0, 260)
+                    header.resizeSection(1, 30)
 
     def validate_directory(self, path):
         """
@@ -248,7 +259,7 @@ class MainForm:
         else:
             if not self.validate_directory(self.form.study_directory_input.text()):
                 return
-            self.form.result_file_listwidget.clear()
+            self.form.result_file_tablewidget.setRowCount(0)
             self.form.results_failed_listwidget.clear()
             self.form.result_tab_widget.setTabText(0, F"Succeeded")
             self.form.result_tab_widget.setTabText(1, F"No Results")
@@ -371,8 +382,27 @@ class MainForm:
             self.form.run_nlp_btn.setEnabled(True)
             return
         if result.status:
-            self.form.result_file_listwidget.addItem(result.text)
-            self.form.result_tab_widget.setTabText(0, F"Succeeded ({self.form.result_file_listwidget.count()})")
+            self.form.result_tab_widget.setTabText(0, F"Succeeded ({self.form.result_file_tablewidget.rowCount() + 1})")
+
+            view_btn = QPushButton()
+            view_icon = QIcon("GWAS_Miner/res/icons/view_icon.png")
+            view_btn.setIcon(view_icon)
+            view_btn.clicked.connect(partial(self.view_result, result.text))
+            study = QTableWidgetItem()
+            study.setTextAlignment(Qt.AlignCenter)
+
+            study.setData(Qt.DisplayRole, result.text)
+
+            row_index = self.form.result_file_tablewidget.rowCount()
+
+            self.form.result_file_tablewidget.insertRow(row_index)
+            self.form.result_file_tablewidget.setItem(row_index, 0, study)
+            self.form.result_file_tablewidget.setCellWidget(row_index, 1, view_btn)
+
+            header = self.form.result_file_tablewidget.horizontalHeader()
+            view_btn.setFixedWidth(30)
+            header.resizeSection(0, 260)
+            header.resizeSection(1, 30)
         else:
             self.form.results_failed_listwidget.addItem(result.text)
             self.form.result_tab_widget.setTabText(1, F"No Results ({self.form.results_failed_listwidget.count()})")

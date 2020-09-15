@@ -137,7 +137,7 @@ class Table:
         self.target_indexes = None
         # if self.targets: ###removed while testing sentence conversion.
         #     self.target_indexes = Table.__get_target_headings(self.targets)
-        self.__get_snps()
+        # self.__get_snps()
 
     def __get_rows(self):
         rows = []
