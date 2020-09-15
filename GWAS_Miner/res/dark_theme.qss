@@ -169,67 +169,42 @@ https://doc.qt.io/qt-5/stylesheet-examples.html#customizing-qcheckbox
 
 --------------------------------------------------------------------------- */
 QCheckBox {
-  background-color: #19232D;
-  color: #F0F0F0;
-  spacing: 4px;
-  outline: none;
-  padding-top: 4px;
-  padding-bottom: 4px;
+	color: #FFFFFF;
+	padding: 2px;
+}
+QCheckBox:disabled {
+	color: #808086;
+	padding: 2px;
 }
 
-QCheckBox:focus {
-  border: none;
+QCheckBox:hover {
+	border-style:solid;
+	padding-left: 1px;
+	padding-right: 1px;
+	padding-bottom: 1px;
+	padding-top: 1px;
+	border-width:1px;
+	border-color: transparent;
 }
-
-QCheckBox QWidget:disabled {
-  background-color: #19232D;
-  color: #787878;
-}
-
-QCheckBox::indicator {
-  margin-left: 4px;
-  height: 16px;
-  width: 16px;
-}
-
-QCheckBox::indicator:unchecked {
-  image: url(":/qss_icons/rc/checkbox_unchecked.png");
-}
-
-QCheckBox::indicator:unchecked:hover, QCheckBox::indicator:unchecked:focus, QCheckBox::indicator:unchecked:pressed {
-  border: none;
-  image: url(":/qss_icons/rc/checkbox_unchecked_focus.png");
-}
-
-QCheckBox::indicator:unchecked:disabled {
-  image: url(":/qss_icons/rc/checkbox_unchecked_disabled.png");
-}
-
 QCheckBox::indicator:checked {
-  image: url(":/qss_icons/rc/checkbox_checked.png");
-}
 
-QCheckBox::indicator:checked:hover, QCheckBox::indicator:checked:focus, QCheckBox::indicator:checked:pressed {
-  border: none;
-  image: url(":/qss_icons/rc/checkbox_checked_focus.png");
+	height: 10px;
+	width: 10px;
+	border-style:solid;
+	border-width: 1px;
+	border-color: qlineargradient(spread:pad, x1:0.5, y1:1, x2:0.5, y2:0, stop:0 rgba(0, 113, 255, 255), stop:1 rgba(91, 171, 252, 255));
+	color: #000000;
+	background-color: qlineargradient(spread:pad, x1:0.5, y1:1, x2:0.5, y2:0, stop:0 rgba(0, 113, 255, 255), stop:1 rgba(91, 171, 252, 255));
 }
+QCheckBox::indicator:unchecked {
 
-QCheckBox::indicator:checked:disabled {
-  image: url(":/qss_icons/rc/checkbox_checked_disabled.png");
+	height: 10px;
+	width: 10px;
+	border-style:solid;
+	border-width: 1px;
+	border-color: qlineargradient(spread:pad, x1:0.5, y1:1, x2:0.5, y2:0, stop:0 rgba(0, 113, 255, 255), stop:1 rgba(91, 171, 252, 255));
+	color: #000000;
 }
-
-QCheckBox::indicator:indeterminate {
-  image: url(":/qss_icons/rc/checkbox_indeterminate.png");
-}
-
-QCheckBox::indicator:indeterminate:disabled {
-  image: url(":/qss_icons/rc/checkbox_indeterminate_disabled.png");
-}
-
-QCheckBox::indicator:indeterminate:focus, QCheckBox::indicator:indeterminate:hover, QCheckBox::indicator:indeterminate:pressed {
-  image: url(":/qss_icons/rc/checkbox_indeterminate_focus.png");
-}
-
 /* QGroupBox --------------------------------------------------------------
 
 https://doc.qt.io/qt-5/stylesheet-examples.html#customizing-qgroupbox
@@ -1007,7 +982,6 @@ QPushButton {
   padding: 3px;
   outline: none;
   /* Issue #194 - Special case of QPushButton inside dialogs, for better UI */
-  min-width: 80px;
 }
 
 QPushButton:disabled {

@@ -7,7 +7,7 @@ from PyQt5.QtCore import QRunnable, pyqtSlot, QObject, pyqtSignal, QThreadPool, 
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtSvg import QGraphicsSvgItem
 from PyQt5.QtWidgets import QApplication, QFileDialog, QPushButton, QGraphicsScene, QTableWidgetItem, QListWidgetItem, \
-    QBoxLayout, QLabel, QHeaderView
+    QBoxLayout, QLabel, QHeaderView, QCheckBox, QHBoxLayout, QWidget
 from reportlab.graphics import renderPM
 from svglib.svglib import svg2rlg
 
@@ -86,6 +86,13 @@ class MainForm:
         self.form.settings_save_btn.clicked.connect(self.settings_save_handler)
         self.form.settings_cancel_btn.clicked.connect(self.settings_cancel_handler)
         self.form.result_view_back_btn.clicked.connect(self.result_back_btn_click_handler)
+        self.form.file_select_all_checkbox.stateChanged.connect(self.set_study_checkbox_states)
+
+    def set_study_checkbox_states(self):
+        state = self.form.file_select_all_checkbox.isChecked()
+        table = self.form.study_file_tablewidget
+        for i in range(table.rowCount()):
+            table.cellWidget(i, 2).findChild(QCheckBox).setChecked(state)
 
     def result_back_btn_click_handler(self):
         self.navigate_to_page(1)
@@ -186,28 +193,44 @@ class MainForm:
         self.form.study_directory_input.setText(path)
         self.form.study_file_tablewidget.setRowCount(0)
         if self.validate_directory(path):
+            self.form.file_select_all_checkbox.setChecked(True)
             for file in os.listdir(self.form.study_directory_input.text()):
                 if file.endswith("_maintext.json"):
+                    # Add analysis button for the study.
                     analyse_btn = QPushButton()
                     analyse_icon = QIcon("GWAS_Miner/res/icons/statistics.png")
                     analyse_btn.setIcon(analyse_icon)
                     analyse_btn.clicked.connect(partial(self.render_study_visualisation, file))  # partial is essential
+                    analyse_widget = QWidget()
+                    analyse_layout = QHBoxLayout(analyse_widget)
+                    analyse_layout.addWidget(analyse_btn)
+                    analyse_layout.setAlignment(Qt.AlignCenter)
+                    analyse_layout.setContentsMargins(0, 0, 0, 0)
+                    # Add study label text.
                     study = QTableWidgetItem()
-
                     study.setTextAlignment(Qt.AlignCenter)
-
                     study.setData(Qt.DisplayRole, file)
+                    # Add checkbox for study record.
+                    check_box_widget = QWidget()
+                    check_box_layout = QHBoxLayout(check_box_widget)
+                    check_box = QCheckBox()
+                    check_box.setChecked(True)
+                    check_box_layout.addWidget(check_box)
+                    check_box_layout.setAlignment(Qt.AlignCenter)
+                    check_box_layout.setContentsMargins(0, 0, 0, 0)
 
                     row_index = self.form.study_file_tablewidget.rowCount()
 
                     self.form.study_file_tablewidget.insertRow(row_index)
                     self.form.study_file_tablewidget.setItem(row_index, 0, study)
                     self.form.study_file_tablewidget.setCellWidget(row_index, 1, analyse_btn)
+                    self.form.study_file_tablewidget.setCellWidget(row_index, 2, check_box_widget)
 
                     header = self.form.study_file_tablewidget.horizontalHeader()
                     analyse_btn.setFixedWidth(30)
-                    header.resizeSection(0, 260)
-                    header.resizeSection(1, 30)
+                    header.resizeSection(0, 180)
+                    header.resizeSection(1, 40)
+                    header.resizeSection(2, 30)
 
     def validate_directory(self, path):
         """
@@ -259,6 +282,10 @@ class MainForm:
         else:
             if not self.validate_directory(self.form.study_directory_input.text()):
                 return
+            shortlist = self.get_selected_studies()
+            if not shortlist:
+                self.set_progress_text("No files selected.")
+                return
             self.form.result_file_tablewidget.setRowCount(0)
             self.form.results_failed_listwidget.clear()
             self.form.result_tab_widget.setTabText(0, F"Succeeded")
@@ -266,8 +293,16 @@ class MainForm:
             self.is_running = True
             GWASMiner.is_cancelled = False
             self.form.run_nlp_btn.setText("Stop \nProcessing")
-            self.run_worker(GWASMiner.process_studies, (self.form.study_directory_input.text(), None),
+            self.run_worker(GWASMiner.process_studies, (self.form.study_directory_input.text(), None, shortlist),
                             self.update_results_files, False)
+
+    def get_selected_studies(self):
+        shortlist = []
+        table = self.form.study_file_tablewidget
+        for i in range(table.rowCount()):
+            if table.cellWidget(i, 2).findChild(QCheckBox).isChecked():
+                shortlist.append(table.item(i, 0).text())
+        return shortlist
 
     @staticmethod
     def convert_svg_textpath(svg):
@@ -401,7 +436,7 @@ class MainForm:
 
             header = self.form.result_file_tablewidget.horizontalHeader()
             view_btn.setFixedWidth(30)
-            header.resizeSection(0, 260)
+            header.resizeSection(0, 200)
             header.resizeSection(1, 30)
         else:
             self.form.results_failed_listwidget.addItem(result.text)

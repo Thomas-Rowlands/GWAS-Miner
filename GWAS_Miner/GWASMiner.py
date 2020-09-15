@@ -26,11 +26,10 @@ def __load_config():
 
 
 def __prepare_ontology_data():
-    from GWAS_Miner.DataStructures import  MasterLexicon
+    from GWAS_Miner.DataStructures import MasterLexicon
     from GWAS_Miner import Ontology
     lexicon_output = MasterLexicon().parse(Ontology.get_tagging_data())
     return lexicon_output
-
 
 
 logger = logging.getLogger("Phenotype Finder")
@@ -129,7 +128,7 @@ def prepare_study(directory, file_name):
     return study
 
 
-def process_studies(directory, visualise=None, qt_progress_signal=None, qt_study_finished_signal=None):
+def process_studies(directory, visualise=None, shortlist=None, qt_progress_signal=None, qt_study_finished_signal=None):
     """[Processes each file within the provided directory for GWAS information extraction.]
 
     Args: directory ([string]): [directory containing publication files.] visualise ([string], optional): [ents =
@@ -156,6 +155,9 @@ def process_studies(directory, visualise=None, qt_progress_signal=None, qt_study
 
     # Process each publication file in turn
     for file_name in os.listdir(directory):
+        if shortlist:
+            if file_name not in shortlist:
+                continue
         if is_cancelled:
             qt_study_finished_signal.emit(cancel_response)
             return
@@ -214,8 +216,6 @@ def main():
             os.makedirs("output")
         except IOError as e:
             sys.exit(F"Unable to create output folder: {e}")
-
-
 
     # Configure logger
     import time

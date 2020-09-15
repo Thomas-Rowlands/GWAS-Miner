@@ -335,7 +335,7 @@ border:none;</string>
             <widget class="QTabWidget" name="result_tab_widget">
              <property name="minimumSize">
               <size>
-               <width>150</width>
+               <width>250</width>
                <height>100</height>
               </size>
              </property>
@@ -381,8 +381,20 @@ border:none;</string>
                    <property name="editTriggers">
                     <set>QAbstractItemView::NoEditTriggers</set>
                    </property>
+                   <property name="tabKeyNavigation">
+                    <bool>false</bool>
+                   </property>
+                   <property name="showDropIndicator" stdset="0">
+                    <bool>false</bool>
+                   </property>
                    <property name="dragDropOverwriteMode">
                     <bool>false</bool>
+                   </property>
+                   <property name="selectionMode">
+                    <enum>QAbstractItemView::NoSelection</enum>
+                   </property>
+                   <property name="selectionBehavior">
+                    <enum>QAbstractItemView::SelectRows</enum>
                    </property>
                    <property name="showGrid">
                     <bool>false</bool>
@@ -422,6 +434,9 @@ border:none;</string>
                    <column>
                     <property name="text">
                      <string>view</string>
+                    </property>
+                    <property name="textAlignment">
+                     <set>AlignCenter</set>
                     </property>
                    </column>
                   </widget>
@@ -515,7 +530,7 @@ border:none;</string>
               <widget class="QFrame" name="main_controls_frame">
                <property name="minimumSize">
                 <size>
-                 <width>200</width>
+                 <width>300</width>
                  <height>250</height>
                 </size>
                </property>
@@ -618,6 +633,24 @@ Processing</string>
                <height>100</height>
               </size>
              </property>
+             <property name="editTriggers">
+              <set>QAbstractItemView::NoEditTriggers</set>
+             </property>
+             <property name="tabKeyNavigation">
+              <bool>false</bool>
+             </property>
+             <property name="showDropIndicator" stdset="0">
+              <bool>false</bool>
+             </property>
+             <property name="dragDropOverwriteMode">
+              <bool>false</bool>
+             </property>
+             <property name="selectionMode">
+              <enum>QAbstractItemView::NoSelection</enum>
+             </property>
+             <property name="selectionBehavior">
+              <enum>QAbstractItemView::SelectRows</enum>
+             </property>
              <property name="showGrid">
               <bool>false</bool>
              </property>
@@ -658,6 +691,24 @@ Processing</string>
                <string>analyse</string>
               </property>
              </column>
+             <column>
+              <property name="text">
+               <string>checkbox</string>
+              </property>
+              <property name="textAlignment">
+               <set>AlignCenter</set>
+              </property>
+             </column>
+            </widget>
+           </item>
+           <item row="4" column="0" alignment="Qt::AlignRight">
+            <widget class="QCheckBox" name="file_select_all_checkbox">
+             <property name="text">
+              <string>Select All</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
             </widget>
            </item>
           </layout>
@@ -665,6 +716,7 @@ Processing</string>
           <zorder>study_input_directory_lbl</zorder>
           <zorder>label</zorder>
           <zorder>result_tab_widget</zorder>
+          <zorder>file_select_all_checkbox</zorder>
          </widget>
         </item>
        </layout>
