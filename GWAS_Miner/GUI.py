@@ -18,8 +18,8 @@ from functools import partial
 class MainForm:
     def __init__(self):
         self.Form, self.Window = uic.loadUiType("GWAS_Miner/res/gwas_miner.ui")
+        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
         self.app = QApplication([])
-        self.app.setAttribute(Qt.AA_EnableHighDpiScaling, True)
         self.window = self.Window()
         self.form = self.Form()
         self.form.setupUi(self.window)
@@ -35,6 +35,7 @@ class MainForm:
         self.run_worker(GWASMiner.load_nlp_object, None, self.initial_loading_finished_callback, True)
         self.dependency_svgs = []
         self.dependency_index = 0
+        self.previous_page = 0
 
     def __load_style(self, theme):
         with open(F'GWAS_Miner/res/{theme}') as file:
@@ -104,7 +105,7 @@ class MainForm:
         self.navigate_to_page(4)
 
     def settings_cancel_handler(self):
-        self.navigate_to_page(1)
+        self.navigate_to_page(self.previous_page)
 
     def settings_save_handler(self):
         previous_theme = GWASMiner.config.get("preferences", "theme")
@@ -113,7 +114,7 @@ class MainForm:
         if previous_theme != new_theme:
             self.__load_style(F"{new_theme.lower()}_theme.qss")
         GWASMiner.save_config()
-        self.navigate_to_page(1)
+        self.navigate_to_page(self.previous_page)
 
     def settings_action_handler(self):
         if GWASMiner.config.get("preferences", "theme").lower() == "light":
@@ -161,6 +162,7 @@ class MainForm:
         Sets the current index of the stack widget
         0 = Loading, 1 = main, 2 = study visualisation, 3 = settings
         """
+        self.previous_page = self.form.stackedWidget.currentIndex()
         self.form.stackedWidget.setCurrentIndex(page_number)
 
     def visualise_back_btn_handler(self):

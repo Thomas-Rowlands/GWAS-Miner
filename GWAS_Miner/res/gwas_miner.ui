@@ -604,7 +604,7 @@ border:none;</string>
                   </property>
                   <property name="minimumSize">
                    <size>
-                    <width>75</width>
+                    <width>85</width>
                     <height>50</height>
                    </size>
                   </property>
