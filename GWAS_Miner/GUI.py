@@ -192,6 +192,8 @@ class MainForm:
         to the study list widget.
         """
         path = QFileDialog.getExistingDirectory(caption='Select Study Directory')
+        if not path:
+            return
         self.form.study_directory_input.setText(path)
         self.form.study_file_tablewidget.setRowCount(0)
         if self.validate_directory(path):

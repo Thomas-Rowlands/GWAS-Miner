@@ -1860,7 +1860,7 @@ QTableView::item:!selected:hover,
 QColumnView::item:!selected:hover {
   outline: 0;
   color: #148CD2;
-  background-color: #32414B;
+  background-color: #19232D;
 }
 
 QTableCornerButton::section {
