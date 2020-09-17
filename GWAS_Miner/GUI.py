@@ -368,6 +368,10 @@ class MainForm:
         return result
 
     def visualisation_finished_callback(self, response):
+        if not response.status:
+            self.set_progress_text("Failed to load document.")
+            self.set_loading_visible(False)
+            return
         entity_html = self.reformat_html(response.data[0])
         self.form.entity_visualisation_browser.setHtml(entity_html)
         self.dependency_svgs.clear()

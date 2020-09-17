@@ -88,6 +88,11 @@ def output_study_results(study, qt_study_finished_signal=None):
 
 def get_study_visualisations(study, qt_progress_signal=None, qt_finished_signal=None):
     nlp_object = load_nlp_object(qt_progress_signal)
+    if study is None:
+        from GWAS_Miner.GUI import QtFinishedResponse
+        response = QtFinishedResponse(False, F"Failed to process document")
+        qt_finished_signal.emit(response)
+        return
     update_gui_progress(qt_progress_signal, F"Processing study {study.pmid}...")
     doc = nlp_object.process_corpus(nlp_object.replace_all_abbreviations(study.get_fulltext()))
     phenotype_stats = nlp_object.get_phenotype_stats(doc, lexicon)
