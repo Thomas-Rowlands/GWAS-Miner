@@ -52,7 +52,7 @@ class MainForm:
         self.form.stackedWidget.setGeometry(0, 0, self.window.width(), self.window.height())
         self.navigate_to_page(0)
         self.form.status_lbl.setHidden(True)
-        self.form.loading_svg.setHidden(True)
+        self.set_loading_visible(True)
         splash_loading_scene = QGraphicsScene()
         main_loading_scene = QGraphicsScene()
         splash_loading_svg = QGraphicsSvgItem("GWAS_Miner/res/loading.svg")
@@ -179,12 +179,19 @@ class MainForm:
         if disable_controls:
             self.toggle_controls(False)
         study = GWASMiner.prepare_study(self.form.study_directory_input.text(), file)
-        self.form.loading_svg.setHidden(False)
+        self.set_loading_visible(True)
         self.worker = Worker(GWASMiner.get_study_visualisations, [study])
         self.worker.signals.progress_update.connect(self.set_progress_text)
         self.worker.signals.error.connect(self.set_progress_text)
         self.worker.signals.finished.connect(self.visualisation_finished_callback)
         self.threadpool.start(self.worker)
+
+    def set_loading_visible(self, state):
+        if not state:
+            if not self.is_running:
+                self.form.loading_svg.setHidden(True)
+        else:
+            self.form.loading_svg.setHidden(False)
 
     def get_file_directory(self):
         """
@@ -207,8 +214,8 @@ class MainForm:
                     analyse_btn.clicked.connect(partial(self.render_study_visualisation, file))  # partial is essential
                     analyse_widget = QWidget()
                     analyse_layout = QHBoxLayout(analyse_widget)
-                    analyse_layout.addWidget(analyse_btn)
                     analyse_layout.setAlignment(Qt.AlignCenter)
+                    analyse_layout.addWidget(analyse_btn)
                     analyse_layout.setContentsMargins(0, 0, 0, 0)
                     # Add study label text.
                     study = QTableWidgetItem()
@@ -227,7 +234,7 @@ class MainForm:
 
                     self.form.study_file_tablewidget.insertRow(row_index)
                     self.form.study_file_tablewidget.setItem(row_index, 0, study)
-                    self.form.study_file_tablewidget.setCellWidget(row_index, 1, analyse_btn)
+                    self.form.study_file_tablewidget.setCellWidget(row_index, 1, analyse_widget)
                     self.form.study_file_tablewidget.setCellWidget(row_index, 2, check_box_widget)
 
                     header = self.form.study_file_tablewidget.horizontalHeader()
@@ -266,7 +273,7 @@ class MainForm:
             self.toggle_controls(False)
             self.navigate_to_page(0)
         else:
-            self.form.loading_svg.setHidden(False)
+            self.set_loading_visible(True)
         self.worker = Worker(func, args)
         self.worker.signals.progress_update.connect(self.set_progress_text)
         self.worker.signals.error.connect(self.set_progress_text)
@@ -397,11 +404,11 @@ class MainForm:
         self.form.visualise_stats_table.setSortingEnabled(True)
         self.form.visualise_stats_table.sortByColumn(1, Qt.SortOrder(1))
         self.navigate_to_page(2)
-        self.form.loading_svg.hide()
+        self.set_loading_visible(False)
         self.form.status_lbl.setText("Ready")
 
     def initial_loading_finished_callback(self, status):
-        self.form.loading_svg.setHidden(True)
+        self.set_loading_visible(False)
         self.toggle_controls(True)
         self.form.run_nlp_btn.setText("Begin \nProcessing")
         self.set_progress_text("")
@@ -414,8 +421,8 @@ class MainForm:
     def update_results_files(self, result):
         if result.data == 1:
             self.set_progress_text(result.text)
-            self.form.loading_svg.setHidden(True)
             self.is_running = False
+            self.set_loading_visible(False)
             GWASMiner.is_cancelled = False
             self.form.run_nlp_btn.setText("Start \nProcessing")
             self.form.run_nlp_btn.setEnabled(True)
@@ -427,6 +434,12 @@ class MainForm:
             view_icon = QIcon("GWAS_Miner/res/icons/view_icon.png")
             view_btn.setIcon(view_icon)
             view_btn.clicked.connect(partial(self.view_result, result.text))
+            view_widget = QWidget()
+            view_layout = QHBoxLayout(view_widget)
+            view_layout.setAlignment(Qt.AlignCenter)
+            view_layout.setContentsMargins(0, 0, 0, 0)
+            view_layout.addWidget(view_btn)
+
             study = QTableWidgetItem()
             study.setTextAlignment(Qt.AlignCenter)
 
@@ -436,7 +449,7 @@ class MainForm:
 
             self.form.result_file_tablewidget.insertRow(row_index)
             self.form.result_file_tablewidget.setItem(row_index, 0, study)
-            self.form.result_file_tablewidget.setCellWidget(row_index, 1, view_btn)
+            self.form.result_file_tablewidget.setCellWidget(row_index, 1, view_widget)
 
             header = self.form.result_file_tablewidget.horizontalHeader()
             view_btn.setFixedWidth(30)
