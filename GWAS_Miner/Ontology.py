@@ -43,7 +43,7 @@ def get_tagging_data():
                                             EFO.get_efo_from_cache, HPO.get_syns])
         if not validate_data(ont_data):
             logger.error("Critical failure to extract ontology data.")
-            sys.exit("Critical failure to extract ontology data.")
+            logger.error("Critical failure to extract ontology data.")
     mesh_data = ont_data[0]
     hpo_data = ont_data[1]
     efo_terms, efo_syns = ont_data[2]
@@ -74,16 +74,16 @@ def update_ontology_cache(qt_progress_signal=None, qt_finished_signal=None):
     """[Updates the ontology cache files with data from the source ontology files.]
     """
     logger.info("Updating ontology cache files.")
-    funcs = [Mesh.set_descriptors,
+    funcs = [Mesh.extract_mesh_data,
              HPO.set_terms,
              HPO.set_hpo_synonyms,
              EFO.set_terms]
     ReadyThready.go_cluster(funcs)
+    logger.info("Finished updating ontology cache files.")
     if qt_finished_signal:
         from GWAS_Miner.GUI import QtFinishedResponse
-        response = QtFinishedResponse(True, "Updated ontology data.")
+        response = QtFinishedResponse(status=True, text="Updated ontology data.")
         qt_finished_signal.emit(response)
-    logger.info("Finished updating ontology cache files.")
 
 
 class EFO:
@@ -105,9 +105,9 @@ class EFO:
                         logger.warning("EFO ID was not found...")
                 json.dump(results, out_file)
         except IOError as io:
-            sys.exit(F"The following IO error occurred querying EFO terms: {io.strerror}")
+            logger.error(F"The following IO error occurred querying EFO terms: {io.strerror}")
         except BaseException as ex:
-            sys.exit(F"The following error occurred querying EFO terms: {ex}")
+            logger.error(F"The following error occurred querying EFO terms: {ex}")
         g.close()
 
     @staticmethod
@@ -122,9 +122,9 @@ class EFO:
                 for syn in temp_syns[i][1]:
                     syns.append([temp_syns[i][0], syn])
         except IOError as io:
-            sys.exit(F"The following IO error occurred retrieving cached EFO terms: {io.strerror}")
+            logger.error(F"The following IO error occurred retrieving cached EFO terms: {io.strerror}")
         except BaseException as ex:
-            sys.exit(F"The following IO error occurred retrieving cached EFO terms: {ex}")
+            logger.error(F"The following IO error occurred retrieving cached EFO terms: {ex}")
 
         return terms, syns
 
@@ -154,32 +154,44 @@ class Mesh:
         return data
 
     @staticmethod
-    def set_descriptors():
+    def validate_branch(tree_num):
+        desired_branches = ["A", "C", "G", "F", "D", "E01", "N06.850"]
+        branch_exceptions = ["G17", "G05", "F02.463.425.069", "F04.754.720.346", "F01.829.263",
+                             "I01.880.853.150"]
+        result = False
+        for desired in desired_branches:
+            if desired in tree_num:
+                result = True
+                for undesired in branch_exceptions:
+                    if undesired in tree_num:
+                        return False
+        return result
+
+    @staticmethod
+    def extract_mesh_data():
         filtered_descriptors = []
         try:
             parser = etree.XMLParser(encoding='utf-8')
             tree = etree.parse("ontology_data/desc2020.xml")
-            desired_branches = ["A", "C", "G", "F", "D", "E01", "N06.850"]
-            branch_exceptions = ["G17", "G05", "F02.463.425.069", "F04.754.720.346", "F01.829.263",
-                                 "I01.880.853.150"]
-
+            unwanted_descriptors = []
             all_descriptors = [x for x in tree.xpath("//DescriptorRecord", smart_string=False)]
             for desc in all_descriptors:
-                is_valid = False
-                for num in desc.xpath(".//TreeNumberList//TreeNumber//text()"):
-                    for desired in desired_branches:
-                        if desired in num:
-                            is_valid = True
-                    for undesired in branch_exceptions:
-                        if undesired in num:
-                            is_valid = False
-                            break
-                if is_valid:
-                    filtered_descriptors.append(desc)
+                for tree_num in desc.xpath(".//TreeNumberList//TreeNumber//text()"):
+                    result = Mesh.validate_branch(tree_num)
+                    if not result:
+                        unwanted_descriptors.append(tree_num)
+                        break
+                    else:
+                        filtered_descriptors.append(desc)
+            for desc in unwanted_descriptors:
+                if desc in filtered_descriptors:
+                    filtered_descriptors.remove(desc)
+
+
         except IOError as io:
-            sys.exit(F"IO error parsing MeSH descriptors XML file: {io.errno} -> {io.strerror}")
+            logger.error(F"IO error parsing MeSH descriptors XML file: {io.errno} -> {io.strerror}")
         except BaseException as ex:
-            sys.exit(F"An unexpected error occurred whilst parsing MeSH descriptors XML file: {ex}")
+            logger.error(F"An unexpected error occurred whilst parsing MeSH descriptors XML file: {ex}")
 
         results = []
         try:
@@ -208,9 +220,9 @@ class Mesh:
             file.write(output)
             file.close()
         except IOError as io:
-            sys.exit(F"IO error saving MeSH descriptors JSON file: {io.errno} -> {io.strerror}")
+            logger.error(F"IO error saving MeSH descriptors JSON file: {io.errno} -> {io.strerror}")
         except BaseException as ex:
-            sys.exit(F"An unexpected error occurred whilst parsing MeSH descriptors XML file: {ex}")
+            logger.error(F"An unexpected error occurred whilst parsing MeSH descriptors XML file: {ex}")
         return results
 
     @staticmethod
@@ -246,7 +258,7 @@ class Mesh:
                 with open('mesh.nt', 'wb') as output_file:
                     shutil.copyfileobj(input_file, output_file)
             logger.info("MeSH file updated")
-            Mesh.set_descriptors()
+            Mesh.extract_mesh_data()
             logger.info("New MeSH data extracted.")
         else:
             logger.info("Already using the latest MeSH file.")
@@ -271,9 +283,9 @@ class HPO:
             file.write(output)
             file.close()
         except IOError as io:
-            sys.exit(F"IO error storing new HPO terms: {io.errno} -> {io.strerror}")
+            logger.error(F"IO error storing new HPO terms: {io.errno} -> {io.strerror}")
         except BaseException as ex:
-            sys.exit(F"An unexpected error occurred whilst storing new HPO terms: {ex}")
+            logger.error(F"An unexpected error occurred whilst storing new HPO terms: {ex}")
         return results
 
     @staticmethod
@@ -283,9 +295,9 @@ class HPO:
             file = open("ontology_data/hp.json", "r")
             results = json.load(file)
         except IOError as io:
-            sys.exit(F"IO error retrieving cached HPO terms: {io.errno} -> {io.strerror}")
+            logger.error(F"IO error retrieving cached HPO terms: {io.errno} -> {io.strerror}")
         except BaseException as ex:
-            sys.exit(F"An unexpected error occurred whilst retrieving cached HPO terms: {ex}")
+            logger.error(F"An unexpected error occurred whilst retrieving cached HPO terms: {ex}")
         return results
 
     @staticmethod

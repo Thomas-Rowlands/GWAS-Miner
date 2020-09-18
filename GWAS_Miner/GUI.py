@@ -139,6 +139,7 @@ class MainForm:
         """
         Return to the Main frame.
         """
+        self.toggle_controls(True)
         self.navigate_to_page(1)
 
     def get_next_dependency(self):

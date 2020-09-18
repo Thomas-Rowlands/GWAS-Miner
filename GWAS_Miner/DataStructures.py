@@ -61,7 +61,12 @@ class Study:
         for table in study_tables_json["tables"]:
             new_table = Table(table)
             self.__tables.append(new_table)
-            self.table_text += new_table.convert_to_text()
+            text = new_table.convert_to_text()
+            if text:
+                self.table_text += text
+            else:
+                self.__tables = None
+                return None
 
     def get_fulltext(self):
         """
@@ -308,18 +313,23 @@ class Table:
 
     def convert_to_text(self):
         output = ""
-        for i in range(len(self.rows)):
-            output += F"{self.caption.replace('.', ',')}, "
-            for o in range(len(self.columns)):
-                column_value = self.columns[o]
-                cell_value = self.rows[i][o]
-                if not column_value:
-                    column_value = "<!blank!>"
-                if not cell_value:
-                    cell_value = "<!blank!>"
-                output += F"{column_value} is {cell_value} and "
-            output = output[:-5]
-            output += ".\n"
+        try:
+            for i in range(len(self.rows)):
+                output += F"{self.caption.replace('.', ',')}, "
+                for o in range(len(self.columns)):
+                    column_value = self.columns[o]
+                    cell_value = self.rows[i][o]
+                    if not column_value:
+                        column_value = "<!blank!>"
+                    if not cell_value:
+                        cell_value = "<!blank!>"
+                    output += F"{column_value} is {cell_value} and "
+                output = output[:-5]
+                output += ".\n"
+        except IndexError as ie:
+            print(F"Index error found in table:{self.table_num}.\nPlease investigate this publication table JSON for "
+                  F"discrepancies.")
+            return None
         return output.replace("<!>", "")
 
 
