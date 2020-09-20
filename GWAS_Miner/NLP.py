@@ -1,15 +1,15 @@
+import logging
 import re
+
+import config
+import networkx as nx
 import spacy
+from DataStructures import SNP
 # from nlpre import dedash, titlecaps, separate_reference, unidecoder, identify_parenthetical_phrases, replace_acronyms
 from spacy import displacy
 from spacy.matcher import Matcher
 from spacy.matcher import PhraseMatcher
 from spacy.tokens import Span
-import networkx as nx
-import logging
-
-import config
-from DataStructures import SNP
 
 
 class Interpreter:

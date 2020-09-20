@@ -1,10 +1,11 @@
+import logging
 import re
-from lxml import etree
-from lxml.etree import tostring
+
+import CharacterDealer
 from DataStructures import Study, Table
 from Utility_Functions import Utility
-import CharacterDealer
-import logging
+from lxml import etree
+from lxml.etree import tostring
 
 
 class PreProcessing:

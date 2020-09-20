@@ -1,18 +1,17 @@
 import os
 import sys
+from functools import partial
 from io import BytesIO
 
+import GWASMiner
 from PyQt5 import uic
-from PyQt5.QtCore import QRunnable, pyqtSlot, QObject, pyqtSignal, QThreadPool, Qt, QSize
+from PyQt5.QtCore import QRunnable, pyqtSlot, QObject, pyqtSignal, QThreadPool, Qt
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtSvg import QGraphicsSvgItem
-from PyQt5.QtWidgets import QApplication, QFileDialog, QPushButton, QGraphicsScene, QTableWidgetItem, QListWidgetItem, \
-    QBoxLayout, QLabel, QHeaderView, QCheckBox, QHBoxLayout, QWidget
+from PyQt5.QtWidgets import QApplication, QFileDialog, QPushButton, QGraphicsScene, QTableWidgetItem, QCheckBox, \
+    QHBoxLayout, QWidget
 from reportlab.graphics import renderPM
 from svglib.svglib import svg2rlg
-
-import GWASMiner
-from functools import partial
 
 
 class MainForm:

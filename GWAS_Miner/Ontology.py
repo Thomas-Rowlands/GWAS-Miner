@@ -1,13 +1,12 @@
-import sys
-
-import rdflib
-import owlready2
-from lxml import etree
-import json
-import config
-import csv
 import codecs
+import csv
+import json
 import logging
+
+import config
+import owlready2
+import rdflib
+from lxml import etree
 from rtgo import ReadyThready
 
 logger = logging.getLogger("Phenotype Finder")

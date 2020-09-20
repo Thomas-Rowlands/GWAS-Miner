@@ -1,6 +1,7 @@
 import json
-from DataStructures import Study
 import logging
+
+from DataStructures import Study
 
 logger = logging.getLogger("Phenotype Finder")
 
