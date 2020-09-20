@@ -5,3 +5,4 @@
 **/.idea
 **/output
 **/GWAS_Miner.egg-info
+**/venv
