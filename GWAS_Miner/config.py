@@ -1,7 +1,7 @@
 # Ontology files
-hpo_file = "ontology_data/hp.owl"
-mesh_file = "ontology_data/desc2020.xml"
-efo_file = "ontology_data/efo.owl"
+hpo_file = "../ontology_data/hp.owl"
+mesh_file = "../ontology_data/desc2020.xml"
+efo_file = "../ontology_data/efo.owl"
 
 # Ontology SPARQL Queries
 efo_terms_statement = """

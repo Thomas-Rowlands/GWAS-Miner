@@ -8,8 +8,8 @@ from spacy.tokens import Span
 import networkx as nx
 import logging
 
-from GWAS_Miner import config
-from GWAS_Miner.DataStructures import SNP
+import config
+from DataStructures import SNP
 
 
 class Interpreter:

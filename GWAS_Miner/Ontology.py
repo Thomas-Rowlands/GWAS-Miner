@@ -4,7 +4,7 @@ import rdflib
 import owlready2
 from lxml import etree
 import json
-from GWAS_Miner import config
+import config
 import csv
 import codecs
 import logging
@@ -81,7 +81,7 @@ def update_ontology_cache(qt_progress_signal=None, qt_finished_signal=None):
     ReadyThready.go_cluster(funcs)
     logger.info("Finished updating ontology cache files.")
     if qt_finished_signal:
-        from GWAS_Miner.GUI import QtFinishedResponse
+        from GUI import QtFinishedResponse
         response = QtFinishedResponse(status=True, text="Updated ontology data.")
         qt_finished_signal.emit(response)
 
@@ -96,7 +96,7 @@ class EFO:
         try:
             g.parse(config.efo_file)
             efo_ontology_terms = g.query(config.efo_terms_statement, initNs=EFO.efo_namespaces)
-            with open("ontology_data/efo_terms.json", "w") as out_file:
+            with open("../ontology_data/efo_terms.json", "w") as out_file:
                 results = {}
                 for (id, label, exactSyn) in efo_ontology_terms:
                     if id not in results:
@@ -114,7 +114,7 @@ class EFO:
     def get_efo_from_cache():
         results, terms, syns = None, None, None
         try:
-            results = json.load(codecs.open('ontology_data/efo_terms.json', 'r', 'utf-8-sig'))
+            results = json.load(codecs.open('../ontology_data/efo_terms.json', 'r', 'utf-8-sig'))
             terms = [[x["a.id"], x["a.FSN"]] for x in results]
             temp_syns = [[x["a.id"], x["synonym"]] for x in results]
             syns = []
@@ -137,7 +137,7 @@ class Mesh:
     @staticmethod
     def get_mesh_phenotypes():
         data = None
-        with open("ontology_data/MeSH_Phenotypes.csv", "r") as input_file:
+        with open("../ontology_data/MeSH_Phenotypes.csv", "r") as input_file:
             reader = csv.reader(input_file)
             data = list(reader)[1:]
         for i in range(len(data)):
@@ -147,7 +147,7 @@ class Mesh:
     @staticmethod
     def get_descriptors():
         data = []
-        with open("ontology_data/mesh.json") as file:
+        with open("../ontology_data/mesh.json") as file:
             terms = json.load(file)
         for id, label in terms:
             data.append([id, label.lower()])
@@ -172,7 +172,7 @@ class Mesh:
         filtered_descriptors = []
         try:
             parser = etree.XMLParser(encoding='utf-8')
-            tree = etree.parse("ontology_data/desc2020.xml")
+            tree = etree.parse("../ontology_data/desc2020.xml")
             unwanted_descriptors = []
             all_descriptors = [x for x in tree.xpath("//DescriptorRecord", smart_string=False)]
             for desc in all_descriptors:
@@ -216,7 +216,7 @@ class Mesh:
                     results.append([id, term])
 
             output = json.dumps(results)
-            file = open("ontology_data/mesh.json", "w")
+            file = open("../ontology_data/mesh.json", "w")
             file.write(output)
             file.close()
         except IOError as io:
@@ -279,7 +279,7 @@ class HPO:
             g.close()
             results = [[id[id.rfind("/") + 1:], term.toPython().lower()] for (id, term) in hpo_ontology_terms]
             output = json.dumps(results)
-            file = open("ontology_data/hp.json", "w")
+            file = open("../ontology_data/hp.json", "w")
             file.write(output)
             file.close()
         except IOError as io:
@@ -292,7 +292,7 @@ class HPO:
     def get_hpo_from_cache():
         results = None
         try:
-            file = open("ontology_data/hp.json", "r")
+            file = open("../ontology_data/hp.json", "r")
             results = json.load(file)
         except IOError as io:
             logger.error(F"IO error retrieving cached HPO terms: {io.errno} -> {io.strerror}")
@@ -309,14 +309,14 @@ class HPO:
         g.close()
         results = [[id, synonym.toPython().lower()] for (id, synonym) in hpo_ontology_syns]
         output = json.dumps(results)
-        file = open("ontology_data/hp_syns.json", "w")
+        file = open("../ontology_data/hp_syns.json", "w")
         file.write(output)
         file.close()
         return results
 
     @staticmethod
     def get_syns():
-        file = open("ontology_data/hp_syns.json", "r")
+        file = open("../ontology_data/hp_syns.json", "r")
         results = json.load(file)
         return results
 

@@ -1,9 +1,9 @@
 import re
 from lxml import etree
 from lxml.etree import tostring
-from GWAS_Miner.DataStructures import Study, Table
-from GWAS_Miner.Utility_Functions import Utility
-from GWAS_Miner import CharacterDealer
+from DataStructures import Study, Table
+from Utility_Functions import Utility
+import CharacterDealer
 import logging
 
 
