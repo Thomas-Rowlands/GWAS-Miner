@@ -16,7 +16,7 @@ Launching the graphical user interface can be done by passing the `-g` parameter
  
 ### Graphical User Interface 
 ```
-python -m GWASMiner.py -g
+python GWASMiner.py -g
 ```
 
 ### Command line
@@ -24,22 +24,22 @@ The following subset of features are available without launching the graphical u
 
 ##### Process files within a directory
 ```
-python -m GWASMiner.py -d <path_to_directory>
+python GWASMiner.py -d <path_to_directory>
 ```
 
 ##### Update ontology cache
 ```
-python -m GWASMiner.py -u
+python GWASMiner.py -u
 ```
 
 ##### Visualise entities identified within a document
 ```
-python -m GWASMiner.py -d <path_to_directory> -g "ents"
+python GWASMiner.py -d <path_to_directory> -g "ents"
 ```
 
 ##### Visualise sentence dependencies within a document
 ```
-python -m GWASMiner.py -d <path_to_directory> -g "sents"
+python GWASMiner.py -d <path_to_directory> -g "sents"
 ```
 
 ## Dependencies
