@@ -11,13 +11,13 @@ from PyQt5.QtWidgets import QApplication, QFileDialog, QPushButton, QGraphicsSce
 from reportlab.graphics import renderPM
 from svglib.svglib import svg2rlg
 
-from GWAS_Miner import GWASMiner
+import GWASMiner
 from functools import partial
 
 
 class MainForm:
     def __init__(self):
-        self.Form, self.Window = uic.loadUiType("GWAS_Miner/res/gwas_miner.ui")
+        self.Form, self.Window = uic.loadUiType("res/gwas_miner.ui")
         QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
         self.app = QApplication([])
         self.window = self.Window()
@@ -38,7 +38,7 @@ class MainForm:
         self.previous_page = 0
 
     def __load_style(self, theme):
-        with open(F'GWAS_Miner/res/{theme}') as file:
+        with open(F'res/{theme}') as file:
             self.window.setStyleSheet(file.read())
 
     def __setup_interface(self):
@@ -55,9 +55,9 @@ class MainForm:
         self.set_loading_visible(True)
         splash_loading_scene = QGraphicsScene()
         main_loading_scene = QGraphicsScene()
-        splash_loading_svg = QGraphicsSvgItem("GWAS_Miner/res/loading.svg")
+        splash_loading_svg = QGraphicsSvgItem("res/loading.svg")
         splash_loading_svg.setScale(0.4)
-        main_loading_svg = QGraphicsSvgItem("GWAS_Miner/res/loading.svg")
+        main_loading_svg = QGraphicsSvgItem("res/loading.svg")
         main_loading_svg.setScale(0.4)
         splash_loading_scene.addItem(splash_loading_svg)
         main_loading_scene.addItem(main_loading_svg)
@@ -131,7 +131,7 @@ class MainForm:
         self.form.loading_label.setText(text)
 
     def update_ontology_cache_handler(self):
-        from GWAS_Miner import Ontology
+        import Ontology
         self.set_splash_loading_text("Updating ontology data...")
         self.run_worker(Ontology.update_ontology_cache, None, self.ontology_updated_callback, disable_controls=True)
 
@@ -210,7 +210,7 @@ class MainForm:
                 if file.endswith("_maintext.json"):
                     # Add analysis button for the study.
                     analyse_btn = QPushButton()
-                    analyse_icon = QIcon("GWAS_Miner/res/icons/statistics.png")
+                    analyse_icon = QIcon("res/icons/statistics.png")
                     analyse_btn.setIcon(analyse_icon)
                     analyse_btn.clicked.connect(partial(self.render_study_visualisation, file))  # partial is essential
                     analyse_widget = QWidget()
@@ -436,7 +436,7 @@ class MainForm:
             self.form.result_tab_widget.setTabText(0, F"Succeeded ({self.form.result_file_tablewidget.rowCount() + 1})")
 
             view_btn = QPushButton()
-            view_icon = QIcon("GWAS_Miner/res/icons/view_icon.png")
+            view_icon = QIcon("res/icons/view_icon.png")
             view_btn.setIcon(view_icon)
             view_btn.clicked.connect(partial(self.view_result, result.text))
             view_widget = QWidget()

@@ -1,5 +1,5 @@
 import json
-from GWAS_Miner.DataStructures import Study
+from DataStructures import Study
 import logging
 
 logger = logging.getLogger("Phenotype Finder")
