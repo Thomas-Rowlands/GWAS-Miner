@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-# Phenotype Finder
-NLP Project for stripping useful data from GWAS Studies.
-=======
 # GWAS Miner
 
 ## Overview
@@ -64,4 +60,3 @@ The following Python packages are required to run GWAS Miner, using at least pyt
 
 ## Contact
 For issue reporting and feedback/recommendations please email Thomas Rowlands at [tr142@leicester.ac.uk](mailto:tr142@leicester.ac.uk).
->>>>>>> Dev1
