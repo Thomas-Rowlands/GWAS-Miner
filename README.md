@@ -34,12 +34,12 @@ python GWASMiner.py -u
 
 ##### Visualise entities identified within a document
 ```
-python GWASMiner.py -d <path_to_directory> -g "ents"
+python GWASMiner.py -d <path_to_file> -g "ents"
 ```
 
 ##### Visualise sentence dependencies within a document
 ```
-python GWASMiner.py -d <path_to_directory> -g "sents"
+python GWASMiner.py -d <path_to_file> -g "sents"
 ```
 
 ## Dependencies
