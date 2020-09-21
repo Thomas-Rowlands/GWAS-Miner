@@ -53,7 +53,6 @@ The following Python packages are required to run GWAS Miner, using at least pyt
 - [networkx](https://pypi.org/project/networkx/)
 - [spacy](https://pypi.org/project/spacy/)
 - [SciSpaCy](https://allenai.github.io/scispacy/) pre-trained data model: `pip install https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.2.5/en_core_sci_md-0.2.5.tar.gz`
-- [traceback](https://pypi.org/project/traceback2/)
 - [svglib](https://pypi.org/project/svglib/)
 - [reportlab](https://pypi.org/project/reportlab/)
 - [PyQt5](https://pypi.org/project/PyQt5/)
