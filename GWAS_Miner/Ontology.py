@@ -59,8 +59,10 @@ def get_tagging_data():
         tagging_data["HPO"].append(label)
     for (id, label) in hpo_syns:
         tagging_data["HPO"].append(label)
+    tagging_data["HPO"] = list(set(tagging_data["HPO"]))
     for (id, label) in mesh_data:
         tagging_data["MeSH"].append(label)
+    tagging_data["MeSH"] = list(set(tagging_data["MeSH"]))
     # for (id, label) in efo_terms:
     #     tagging_data["EFO"].append(label)
     # for (id, label) in efo_syns:

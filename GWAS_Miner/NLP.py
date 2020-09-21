@@ -13,33 +13,34 @@ from spacy.tokens import Span
 
 
 class Interpreter:
-    __failed_matches = []
-    __nlp = spacy.load("en_core_sci_md", disable=["ner"])
-    __nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
-    __rsid_regex = [{"TEXT": {"REGEX": "(?:rs[0-9]{1,}){1}"}}]
-    __SNP_regex = [
-        {"TEXT": {"REGEX": r"([ATCG]{1}[a-z]{1,}[0-9]{1,}[ATCG]{1}[a-z]{1,})"}}]
-    __gene_seq_regex = [{"TEXT": {"REGEX": "([ ][ACTG]{3,}[ ])"}}]
-    __basic_matcher = None
-    __phrase_matchers = []
-    __logger = logging.getLogger("GWAS Miner")
-    __entity_labels = ["MeSH", "HPO"]
-
     def __init__(self, lexicon, ontology_only=False):
+        self.__nlp = spacy.load("en_core_sci_md", disable=["ner"])
+        self.__failed_matches = []
+        self.__nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
+        self.__rsid_regex = [{"TEXT": {"REGEX": "(?:rs[0-9]{1,}){1}"}}]
+        self.__SNP_regex = [
+            {"TEXT": {"REGEX": r"([ATCG]{1}[a-z]{1,}[0-9]{1,}[ATCG]{1}[a-z]{1,})"}}]
+        self.__gene_seq_regex = [{"TEXT": {"REGEX": "([ ][ACTG]{3,}[ ])"}}]
+        self.__basic_matcher = None
+        self.__phrase_matchers = []
+        self.__logger = logging.getLogger("GWAS Miner")
+        self.__entity_labels = ["MeSH", "HPO"]
         if not ontology_only:
             self.__add_matchers(lexicon)
 
     def __add_matchers(self, lexicon):
-        self.__basic_matcher = Matcher(self.__nlp.vocab, validate=True)
+        self.__basic_matcher = Matcher(self.__nlp.vocab)
         self.__basic_matcher.add('RSID', self.__on_match, self.__rsid_regex)
         self.__basic_matcher.add('SNP', self.__on_match, self.__SNP_regex)
         for entry in lexicon.keys():
-            for sub_entry in sorted(lexicon[entry].keys(), reverse=True):
-                new_matcher = PhraseMatcher(self.__nlp.vocab, attr="LOWER")
+            new_matcher = PhraseMatcher(self.__nlp.vocab, attr="LOWER")
+            print("New matcher")
+            sub_list = sorted(lexicon[entry].keys(), reverse=True)
+            for sub_entry in sub_list:
                 patterns = list(self.__nlp.tokenizer.pipe(
                     lexicon[entry][sub_entry]))
                 new_matcher.add(entry, self.__on_match, *patterns)
-                self.__phrase_matchers.append(new_matcher)
+            self.__phrase_matchers.append(new_matcher)
 
     def add_rule_matcher(self, label, rule):
         self.__basic_matcher.add(label, self.__on_match, rule)
