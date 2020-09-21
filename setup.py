@@ -23,7 +23,6 @@ setuptools.setup(
         "networkx",
         "spacy",
         "en_core_sci_md @ https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.2.5/en_core_sci_md-0.2.5.tar.gz",
-        "traceback",
         "svglib",
         "reportlab",
         "PyQt5"
