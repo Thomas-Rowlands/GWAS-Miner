@@ -32,7 +32,7 @@ def __prepare_ontology_data():
     return lexicon_output
 
 
-logger = logging.getLogger("Phenotype Finder")
+logger = logging.getLogger("GWAS Miner")
 config = __load_config()
 lexicon = __prepare_ontology_data()
 nlp = None

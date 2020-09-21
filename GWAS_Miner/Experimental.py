@@ -3,7 +3,7 @@ import logging
 
 from DataStructures import Study
 
-logger = logging.getLogger("Phenotype Finder")
+logger = logging.getLogger("GWAS Miner")
 
 
 def validate_json_maintext(json_data):

@@ -69,7 +69,6 @@ QWidget {
   selection-background-color: #1464A0;
   selection-color: #F0F0F0;
 }
-
 QWidget:disabled {
   background-color: #19232D;
   color: #787878;
@@ -981,6 +980,7 @@ QPushButton {
   border-radius: 4px;
   padding: 3px;
   outline: none;
+  font-size: 10pt;
   /* Issue #194 - Special case of QPushButton inside dialogs, for better UI */
 }
 
@@ -1258,16 +1258,11 @@ QComboBox::drop-down {
   width: 12px;
   border-left: 1px solid #32414B;
 }
-
-QComboBox::down-arrow {
-  image: url(":/qss_icons/rc/arrow_down_disabled.png");
-  height: 8px;
-  width: 8px;
+QComboBox::item{
+    max-height:2em;
+    margin:0;
 }
 
-QComboBox::down-arrow:on, QComboBox::down-arrow:hover, QComboBox::down-arrow:focus {
-  image: url(":/qss_icons/rc/arrow_down.png");
-}
 
 /* QSlider ----------------------------------------------------------------
 
@@ -1375,6 +1370,7 @@ QLineEdit {
   border: 1px solid #32414B;
   border-radius: 4px;
   color: #F0F0F0;
+  font-size: 10pt;
 }
 
 QLineEdit:disabled {
@@ -1404,6 +1400,7 @@ https://doc.qt.io/qt-5/stylesheet-examples.html#customizing-qtabwidget-and-qtabb
 QTabWidget {
   padding: 2px;
   selection-background-color: #32414B;
+  font-size: 10pt;
 }
 
 QTabWidget QWidget {
@@ -1806,6 +1803,7 @@ QColumnView {
   color: #F0F0F0;
   gridline-color: #32414B;
   border-radius: 4px;
+  font-size: 10pt;
 }
 
 QTreeView:disabled,

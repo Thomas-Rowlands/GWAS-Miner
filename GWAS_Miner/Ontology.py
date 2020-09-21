@@ -9,7 +9,7 @@ import rdflib
 from lxml import etree
 from rtgo import ReadyThready
 
-logger = logging.getLogger("Phenotype Finder")
+logger = logging.getLogger("GWAS Miner")
 
 
 def validate_data(ont_data):
@@ -41,7 +41,6 @@ def get_tagging_data():
         ont_data = ReadyThready.go_cluster([Mesh.get_descriptors, HPO.get_hpo_from_cache,
                                             EFO.get_efo_from_cache, HPO.get_syns])
         if not validate_data(ont_data):
-            logger.error("Critical failure to extract ontology data.")
             logger.error("Critical failure to extract ontology data.")
     mesh_data = ont_data[0]
     hpo_data = ont_data[1]

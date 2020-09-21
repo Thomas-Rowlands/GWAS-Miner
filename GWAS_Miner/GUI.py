@@ -31,10 +31,11 @@ class MainForm:
         self.is_cancelled = False
         self.is_running = False
         self.worker = None
-        self.run_worker(GWASMiner.load_nlp_object, None, self.initial_loading_finished_callback, True)
+        # self.run_worker(GWASMiner.load_nlp_object, None, self.initial_loading_finished_callback, True)
         self.dependency_svgs = []
         self.dependency_index = 0
         self.previous_page = 0
+        self.navigate_to_page(1)
 
     def __load_style(self, theme):
         with open(F'res/{theme}') as file:
@@ -239,7 +240,7 @@ class MainForm:
 
                     header = self.form.study_file_tablewidget.horizontalHeader()
                     analyse_btn.setFixedWidth(30)
-                    header.resizeSection(0, 180)
+                    header.resizeSection(0, 220)
                     header.resizeSection(1, 40)
                     header.resizeSection(2, 30)
 

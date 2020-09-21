@@ -22,7 +22,7 @@ class Interpreter:
     __gene_seq_regex = [{"TEXT": {"REGEX": "([ ][ACTG]{3,}[ ])"}}]
     __basic_matcher = None
     __phrase_matchers = []
-    __logger = logging.getLogger("Phenotype Finder")
+    __logger = logging.getLogger("GWAS Miner")
     __entity_labels = ["MeSH", "HPO"]
 
     def __init__(self, lexicon, ontology_only=False):

@@ -9,7 +9,7 @@ from lxml.etree import tostring
 
 
 class PreProcessing:
-    __logger = logging.getLogger("Phenotype Finder")
+    __logger = logging.getLogger("GWAS Miner")
 
     # Retrieves rs identifiers from input string
     @staticmethod

@@ -1,7 +1,7 @@
 import logging
 import re
 
-logger = logging.getLogger("Phenotype Finder")
+logger = logging.getLogger("GWAS Miner")
 
 
 def convert_to_list(num):
