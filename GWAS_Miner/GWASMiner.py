@@ -57,7 +57,10 @@ def load_nlp_object(qt_progress_signal=None, qt_finished_signal=None):
         lexicon = __prepare_ontology_data()
     if not nlp:
         update_gui_progress(qt_progress_signal, "Loading NLP Pipeline...")
+        import time
+        start = time.time()
         nlp = Interpreter(lexicon)
+        print(time.time() - start)
         if qt_finished_signal:
             qt_finished_signal.emit(True)
             return
@@ -110,6 +113,8 @@ def process_study(nlp_object, study, qt_progress_signal=None, qt_study_finished_
     if not study or is_cancelled:
         return False
     update_gui_progress(qt_progress_signal, F"Processing study {study.pmid}...")
+    study_text = study.get_fulltext()
+    sections = study.sections
     doc = nlp_object.process_corpus(
         nlp_object.replace_all_abbreviations(study.get_fulltext()))
     blah = []  # for debugging only

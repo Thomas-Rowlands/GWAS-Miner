@@ -10,37 +10,38 @@ from spacy import displacy
 from spacy.matcher import Matcher
 from spacy.matcher import PhraseMatcher
 from spacy.tokens import Span
+from scispacy.linking import EntityLinker
 
 
 class Interpreter:
     def __init__(self, lexicon, ontology_only=False):
-        self.__nlp = spacy.load("en_core_sci_md", disable=["ner"])
+        self.__nlp = spacy.load("en_core_sci_md")#, disable=["ner"])
         self.__failed_matches = []
-        self.__nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
+        #self.__nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
+        self.linker = EntityLinker(name="mesh", threshold=0.85)
+        self.__nlp.add_pipe(self.linker)
         self.__rsid_regex = [{"TEXT": {"REGEX": "(?:rs[0-9]{1,}){1}"}}]
         self.__SNP_regex = [
             {"TEXT": {"REGEX": r"([ATCG]{1}[a-z]{1,}[0-9]{1,}[ATCG]{1}[a-z]{1,})"}}]
         self.__gene_seq_regex = [{"TEXT": {"REGEX": "([ ][ACTG]{3,}[ ])"}}]
-        self.__basic_matcher = None
-        self.__phrase_matchers = []
+        self.__basic_matcher = Matcher(self.__nlp.vocab)
+        self.__phrase_matcher = None
         self.__logger = logging.getLogger("GWAS Miner")
         self.__entity_labels = ["MeSH", "HPO"]
-        if not ontology_only:
-            self.__add_matchers(lexicon)
+        # if not ontology_only:
+        #     self.__add_matchers(lexicon)
 
-    def __add_matchers(self, lexicon):
-        self.__basic_matcher = Matcher(self.__nlp.vocab)
-        self.__basic_matcher.add('RSID', self.__on_match, self.__rsid_regex)
-        self.__basic_matcher.add('SNP', self.__on_match, self.__SNP_regex)
-        for entry in lexicon.keys():
-            new_matcher = PhraseMatcher(self.__nlp.vocab, attr="LOWER")
-            print("New matcher")
-            sub_list = sorted(lexicon[entry].keys(), reverse=True)
-            for sub_entry in sub_list:
-                patterns = list(self.__nlp.tokenizer.pipe(
-                    lexicon[entry][sub_entry]))
-                new_matcher.add(entry, self.__on_match, *patterns)
-            self.__phrase_matchers.append(new_matcher)
+    # def __add_matchers(self, lexicon):
+        # self.__basic_matcher = Matcher(self.__nlp.vocab)
+        #self.__basic_matcher.add('RSID', self.__on_match, self.__rsid_regex)
+        #self.__basic_matcher.add('SNP', self.__on_match, self.__SNP_regex)
+        # phrase_matcher = PhraseMatcher(self.__nlp.vocab, attr="LOWER")
+        # for entry in lexicon.keys():
+        #     sub_list = [lexicon[entry][x] for x in sorted(lexicon[entry].keys(), reverse=True)]
+        #     term_list = [x for lst in sub_list for x in lst]
+        #     patterns = self.__nlp.tokenizer.pipe(term_list, batch_size=8000)
+        #     phrase_matcher.add(entry, patterns, on_match=self.__on_match)
+        # self.__phrase_matcher = phrase_matcher
 
     def add_rule_matcher(self, label, rule):
         self.__basic_matcher.add(label, self.__on_match, rule)
@@ -72,7 +73,34 @@ class Interpreter:
                 except:
                     test = None
 
-    def process_corpus(self, corpus, ontology_only=False):
+    def get_entity_stats(self, doc):
+        for ent in doc.ents:
+            if ent._.kb_ents:
+                print(F"Entity: {ent} | Match: MeSH | ID: {ent._.kb_ents[0][0]} | Confidence: {ent._.kb_ents[0][1]}\n Description: {self.linker.kb.cui_to_entity[ent._.kb_ents[0][0]]}")
+
+    def process_corpus(self, corpus):
+        doc = self.__nlp(corpus)
+        old_ents, doc.ents = doc.ents, []
+        for ent_label in config.regex_entity_patterns:
+            if isinstance(config.regex_entity_patterns[ent_label], list):
+                for pattern in config.regex_entity_patterns[ent_label]:
+                    self.__regex_match(pattern, doc, ent_label)
+                    self.__entity_labels.append(ent_label)
+            else:
+                self.__regex_match(config.regex_entity_patterns[ent_label], doc, ent_label)
+                self.__entity_labels.append(ent_label)
+        self.__basic_matcher(doc)
+        for ent in old_ents:
+            try:
+                doc.ents += (ent,)
+            except:  # Default SpaCy entities should never override others.
+                continue
+        # Ensure that multi-token entities are merged for extraction and association processing.
+        for ent_label in self.__entity_labels:
+            self.__merge_spans(doc, ent_label)
+        return doc
+
+    def old_process_corpus(self, corpus, ontology_only=False):
         """[Applies tokenization, entity recognition and dependency parsing to the supplied corpus.]
 
         Args:
@@ -111,8 +139,7 @@ class Interpreter:
             "JOIN", None, hyphenated_pattern, compound_pattern)
         self.__basic_matcher(doc)
 
-        for matcher in self.__phrase_matchers:
-            matcher(doc)
+        self.__phrase_matcher(doc)
 
         # Ensure that rule-matched entities override data model entities when needed.
         if not ontology_only:
@@ -285,8 +312,6 @@ class Interpreter:
             immediate_relations = self.allocate_contiguous_phenotypes(sent)
 
             for phenotype in phenotypes:
-                # if phenotype.lower_ == 'olfactory receptors': #DEBUGGING ONLY
-                #     Interpreter.display_structure(sent)
                 contains_snp = False
                 contains_pval = False
                 subtree_count = 0
@@ -302,9 +327,6 @@ class Interpreter:
                         phenotype[0][0])
                 if not contains_pval and not contains_snp:
                     continue
-
-                # if phenotype[0].lower_ == "hematocrit":
-                #     Interpreter.display_structure(sent)
 
                 # Maximum length of dependency path for association.
                 snp_distance = 4

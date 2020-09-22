@@ -32,27 +32,33 @@ class Study:
         self.table_text = ""
         self.original = None
         self.__populate_study(study_json)
+        self.__add_core_sections()
         self.__load_tables(study_tables_json)
 
     def __populate_study(self, study_json):
         """
         Parses the study JSON data to populate the study object.
         """
+        misc = []
         self.title = list(study_json.keys())[0]
-        for section in study_json[self.title]:
-            if "abstract" in section[0].lower():
-                self.abstract = self.abstract + section[2]
-            elif "acknowledgements" in section[0].lower():
-                self.acknowledgements = self.acknowledgements + section[2]
-            elif "discussion" in section[0].lower():
-                self.discussion = self.discussion + section[2]
-            elif "introduction" in section[0].lower():
-                self.introduction = self.introduction + section[2]
-            elif "results" in section[0].lower():
-                self.results = self.results + section[2]
-            elif "methods" in section[0].lower():
-                self.methods = self.methods + section[2]
-            self.sections.append([section[0], section[2]])
+        for input_section in study_json[self.title]:
+            for section in self.sections:
+                match_found = False
+                if section.name in input_section[0].lower():
+                    match_found = True
+                    section.append_text(input_section[1])
+                    break
+                if section.name == "Misc":
+                    section.append_text(input_section[1])
+
+    def __add_core_sections(self):
+        self.sections.append(StudySection("Abstract", weighting=10))
+        self.sections.append(StudySection("Introduction", weighting=8))
+        self.sections.append(StudySection("Discussion", weighting=8))
+        self.sections.append(StudySection("Results", weighting=10))
+        self.sections.append(StudySection("Methods", weighting=5))
+        self.sections.append(StudySection("Acknowledgements", weighting=1))
+        self.sections.append(StudySection("Misc", weighting=5))
 
     def __load_tables(self, study_tables_json):
         """
@@ -73,14 +79,11 @@ class Study:
         Generates a free text string for the study excluding acknowledgements, citations and tables.
         @return: String containing the full text study
         """
-        if self.sections:
-            result = F"{self.title}.\n{self.abstract}\n"
-            for section in self.sections:
-                result += F" {section[1]}\n"
-            result += F"\n{self.table_text}"
-            return result
-        else:
-            return None
+        result = F"{self.title}\n"
+        for section in self.sections:
+            result += section.get_text()
+        result += self.table_text
+        return result
 
     def append_snp(self, new_snp):
         """
@@ -114,6 +117,26 @@ class Study:
         @return: List of SNP objects
         """
         return self.__snps
+
+
+class StudySection:
+    def __init__(self, name, text="", weighting=0):
+        self.__name = name
+        self.__text = text.lower()
+        self.__weighting = weighting
+
+    def set_name(self, name):
+        self.__name = name
+
+    def add_text(self, text):
+        self.__text += text
+
+    def get_text(self):
+        return self.__text
+
+    def set_weighting(self, value):
+        self.__weighting = value
+
 
 
 class TableSection:
