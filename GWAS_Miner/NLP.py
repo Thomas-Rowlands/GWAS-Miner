@@ -81,6 +81,7 @@ class Interpreter:
     def process_corpus(self, corpus):
         doc = self.__nlp(corpus)
         old_ents, doc.ents = doc.ents, []
+        self.__basic_matcher.add('RSID', self.__on_match, self.__rsid_regex)
         for ent_label in config.regex_entity_patterns:
             if isinstance(config.regex_entity_patterns[ent_label], list):
                 for pattern in config.regex_entity_patterns[ent_label]:
@@ -98,6 +99,17 @@ class Interpreter:
         # Ensure that multi-token entities are merged for extraction and association processing.
         for ent_label in self.__entity_labels:
             self.__merge_spans(doc, ent_label)
+        ents = list(doc.ents)
+        for i in range(len(ents)):
+            old_ent = ents[i]
+            new_ent = None
+            if ents[i]._.kb_ents:
+                new_ent = Span(doc, old_ent.start, old_ent.end, label="MeSH")
+                ents[i] = new_ent
+            elif ents[i].label_ == "ENTITY":
+                new_ent = Span(doc, old_ent.start, old_ent.end, label="SciSpaCy")
+                ents[i] = new_ent
+        doc.ents = ents
         return doc
 
     def old_process_corpus(self, corpus, ontology_only=False):
@@ -481,11 +493,11 @@ class Interpreter:
         colors = None
         if theme == "light":
             colors = {"MESH": "rgb(247, 66, 145)", "EFO": "rgb(247, 66, 145)", "HPO": "rgb(147, 66, 245)",
-                      "RSID": "rgb(245, 66, 72)",
+                      "RSID": "rgb(245, 66, 72)", "SciSpaCy": "rgb(36, 120, 255)",
                       "PVAL": "rgb(102, 255, 51)", "PTYPE": "rgb(51, 102, 255)", "SNP": "rgb(0, 255, 204)"}
         else:
             colors = {"MESH": "rgb(217, 36, 115)", "EFO": "rgb(217, 36, 115)", "HPO": "rgb(117, 36, 215)",
-                      "RSID": "rgb(215, 36, 42)",
+                      "RSID": "rgb(215, 36, 42)", "SciSpaCy": "rgb(36, 120, 255)",
                       "PVAL": "rgb(72, 225, 21)", "PTYPE": "rgb(21, 72, 225)", "SNP": "rgb(0, 225, 174)"}
         options = {"colors": colors}
         if markup_only:

@@ -26,7 +26,11 @@ setuptools.setup(
         "svglib>=1.0.1",
         "reportlab>=3.5.49",
         "PyQt5>=5.15.0",
-        "scispacy>=0.2.5,<0.2.6"
+        "scispacy>=0.2.5,<0.2.6",
+        "https://ai2-s2-scispacy.s3-us-west-2.amazonaws.com/data/mesh_linking_model/tfidf_vectors_sparse.npz",
+        "https://ai2-s2-scispacy.s3-us-west-2.amazonaws.com/data/mesh_linking_model/nmslib_index.bin",
+        "https://ai2-s2-scispacy.s3-us-west-2.amazonaws.com/data/mesh_linking_model/tfidf_vectorizer.joblib",
+        "https://ai2-s2-scispacy.s3-us-west-2.amazonaws.com/data/mesh_linking_model/concept_aliases.json"
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
