@@ -4,7 +4,7 @@ import re
 import config
 import networkx as nx
 import spacy
-from DataStructures import SNP
+from DataStructures import Marker
 # from nlpre import dedash, titlecaps, separate_reference, unidecoder, identify_parenthetical_phrases, replace_acronyms
 from spacy import displacy
 from spacy.matcher import Matcher
@@ -18,7 +18,7 @@ class Interpreter:
         self.__failed_matches = []
         self.__nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
         self.__rsid_regex = [{"TEXT": {"REGEX": "(?:rs[0-9]{1,}){1}"}}]
-        self.__SNP_regex = [
+        self.__marker_regex = [
             {"TEXT": {"REGEX": r"([ATCG]{1}[a-z]{1,}[0-9]{1,}[ATCG]{1}[a-z]{1,})"}}]
         self.__gene_seq_regex = [{"TEXT": {"REGEX": "([ ][ACTG]{3,}[ ])"}}]
         self.__basic_matcher = None
@@ -31,7 +31,7 @@ class Interpreter:
     def __add_matchers(self, lexicon):
         self.__basic_matcher = Matcher(self.__nlp.vocab)
         self.__basic_matcher.add('RSID', self.__on_match, self.__rsid_regex)
-        self.__basic_matcher.add('SNP', self.__on_match, self.__SNP_regex)
+        self.__basic_matcher.add('marker', self.__on_match, self.__marker_regex)
         for entry in lexicon.keys():
             new_matcher = PhraseMatcher(self.__nlp.vocab, attr="LOWER")
             print("New matcher")
@@ -190,7 +190,7 @@ class Interpreter:
     @staticmethod
     def __expand_sentence_dependency_search(token):
         contains_pval = False
-        contains_snp = False
+        contains_marker = False
         next_token = None
         old_token = None
         if type(token) == Span:
@@ -212,8 +212,8 @@ class Interpreter:
             if child.ent_type_ == "PVAL":
                 contains_pval = True
             elif child.ent_type_ == "RSID":
-                contains_snp = True
-        return contains_pval, contains_snp
+                contains_marker = True
+        return contains_pval, contains_marker
 
     def allocate_contiguous_phenotypes(self, sent):
         """[Identify phenotype entities bordering p-value entities]
@@ -242,7 +242,7 @@ class Interpreter:
             doc ([SpaCy doc object]): [SpaCy processed document containing entities for extraction]
 
         Returns:
-            [dict]: [Dictionary containing extracted phenotype, SNP and p-values associated together based on SDP calculation.]
+            [dict]: [Dictionary containing extracted phenotype, marker and p-values associated together based on SDP calculation.]
         """
         phenotype_sents = Interpreter.__filter_sents_by_entity(
             doc.sents, [["MeSH", "HPO"], ["PVAL", "PVAL-G"], "RSID"])
@@ -250,13 +250,13 @@ class Interpreter:
         return results
 
     def calculate_sdp(self, phenotype_sents):
-        """[Calculates the shortest dependency path for each phenotype/SNP/p-value combination, returning the shortest for each one.]
+        """[Calculates the shortest dependency path for each phenotype/marker/p-value combination, returning the shortest for each one.]
 
         Args:
             phenotype_sents ([list]): [List of SpaCy sent objects containing phenotype entities.]
 
         Returns:
-            [dict]: [Dictionary containing extracted phenotype, SNP and p-values associated together based on SDP calculation.]
+            [dict]: [Dictionary containing extracted phenotype, marker and p-values associated together based on SDP calculation.]
         """
         results = []
         # Iterate through each sentence containing a phenotype named entity label
@@ -274,53 +274,53 @@ class Interpreter:
 
             phenotypes = Interpreter.__validate_node_entities(
                 [x for x in sent.ents if x.label_ == 'MeSH'], graph.nodes)
-            snps = Interpreter.__validate_node_entities(
+            markers = Interpreter.__validate_node_entities(
                 [x for x in sent.ents if x.label_ == 'RSID'], graph.nodes)
             pvals = Interpreter.__validate_node_entities(
                 [x for x in sent.ents if x.label_ == 'PVAL'], graph.nodes)
 
             phenotype_count = len(phenotypes)
-            snp_count = len(snps)
+            marker_count = len(markers)
             pval_count = len(pvals)
             immediate_relations = self.allocate_contiguous_phenotypes(sent)
 
             for phenotype in phenotypes:
                 # if phenotype.lower_ == 'olfactory receptors': #DEBUGGING ONLY
                 #     Interpreter.display_structure(sent)
-                contains_snp = False
+                contains_marker = False
                 contains_pval = False
                 subtree_count = 0
                 for child in phenotype[0][0].subtree:
                     if child.ent_type_ == "PVAL":
                         contains_pval = True
                     elif child.ent_type_ == "RSID":
-                        contains_snp = True
+                        contains_marker = True
                     subtree_count += 1
 
-                if not contains_snp and not contains_pval:
-                    contains_pval, contains_snp = Interpreter.__expand_sentence_dependency_search(
+                if not contains_marker and not contains_pval:
+                    contains_pval, contains_marker = Interpreter.__expand_sentence_dependency_search(
                         phenotype[0][0])
-                if not contains_pval and not contains_snp:
+                if not contains_pval and not contains_marker:
                     continue
 
                 # if phenotype[0].lower_ == "hematocrit":
                 #     Interpreter.display_structure(sent)
 
                 # Maximum length of dependency path for association.
-                snp_distance = 4
+                marker_distance = 4
                 pval_distance = 4
                 rsid = None
                 pval = None
-                best_snp_distance = snp_distance + 1
+                best_marker_distance = marker_distance + 1
                 best_pval_distance = pval_distance + 1
-                for snp in snps:  # Check shortest dependency path between each SNP and each phenotype & RSID.
+                for marker in markers:  # Check shortest dependency path between each marker and each phenotype & RSID.
                     temp_distance = nx.shortest_path_length(
-                        graph, source=phenotype[1].lower(), target=snp[1].lower())
-                    if temp_distance <= snp_distance and temp_distance < best_snp_distance:
-                        snp_distance = temp_distance
+                        graph, source=phenotype[1].lower(), target=marker[1].lower())
+                    if temp_distance <= marker_distance and temp_distance < best_marker_distance:
+                        marker_distance = temp_distance
                         rsid = nx.shortest_path(
-                            graph, source=phenotype[1].lower(), target=snp[1].lower())[-1]
-                        best_snp_distance = temp_distance
+                            graph, source=phenotype[1].lower(), target=marker[1].lower())[-1]
+                        best_marker_distance = temp_distance
                     else:
                         continue
                 if not rsid:  # RSID must be present for an association to be made.
@@ -337,10 +337,10 @@ class Interpreter:
                         continue
                 if not pval:
                     continue
-                result_snp = SNP(rsid[:rsid.find("<id")])
-                result_snp.phenotype = phenotype[0].lower_
-                result_snp.misc_p_val = pval[:pval.find("<id")]
-                results.append(result_snp)
+                result_marker = Marker(rsid[:rsid.find("<id")])
+                result_marker.phenotype = phenotype[0].lower_
+                result_marker.misc_p_val = pval[:pval.find("<id")]
+                results.append(result_marker)
                 # if phenotype[0].lower_ not in results:
                 #     results[phenotype[0].lower_] = []
                 # results[phenotype[0].lower_].append([rsid[:rsid.find("<id")]])
@@ -460,11 +460,11 @@ class Interpreter:
         if theme == "light":
             colors = {"MESH": "rgb(247, 66, 145)", "EFO": "rgb(247, 66, 145)", "HPO": "rgb(147, 66, 245)",
                       "RSID": "rgb(245, 66, 72)",
-                      "PVAL": "rgb(102, 255, 51)", "PTYPE": "rgb(51, 102, 255)", "SNP": "rgb(0, 255, 204)"}
+                      "PVAL": "rgb(102, 255, 51)", "PTYPE": "rgb(51, 102, 255)", "marker": "rgb(0, 255, 204)"}
         else:
             colors = {"MESH": "rgb(217, 36, 115)", "EFO": "rgb(217, 36, 115)", "HPO": "rgb(117, 36, 215)",
                       "RSID": "rgb(215, 36, 42)",
-                      "PVAL": "rgb(72, 225, 21)", "PTYPE": "rgb(21, 72, 225)", "SNP": "rgb(0, 225, 174)"}
+                      "PVAL": "rgb(72, 225, 21)", "PTYPE": "rgb(21, 72, 225)", "marker": "rgb(0, 225, 174)"}
         options = {"colors": colors}
         if markup_only:
             return displacy.render(doc, style="ent", page=True, options=options, jupyter=False)
@@ -551,7 +551,7 @@ class Interpreter:
             return False
 
     @staticmethod
-    def replace_all_abbreviations(fulltext):
+    def replace_all_abbreviations(fulltext, section=None):
         """
         Returns the expanded form of an abbreviation from the fulltext.
         @param fulltext: The document containing the abbreviations and their declarations
@@ -560,7 +560,12 @@ class Interpreter:
         changes = []
         # r"([^(-]\b[a-z]{0,}[A-Z]{2,}[a-z]{0,}\b[^)-])"
         pattern = r"([^ \"',.(-]\b)?([a-z]{0,})([A-Z]{2,})([a-z]{0,})(\b[^;,.'\" )-]?)"
-        for match in re.findall(pattern, fulltext):
+        input_text = None
+        if section:
+            input_text = section
+        else:
+            input_text = fulltext
+        for match in re.findall(pattern, input_text):
             target = ""
             if type(match) == str:
                 target = match
@@ -573,9 +578,9 @@ class Interpreter:
         for change in changes:
             if change[1]:
                 if change[1] != change[0]:
-                    fulltext = fulltext.replace(change[0], F" {change[1]} ")
+                    input_text = input_text.replace(change[0], F" {change[1]} ")
         # Interpreter.__logger.info(changes) #  Can error due to strange encodings used.
-        return fulltext
+        return input_text
 
     @staticmethod
     def replace_abbreviations(token, fulltext):

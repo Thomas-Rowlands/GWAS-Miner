@@ -72,12 +72,12 @@ def update_gui_progress(qt_progress_signal, text):
 
 def output_study_results(study, qt_study_finished_signal=None):
     import json
-    if len(study.get_snps()) == 0 and qt_study_finished_signal:
+    if len(study.get_markers()) == 0 and qt_study_finished_signal:
         from GUI import QtFinishedResponse
         response = QtFinishedResponse(False, F"PMC{study.pmid}")
         qt_study_finished_signal.emit(response)
         return
-    result_json = {"PMCID": study.pmid, "Mutations": [snp.__dict__ for snp in study.get_snps()]}
+    result_json = {"PMCID": study.pmid, "Mutations": [marker.__dict__ for marker in study.get_markers()]}
     with open(F"output/PMC{study.pmid}_result.json", "w", encoding="utf-8") as out_file:
         out_file.write(json.dumps(result_json, indent=4))
     if qt_study_finished_signal:
@@ -105,18 +105,29 @@ def get_study_visualisations(study, qt_progress_signal=None, qt_finished_signal=
         qt_finished_signal.emit(response)
 
 
-def process_study(nlp_object, study, qt_progress_signal=None, qt_study_finished_signal=None):
+def process_study(nlp, study, qt_progress_signal=None, qt_study_finished_signal=None):
     global is_cancelled
     if not study or is_cancelled:
         return False
+
     update_gui_progress(qt_progress_signal, F"Processing study {study.pmid}...")
-    doc = nlp_object.process_corpus(
-        nlp_object.replace_all_abbreviations(study.get_fulltext()))
-    blah = []  # for debugging only
-    for sent in doc.sents:
-        blah.append(sent)
+    study_text = study.get_fulltext()
+    sections = study.sections
+    docs = []
+
+    for section in sections:
+        section.set_text(nlp.replace_all_abbreviations(study_text, section.get_text()))
+        docs.append((nlp.process_corpus(section.get_text()), section.get_weighting()))
+
+    for table in study.get_tables():
+        text = nlp.replace_all_abbreviations(study_text, table.get_text())
+        docs.append((text, 10))
+
+    
+
     update_gui_progress(qt_progress_signal, F"Identifying data from study {study.pmid}...")
-    study.set_snps(nlp_object.extract_phenotypes(doc))
+    for (doc, weighting) in docs:
+        study.append_marker(nlp.extract_phenotypes(doc))
     output_study_results(study, qt_study_finished_signal)
     return True
 
