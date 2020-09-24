@@ -111,6 +111,7 @@ def process_study(nlp, study, qt_progress_signal=None, qt_study_finished_signal=
         return False
 
     update_gui_progress(qt_progress_signal, F"Processing study {study.pmid}...")
+
     study_text = study.get_fulltext()
     sections = study.sections
     docs = []
@@ -121,13 +122,15 @@ def process_study(nlp, study, qt_progress_signal=None, qt_study_finished_signal=
 
     for table in study.get_tables():
         text = nlp.replace_all_abbreviations(study_text, table.get_text())
-        docs.append((text, 10))
-
-    
+        docs.append((nlp.process_corpus(text), 10))
 
     update_gui_progress(qt_progress_signal, F"Identifying data from study {study.pmid}...")
+
     for (doc, weighting) in docs:
-        study.append_marker(nlp.extract_phenotypes(doc))
+        markers = nlp.extract_phenotypes(doc)
+        for marker in markers:
+            marker.weight = weighting
+        study.append_marker(markers)
     output_study_results(study, qt_study_finished_signal)
     return True
 

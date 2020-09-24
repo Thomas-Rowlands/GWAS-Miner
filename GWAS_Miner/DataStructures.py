@@ -15,7 +15,7 @@ class Study:
     def __init__(self, study_json, study_tables_json):
         self.title = None
         self.authors = None
-        self.__markers = None
+        self.__markers = []
         self.concepts = None
         self.p_values = None
         self.pmid = None
@@ -90,7 +90,7 @@ class Study:
         @param new_marker: marker object to append to the study
         @return: True on a successful append, False if a duplicate is found
         """
-        if not isinstance(list, new_marker):
+        if not isinstance(new_marker, list):
             new_marker = [new_marker]
         for input_marker in new_marker:
             duplicate_found = False
@@ -101,7 +101,7 @@ class Study:
             if duplicate_found:
                 continue
             else:
-                self.__markers.append(new_marker)
+                self.__markers.append(input_marker)
 
     def set_markers(self, new_markers):
         """
@@ -375,6 +375,7 @@ class Marker:
         self.misc_p_val = None
         self.phenotype = None
         self.internal_marker = None
+        self.weight = 0
 
 
 class MasterLexicon:
