@@ -39,14 +39,14 @@ class Study:
                 match_found = False
                 if section.get_name() in input_section[0].lower():
                     match_found = True
-                    section.add_text(input_section[1])
+                    section.add_text(input_section[2])
                     break
                 if section.get_name() == "Misc":
-                    section.add_text(input_section[1])
+                    section.add_text(input_section[2])
 
     def __add_core_sections(self):
         self.sections.append(StudySection("Abstract", weighting=10))
-        self.sections.append(StudySection("Introduction", weighting=8))
+        self.sections.append(StudySection("Introduction", weighting=3))
         self.sections.append(StudySection("Discussion", weighting=8))
         self.sections.append(StudySection("Results", weighting=10))
         self.sections.append(StudySection("Methods", weighting=5))
@@ -75,13 +75,17 @@ class Study:
         Generates a free text string for the study excluding acknowledgements, citations and tables.
         @return: String containing the full text study
         """
-        result = F"{self.title}\n"
+        result = F"{self.title} \n <new_line> \n"
         for section in self.sections:
-            result += section.get_text()
-        result += self.__table_text
+            result += F"{section.get_text()} \n <new_line> \n"
+        result += self.get_table_text()
         return result
 
     def get_table_text(self):
+        result = ""
+        for table in self.__tables:
+            result += F"Table {table.table_num} \n <new_line> \n"
+            result += F"{table.caption} \n <new_line> \n {table.get_text()}"
         return self.__table_text
 
     def append_marker(self, new_marker):
@@ -122,7 +126,7 @@ class Study:
 
 class StudySection:
     def __init__(self, name, text="", weighting=0):
-        self.__name = name
+        self.__name = name.lower()
         self.__text = text.lower()
         self.__weighting = weighting
 

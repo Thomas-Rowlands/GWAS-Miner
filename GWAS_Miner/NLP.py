@@ -34,7 +34,6 @@ class Interpreter:
         self.__basic_matcher.add('marker', self.__on_match, self.__marker_regex)
         for entry in lexicon.keys():
             new_matcher = PhraseMatcher(self.__nlp.vocab, attr="LOWER")
-            print("New matcher")
             sub_list = sorted(lexicon[entry].keys(), reverse=True)
             for sub_entry in sub_list:
                 patterns = list(self.__nlp.tokenizer.pipe(

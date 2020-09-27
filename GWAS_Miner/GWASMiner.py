@@ -94,6 +94,7 @@ def get_study_visualisations(study, qt_progress_signal=None, qt_finished_signal=
         qt_finished_signal.emit(response)
         return
     update_gui_progress(qt_progress_signal, F"Processing study {study.pmid}...")
+    test = study.get_fulltext()
     doc = nlp_object.process_corpus(nlp_object.replace_all_abbreviations(study.get_fulltext()))
     phenotype_stats = nlp_object.get_phenotype_stats(doc, lexicon)
     update_gui_progress(qt_progress_signal, "Generating HTML")
