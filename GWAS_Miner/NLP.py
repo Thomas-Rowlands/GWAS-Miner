@@ -485,7 +485,7 @@ class Interpreter:
                     results[ent.lower_] = {}
                     results[ent.lower_]["Count"] = 1
                     results[ent.lower_]["Ontology"] = ent.label_
-                    space_count = ent.lower_.count(" ")
+                    #results[ent.lower_]["ID"]
 
         return results
 

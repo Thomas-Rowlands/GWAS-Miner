@@ -94,7 +94,7 @@ class MainForm:
         about_dialog.setText("""
         <h1 style='text-align:center'>GWAS Miner</h1>
         <p style='text-align:center'>Created by Thomas Rowlands <br><br>
-        Github repo: https://github.com/Thomas-Rowlands/GWAS-Miner</p> <br>
+        Github repo: <a href='https://github.com/Thomas-Rowlands/GWAS-Miner'>github.com/Thomas-Rowlands/GWAS-Miner</a></p>
         """)
         about_dialog.setStandardButtons(QMessageBox.Close)
         about_dialog.setDefaultButton(QMessageBox.Close)

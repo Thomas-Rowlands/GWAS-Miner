@@ -48,6 +48,7 @@ def get_tagging_data():
     hpo_syns = ont_data[3]
     logger.info("Finished ontology data loading.")
 
+
     # Retrieve HPO to Mesh mappings
     # query_string = """SELECT hpoID, meshID
     #             FROM hpo2mesh

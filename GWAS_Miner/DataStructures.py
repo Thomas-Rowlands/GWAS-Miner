@@ -382,6 +382,19 @@ class Marker:
         self.weight = 0
 
 
+class LexiconEntry:
+    def __init__(self):
+        self.identifier = None
+        self.name = None
+        self.synonyms = []
+
+
+class Lexicon:
+    def __init__(self, name):
+        self.name = name
+        self.entries = []
+
+
 class MasterLexicon:
     def __init__(self, vocab=None):
         self.vocab = None
