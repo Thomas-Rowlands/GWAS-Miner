@@ -28,18 +28,29 @@ class Interpreter:
         if not ontology_only:
             self.__add_matchers(lexicon)
 
-    def __add_matchers(self, lexicon):
+    def __add_matchers(self, master_lexicon):
         self.__basic_matcher = Matcher(self.__nlp.vocab)
         self.__basic_matcher.add('RSID', self.__on_match, self.__rsid_regex)
         self.__basic_matcher.add('marker', self.__on_match, self.__marker_regex)
-        for entry in lexicon.keys():
-            new_matcher = PhraseMatcher(self.__nlp.vocab, attr="LOWER")
-            sub_list = sorted(lexicon[entry].keys(), reverse=True)
-            for sub_entry in sub_list:
-                patterns = list(self.__nlp.tokenizer.pipe(
-                    lexicon[entry][sub_entry]))
-                new_matcher.add(entry, self.__on_match, *patterns)
-            self.__phrase_matchers.append(new_matcher)
+
+        new_matcher = PhraseMatcher(self.__nlp.vocab, attr="LOWER")
+        for lexicon in master_lexicon.get_ordered_lexicons():
+            for entry in lexicon.get_entries():
+                patterns = [self.__nlp.tokenizer.pipe(entry.name())]
+                for synonym in entry.synonyms():
+                    patterns.append(self.__nlp.tokenizer.pipe(synonym))
+                new_matcher.add(lexicon.name, self.__on_match, *patterns)
+        self.__phrase_matchers.add(new_matcher)
+
+        # for entry in lexicon.keys():
+        #     new_matcher = PhraseMatcher(self.__nlp.vocab, attr="LOWER")
+        #     sub_list = sorted(lexicon[entry].keys(), reverse=True)
+        #     for sub_entry in sub_list:
+        #         patterns = list(self.__nlp.tokenizer.pipe(
+        #             lexicon[entry][sub_entry])
+        #         )
+        #         new_matcher.add(entry, self.__on_match, *patterns)
+        #     self.__phrase_matchers.append(new_matcher)
 
     def add_rule_matcher(self, label, rule):
         self.__basic_matcher.add(label, self.__on_match, rule)
@@ -461,9 +472,10 @@ class Interpreter:
                       "RSID": "rgb(245, 66, 72)",
                       "PVAL": "rgb(102, 255, 51)", "PTYPE": "rgb(51, 102, 255)", "marker": "rgb(0, 255, 204)"}
         else:
-            colors = {"MESH": "rgb(217, 36, 115)", "EFO": "rgb(217, 36, 115)", "HPO": "rgb(117, 36, 215)",
-                      "RSID": "rgb(215, 36, 42)",
-                      "PVAL": "rgb(72, 225, 21)", "PTYPE": "rgb(21, 72, 225)", "marker": "rgb(0, 225, 174)"}
+            colors = {"MESH": "rgb(156, 25, 82)", "EFO": "rgb(217, 36, 115)", "HPO": "rgb(117, 36, 215)",
+                      "RSID": "rgb(140, 22, 26)",
+                      "PVAL": "rgb(48, 150, 14)", "PTYPE": "rgb(21, 72, 225)", "marker": "rgb(0, 225, 174)",
+                      "TABLE REF": "rgb(61, 38, 6)"}
         options = {"colors": colors}
         if markup_only:
             return displacy.render(doc, style="ent", page=True, options=options, jupyter=False)
@@ -485,7 +497,7 @@ class Interpreter:
                     results[ent.lower_] = {}
                     results[ent.lower_]["Count"] = 1
                     results[ent.lower_]["Ontology"] = ent.label_
-                    #results[ent.lower_]["ID"]
+                    # results[ent.lower_]["ID"]
 
         return results
 
@@ -528,7 +540,7 @@ class Interpreter:
         # First match SHOULD be the declaration of this abbreviation.
         # Split REGEX match to a list of words
         split_sent = declaration_match.group(0).lower().replace(
-            " )", ")").replace("( ", "(").split(" ")
+            " )", ")").replace("( ", "(").replace("\n", "").split(" ")
         found_counter = 0
         found_indexes = []
         i = len(split_sent) - 2  # Indexing + ignore the actual abbreviation
@@ -577,9 +589,13 @@ class Interpreter:
         for change in changes:
             if change[1]:
                 if change[1] != change[0]:
-                    input_text = input_text.replace(change[0], F" {change[1]} ")
+                    input_text = input_text.replace(change[0], change[1])
         # Interpreter.__logger.info(changes) #  Can error due to strange encodings used.
-        return input_text
+        return Interpreter.__clean_reference_remains(input_text)
+
+    @staticmethod
+    def __clean_reference_remains(text):
+        return text.replace("()", "").replace("(, )", "")
 
     @staticmethod
     def replace_abbreviations(token, fulltext):
@@ -600,15 +616,3 @@ class Interpreter:
                 return doc
         else:
             return doc
-        # if len(doc) < 5:  # Abbreviations are more likely to be less than 5 characters long, to avoid noise.
-        #     # Prepare the document for processing and try a first pass with the NLPre library.
-        #     new_doc = doc.upper()
-        #     fulltext = fulltext.upper()
-        #     fulltext = fulltext.replace(doc, new_doc)
-        #     abbrevs = identify_parenthetical_phrases()(fulltext)
-        #     result = Interpreter.insert_phrase(abbrevs, new_doc)
-        #     if result is None:
-        #         result = Interpreter.__check_single_word_abbrev(fulltext, new_doc)
-        #     return result
-        # else:
-        #     return doc

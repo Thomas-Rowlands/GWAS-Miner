@@ -2,12 +2,16 @@ import codecs
 import csv
 import json
 import logging
+import pickle
+from collections import namedtuple
 
 import config
 import owlready2
 import rdflib
 from lxml import etree
 from rtgo import ReadyThready
+
+from GWAS_Miner.DataStructures import Lexicon, LexiconEntry, MasterLexicon
 
 logger = logging.getLogger("GWAS Miner")
 
@@ -24,7 +28,39 @@ def validate_data(ont_data):
     return True
 
 
-def get_tagging_data():
+def set_master_lexicon():
+    mesh_lexicon = Mesh.get_lexicon()
+    hpo_lexicon = HPO.get_lexicon()
+    master = MasterLexicon()
+    master.add_lexicon(mesh_lexicon)
+    master.add_lexicon(hpo_lexicon)
+    master.set_priority_order({mesh_lexicon.name: 1, hpo_lexicon.name: 2})
+    try:
+        with open("../ontology_data/lexicon.json", "wb") as file:
+            pickle.dump(master, file)
+    except IOError as io:
+        logger.error(F"Unable to create lexicon cache: {io}")
+    except Exception as ex:
+        logger.error(F"An unexpected error occurred creating lexicon cache: {ex}")
+    return master
+
+
+def get_master_lexicon():
+    master = None
+    try:
+        with open("../ontology_data/lexicon.json", "rb") as file:
+            master = pickle.load(file)
+    except FileNotFoundError:
+        logger.info(F"Cache missing, creating new cache...")
+        return set_master_lexicon()
+    except IOError as io:
+        logger.error(F"Unable to read lexicon cache: {io}")
+    except Exception as ex:
+        logger.error(F"An unexpected error occurred reading lexicon cache: {ex}")
+    return master
+
+
+def __get_tagging_data():
     """[Assigns ontology data from cache files ready for processing]
     """
     # Update ontology file & extracted data.
@@ -34,11 +70,11 @@ def get_tagging_data():
 
     # Retrieve HPO synonyms
     logger.info("Starting ontology data loading.")
-    ont_data = ReadyThready.go_cluster([Mesh.get_descriptors, HPO.get_hpo_from_cache,
+    ont_data = ReadyThready.go_cluster([Mesh.get_lexicon, HPO.get_lexicon,
                                         EFO.get_efo_from_cache, HPO.get_syns])
     if not validate_data(ont_data):
         update_ontology_cache()
-        ont_data = ReadyThready.go_cluster([Mesh.get_descriptors, HPO.get_hpo_from_cache,
+        ont_data = ReadyThready.go_cluster([Mesh.get_lexicon, HPO.get_lexicon,
                                             EFO.get_efo_from_cache, HPO.get_syns])
         if not validate_data(ont_data):
             logger.error("Critical failure to extract ontology data.")
@@ -47,7 +83,6 @@ def get_tagging_data():
     efo_terms, efo_syns = ont_data[2]
     hpo_syns = ont_data[3]
     logger.info("Finished ontology data loading.")
-
 
     # Retrieve HPO to Mesh mappings
     # query_string = """SELECT hpoID, meshID
@@ -146,13 +181,18 @@ class Mesh:
         return data
 
     @staticmethod
-    def get_descriptors():
+    def get_lexicon():
+        new_lexicon = Lexicon(name="MESH")
         data = []
         with open("../ontology_data/mesh.json") as file:
             terms = json.load(file)
         for id, label in terms:
-            data.append([id, label.lower()])
-        return data
+            if new_lexicon.identifier_used(id):
+                new_lexicon.assign_synonym(id, label)
+                continue
+            entry = LexiconEntry(identifer=id, name=label)
+            new_lexicon.add_entry(entry)
+        return new_lexicon
 
     @staticmethod
     def validate_branch(tree_num):
@@ -187,7 +227,6 @@ class Mesh:
             for desc in unwanted_descriptors:
                 if desc in filtered_descriptors:
                     filtered_descriptors.remove(desc)
-
 
         except IOError as io:
             logger.error(F"IO error parsing MeSH descriptors XML file: {io.errno} -> {io.strerror}")
@@ -290,16 +329,26 @@ class HPO:
         return results
 
     @staticmethod
-    def get_hpo_from_cache():
-        results = None
+    def get_lexicon():
+        terms = None
+        syns = None
+        new_lexicon = Lexicon(name="HPO")
         try:
-            file = open("../ontology_data/hp.json", "r")
-            results = json.load(file)
+            with open("../ontology_data/hp.json", "r") as file:
+                terms = json.load(file)
+            with open("../ontology_data/hp_syns.json", "r") as file:
+                syns = json.load(file)
         except IOError as io:
             logger.error(F"IO error retrieving cached HPO terms: {io.errno} -> {io.strerror}")
         except BaseException as ex:
             logger.error(F"An unexpected error occurred whilst retrieving cached HPO terms: {ex}")
-        return results
+        for id, label in terms:
+            new_entry = LexiconEntry(identifer=id, name=label)
+            new_lexicon.add_entry(new_entry)
+        for id, label in syns:
+            new_lexicon.assign_synonym(id, label)
+
+        return new_lexicon
 
     @staticmethod
     def set_hpo_synonyms():

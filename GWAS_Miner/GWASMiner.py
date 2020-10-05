@@ -8,6 +8,8 @@ Main access point,
 """
 import logging
 
+from GWAS_Miner.DataStructures import MasterLexicon
+
 
 def __load_config():
     """
@@ -26,10 +28,10 @@ def __load_config():
 
 
 def __prepare_ontology_data():
-    from DataStructures import MasterLexicon
     import Ontology
-    lexicon_output = MasterLexicon().parse(Ontology.get_tagging_data())
-    return lexicon_output
+    test = MasterLexicon()
+    test = Ontology.get_master_lexicon()
+    return test
 
 
 logger = logging.getLogger("GWAS Miner")

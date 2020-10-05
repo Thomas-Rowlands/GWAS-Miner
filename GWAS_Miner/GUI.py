@@ -385,7 +385,7 @@ class MainForm:
         result = html.replace("line-height: 2.5;", "line-height: 1.15;").replace("-apple-system", "calibri")
         result = result.replace("padding: 0.45em 0.6em;", "padding: 30px;")
         result = result.replace("border-radius: 0.35em;", "border-radius: 5px;")
-        result = result.replace("<new_line>", "<br>")
+        result = result.replace("&lt;new_line&gt;", "<br>")
         return result
 
     def visualisation_finished_callback(self, response):

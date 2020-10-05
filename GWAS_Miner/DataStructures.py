@@ -72,20 +72,34 @@ class Study:
 
     def get_fulltext(self):
         """
+        Generates a formatted free text string for visualisation.
+        @return: String containing the full text study
+        """
+        result = F"{self.title} \n <new_line><new_line> \n"
+        for section in self.sections:
+            result += F"{section.get_text()} \n <new_line><new_line> \n"
+        result += self.get_table_text()
+        return result
+
+    def get_formatted_fulltext(self):
+        """
         Generates a free text string for the study excluding acknowledgements, citations and tables.
         @return: String containing the full text study
         """
-        result = F"{self.title} \n <new_line> \n"
+        result = F"{self.title} \n\n"
         for section in self.sections:
-            result += F"{section.get_text()} \n <new_line> \n"
+            result += F"{section.get_text()} \n\n"
         result += self.get_table_text()
         return result
 
     def get_table_text(self):
         result = ""
         for table in self.__tables:
-            result += F"Table {table.table_num} \n <new_line> \n"
-            result += F"{table.caption} \n <new_line> \n {table.get_text()}"
+            result += F"<new_line><new_line> Table {table.table_num} \n <new_line><new_line> \n"
+            result += F"{table.caption} \n <new_line><new_line> \n {table.get_text()}"
+        return result  # self.__table_text
+
+    def get_formatted_table_text(self):
         return self.__table_text
 
     def append_marker(self, new_marker):
@@ -372,60 +386,124 @@ class Table:
 
 
 class Marker:
-    def __init__(self, rs_identifier=None):
+    def __init__(self, rs_identifier=None, gee_p_val=None, fbat_p_val=None, misc_p_val=None, phenotype=None,
+                 internal_marker=None, weight=0):
         self.rs_identifier = rs_identifier
-        self.gee_p_val = None
-        self.fbat_p_val = None
-        self.misc_p_val = None
-        self.phenotype = None
-        self.internal_marker = None
-        self.weight = 0
+        self.gee_p_val = gee_p_val
+        self.fbat_p_val = fbat_p_val
+        self.misc_p_val = misc_p_val
+        self.phenotype = phenotype
+        self.internal_marker = internal_marker
+        self.weight = weight
 
 
 class LexiconEntry:
-    def __init__(self):
-        self.identifier = None
-        self.name = None
-        self.synonyms = []
+    def __init__(self, identifer, name):
+        self.identifier = identifer
+        self.__name = name
+        self.__synonyms = []
+        self.__token_size = name.count(" ")
+
+    def get_token_size(self):
+        return self.__token_size
+
+    def set_name(self, name):
+        self.__name = name
+        self.__token_size = name.count(" ")
+
+    def name(self):
+        return self.__name
+
+    def add_synonym(self, synonym):
+        if synonym not in self.__synonyms:
+            self.__synonyms.append(synonym)
+
+    def remove_synonym(self, synonym):
+        self.__synonyms.remove(synonym)
+
+    def synonyms(self):
+        return self.__synonyms
 
 
 class Lexicon:
     def __init__(self, name):
         self.name = name
-        self.entries = []
+        self.__entries = []
+        self.__identifiers = []
+        self.__longest_term = 0
+
+    def add_entry(self, entry):
+        if isinstance(entry, LexiconEntry):
+            self.__entries.append(entry)
+            if entry.get_token_size() > self.__longest_term:
+                self.__longest_term = entry.get_token_size()
+            self.__identifiers.append(entry.identifier)
+        else:
+            raise TypeError("entry input must be of type LexiconEntry")
+
+    def remove_entry(self, entry):
+        if isinstance(entry, LexiconEntry):
+            self.__entries.remove(entry)
+        else:
+            raise TypeError("entry input must be of type LexiconEntry")
+
+    def get_entries(self):
+        return self.__entries
+
+    def identifier_used(self, identifier):
+        return identifier in self.__identifiers
+
+    def assign_synonym(self, identifier, name):
+        entry = next((x for x in self.__entries if x.identifier == identifier), None)
+        if entry:
+            entry.add_synonym(name)
 
 
 class MasterLexicon:
-    def __init__(self, vocab=None):
-        self.vocab = None
-        self.master = None
-        if vocab:
-            self.parse(vocab)
+    def __init__(self):
+        self.__lexicons = []
+        self.__priority_order = {}
 
-    def parse(self, vocab):
-        self.vocab = vocab
-        self.master = self.__separate_lexicon()
-        return self.master
+    def add_lexicon(self, new_lexicon):
+        if isinstance(new_lexicon, Lexicon):
+            if new_lexicon not in self.__lexicons:
+                self.__lexicons.append(new_lexicon)
+            else:
+                logger.info("Lexicon already present in MasterLexicon object.")
 
-    def __separate_lexicon(self):
-        """
-        (Internal) Divide the input vocabulary by the number of tokens in each term, for each ontology dict entry.
-        @return: Dictionary containing the master lexicon generated.
-        """
-        master = {}
-        for ontology in self.vocab.keys():
-            master[ontology] = {}
-            for phrase in self.vocab[ontology]:
-                space_count = phrase.count(" ")
-                if space_count in master[ontology]:
-                    master[ontology][space_count].append(phrase)
-                else:
-                    master[ontology][space_count] = [phrase]
-        return master
+    def remove_lexicon(self, target_lexicon):
+        if not isinstance(target_lexicon, Lexicon):
+            raise TypeError("Input must be of type Lexicon")
+        for lexicon in self.__lexicons:
+            if lexicon is target_lexicon:
+                self.__lexicons.remove(lexicon)
+                return True
+        return False
 
-    def vocab_count(self, key):
+    def get_lexicon_by_name(self, name):
+        for lexicon in self.__lexicons:
+            if lexicon.name == name:
+                return lexicon
+
+    def set_priority_order(self, new_priority):
         """
-        Calculate the number of vocabularies in the master lexicon for a specified key.
-        @return: Integer count of master lexicon vocabularies.
+
+        :param new_priority: dict containing lexicon name (case insensitive) -> priority integer pairs
+            (lower numbers have higher priority)
+        :return: True if successful else False.
         """
-        return len(self.master[key].keys())
+        if not isinstance(new_priority, dict):
+            raise TypeError("Input must be a dictionary")
+        if len(new_priority.keys()) != len(self.__lexicons):
+            raise IndexError("Dictionary key length does not match the number of current lexicons.")
+        self.__priority_order = {k: v for k, v in sorted(new_priority.items(), key=lambda item: item[1])}
+        return True
+
+    def get_priority_order(self):
+        return self.__priority_order
+
+    def get_ordered_lexicons(self):
+        ordered_lexicons = []
+        for key in self.__priority_order:
+            ordered_lexicons.append(self.get_lexicon_by_name(key))
+        return ordered_lexicons
