@@ -458,6 +458,14 @@ class Lexicon:
         if entry:
             entry.add_synonym(name)
 
+    def get_entry_by_term(self, term):
+        for entry in self.__entries:
+            if entry.name().lower() == term:
+                return entry
+            if term in [x.lower() for x in entry.synonyms()]:
+                return entry
+        return None
+
 
 class MasterLexicon:
     def __init__(self):
@@ -507,3 +515,7 @@ class MasterLexicon:
         for key in self.__priority_order:
             ordered_lexicons.append(self.get_lexicon_by_name(key))
         return ordered_lexicons
+
+    def get_lexicon_entry(self, term, lexicon_name):
+        lexicon = self.get_lexicon_by_name(lexicon_name)
+        return lexicon.get_entry_by_term(term)

@@ -36,7 +36,7 @@ def set_master_lexicon():
     master.add_lexicon(hpo_lexicon)
     master.set_priority_order({mesh_lexicon.name: 1, hpo_lexicon.name: 2})
     try:
-        with open("../ontology_data/lexicon.json", "wb") as file:
+        with open("../ontology_data/lexicon.lexi", "wb") as file:
             pickle.dump(master, file)
     except IOError as io:
         logger.error(F"Unable to create lexicon cache: {io}")
@@ -48,7 +48,7 @@ def set_master_lexicon():
 def get_master_lexicon():
     master = None
     try:
-        with open("../ontology_data/lexicon.json", "rb") as file:
+        with open("../ontology_data/lexicon.lexi", "rb") as file:
             master = pickle.load(file)
     except FileNotFoundError:
         logger.info(F"Cache missing, creating new cache...")

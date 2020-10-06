@@ -407,23 +407,28 @@ class MainForm:
             phenotype = list(response.data[2].keys())[i]
             ontology = response.data[2][phenotype]["Ontology"]
             count = response.data[2][phenotype]["Count"]
+            id = response.data[2][phenotype]["ID"]
 
             phenotype_cell = QTableWidgetItem()
             count_cell = QTableWidgetItem()
             ontology_cell = QTableWidgetItem()
+            id_cell = QTableWidgetItem()
 
             phenotype_cell.setTextAlignment(Qt.AlignCenter)
             count_cell.setTextAlignment(Qt.AlignCenter)
             ontology_cell.setTextAlignment(Qt.AlignCenter)
+            id_cell.setTextAlignment(Qt.AlignCenter)
 
             phenotype_cell.setData(Qt.DisplayRole, phenotype)
             count_cell.setData(Qt.DisplayRole, count)
             ontology_cell.setData(Qt.DisplayRole, ontology)
+            id_cell.setData(Qt.DisplayRole, id)
 
             self.form.visualise_stats_table.insertRow(i)
             self.form.visualise_stats_table.setItem(i, 0, phenotype_cell)
             self.form.visualise_stats_table.setItem(i, 1, count_cell)
             self.form.visualise_stats_table.setItem(i, 2, ontology_cell)
+            self.form.visualise_stats_table.setItem(i, 3, id_cell)
 
         self.form.visualise_stats_table.resizeColumnsToContents()
         self.form.visualise_stats_table.setSortingEnabled(True)

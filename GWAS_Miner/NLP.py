@@ -22,7 +22,7 @@ class Interpreter:
             {"TEXT": {"REGEX": r"([ATCG]{1}[a-z]{1,}[0-9]{1,}[ATCG]{1}[a-z]{1,})"}}]
         self.__gene_seq_regex = [{"TEXT": {"REGEX": "([ ][ACTG]{3,}[ ])"}}]
         self.__basic_matcher = None
-        self.__phrase_matchers = []
+        self.__phrase_matcher = None
         self.__logger = logging.getLogger("GWAS Miner")
         self.__entity_labels = ["MeSH", "HPO"]
         if not ontology_only:
@@ -36,11 +36,12 @@ class Interpreter:
         new_matcher = PhraseMatcher(self.__nlp.vocab, attr="LOWER")
         for lexicon in master_lexicon.get_ordered_lexicons():
             for entry in lexicon.get_entries():
-                patterns = [self.__nlp.tokenizer.pipe(entry.name())]
+                patterns = [entry.name()]
                 for synonym in entry.synonyms():
-                    patterns.append(self.__nlp.tokenizer.pipe(synonym))
+                    patterns.append(synonym)
+                patterns = self.__nlp.tokenizer.pipe(patterns)
                 new_matcher.add(lexicon.name, self.__on_match, *patterns)
-        self.__phrase_matchers.add(new_matcher)
+        self.__phrase_matcher = new_matcher
 
         # for entry in lexicon.keys():
         #     new_matcher = PhraseMatcher(self.__nlp.vocab, attr="LOWER")
@@ -119,10 +120,9 @@ class Interpreter:
             'POS': 'NOUN', 'DEP': 'compound'}, {'POS': 'NOUN'}]
         self.__basic_matcher.add(
             "JOIN", None, hyphenated_pattern, compound_pattern)
-        self.__basic_matcher(doc)
 
-        for matcher in self.__phrase_matchers:
-            matcher(doc)
+        self.__basic_matcher(doc)
+        self.__phrase_matcher(doc)
 
         # Ensure that rule-matched entities override data model entities when needed.
         if not ontology_only:
@@ -486,18 +486,18 @@ class Interpreter:
         return [(x.text, x.label_) for x in doc.ents]
 
     @staticmethod
-    def get_phenotype_stats(doc, lexicon):
-
+    def get_phenotype_stats(doc, master_lexicon):
         results = {}
         for ent in doc.ents:
-            if ent.label_ in ["MeSH", "HPO"]:
-                if ent.lower_ in results:
-                    results[ent.lower_]["Count"] += 1
+            if ent.label_ in ["MESH", "HPO"]:
+                entry = master_lexicon.get_lexicon_entry(lexicon_name=ent.label_, term=ent.lower_)
+                if entry.name() in results:
+                    results[entry.name()]["Count"] += 1
                 else:
-                    results[ent.lower_] = {}
-                    results[ent.lower_]["Count"] = 1
-                    results[ent.lower_]["Ontology"] = ent.label_
-                    # results[ent.lower_]["ID"]
+                    results[entry.name()] = {}
+                    results[entry.name()]["Count"] = 1
+                    results[entry.name()]["Ontology"] = ent.label_
+                    results[entry.name()]["ID"] = entry.identifier
 
         return results
 
