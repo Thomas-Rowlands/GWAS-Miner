@@ -9,7 +9,7 @@ from PyQt5.QtCore import QRunnable, pyqtSlot, QObject, pyqtSignal, QThreadPool, 
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtSvg import QGraphicsSvgItem
 from PyQt5.QtWidgets import QApplication, QFileDialog, QPushButton, QGraphicsScene, QTableWidgetItem, QCheckBox, \
-    QHBoxLayout, QWidget
+    QHBoxLayout, QWidget, QMessageBox
 from reportlab.graphics import renderPM
 from svglib.svglib import svg2rlg
 
@@ -87,6 +87,19 @@ class MainForm:
         self.form.settings_cancel_btn.clicked.connect(self.settings_cancel_handler)
         self.form.result_view_back_btn.clicked.connect(self.result_back_btn_click_handler)
         self.form.file_select_all_checkbox.stateChanged.connect(self.set_study_checkbox_states)
+        self.form.about_action.triggered.connect(self.about_clicked)
+
+    def about_clicked(self):
+        about_dialog = QMessageBox()
+        about_dialog.setText("""
+        <h1 style='text-align:center'>GWAS Miner</h1>
+        <p style='text-align:center'>Created by Thomas Rowlands <br><br>
+        Github repo: <a href='https://github.com/Thomas-Rowlands/GWAS-Miner'>github.com/Thomas-Rowlands/GWAS-Miner</a></p>
+        """)
+        about_dialog.setStandardButtons(QMessageBox.Close)
+        about_dialog.setDefaultButton(QMessageBox.Close)
+        about_dialog.setWindowTitle("About")
+        about_dialog.exec()
 
     def set_study_checkbox_states(self):
         state = self.form.file_select_all_checkbox.isChecked()
@@ -130,9 +143,16 @@ class MainForm:
         self.form.loading_label.setText(text)
 
     def update_ontology_cache_handler(self):
-        import Ontology
-        self.set_splash_loading_text("Updating ontology data...")
-        self.run_worker(Ontology.update_ontology_cache, None, self.ontology_updated_callback, disable_controls=True)
+        warning_dialog = QMessageBox()
+        warning_dialog.setText("Warning: This will take a few minutes and cannot be cancelled.")
+        warning_dialog.setInformativeText("Are you sure?")
+        warning_dialog.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        warning_dialog.setDefaultButton(QMessageBox.Yes)
+        result = warning_dialog.exec()
+        if result == QMessageBox.Yes:
+            import Ontology
+            self.set_splash_loading_text("Updating ontology data...")
+            self.run_worker(Ontology.update_ontology_cache, None, self.ontology_updated_callback, disable_controls=True)
 
     def ontology_updated_callback(self, response=None):
         """
@@ -365,6 +385,7 @@ class MainForm:
         result = html.replace("line-height: 2.5;", "line-height: 1.15;").replace("-apple-system", "calibri")
         result = result.replace("padding: 0.45em 0.6em;", "padding: 30px;")
         result = result.replace("border-radius: 0.35em;", "border-radius: 5px;")
+        result = result.replace("&lt;new_line&gt;", "<br>")
         return result
 
     def visualisation_finished_callback(self, response):
@@ -386,23 +407,28 @@ class MainForm:
             phenotype = list(response.data[2].keys())[i]
             ontology = response.data[2][phenotype]["Ontology"]
             count = response.data[2][phenotype]["Count"]
+            id = response.data[2][phenotype]["ID"]
 
             phenotype_cell = QTableWidgetItem()
             count_cell = QTableWidgetItem()
             ontology_cell = QTableWidgetItem()
+            id_cell = QTableWidgetItem()
 
             phenotype_cell.setTextAlignment(Qt.AlignCenter)
             count_cell.setTextAlignment(Qt.AlignCenter)
             ontology_cell.setTextAlignment(Qt.AlignCenter)
+            id_cell.setTextAlignment(Qt.AlignCenter)
 
             phenotype_cell.setData(Qt.DisplayRole, phenotype)
             count_cell.setData(Qt.DisplayRole, count)
             ontology_cell.setData(Qt.DisplayRole, ontology)
+            id_cell.setData(Qt.DisplayRole, id)
 
             self.form.visualise_stats_table.insertRow(i)
             self.form.visualise_stats_table.setItem(i, 0, phenotype_cell)
             self.form.visualise_stats_table.setItem(i, 1, count_cell)
             self.form.visualise_stats_table.setItem(i, 2, ontology_cell)
+            self.form.visualise_stats_table.setItem(i, 3, id_cell)
 
         self.form.visualise_stats_table.resizeColumnsToContents()
         self.form.visualise_stats_table.setSortingEnabled(True)

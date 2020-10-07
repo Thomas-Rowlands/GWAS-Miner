@@ -215,15 +215,15 @@ class PreProcessing:
     @staticmethod
     def __get_tables(tree):
         """
-        Parses the results tables and retrieves SNPs with their associated p-value and phenotype.
+        Parses the results tables and retrieves markers with their associated p-value and phenotype.
         @param tree: etree parsed XML document containing results tables.
-        @return: List of results tables and a list of SNP objects.
+        @return: List of results tables and a list of marker objects.
         """
         tables = tree.xpath("//table")
         new_tables = []
         results = []
         captions = []
-        snps = []
+        markers = []
         table_count = 1
         for table in tables:
             # Retrieve caption for each table with validation.
@@ -291,18 +291,18 @@ class PreProcessing:
                 for i in table:
                     parsed_table = Table(i, table_num=table_num, caption=captions[caption_counter])
                     results.append(parsed_table)
-                    if parsed_table.snps:
-                        for snp in parsed_table.snps:
-                            snps.append(snp)
+                    if parsed_table.markers:
+                        for marker in parsed_table.markers:
+                            markers.append(marker)
             else:
                 parsed_table = Table(table, table_num=table_num, caption=captions[caption_counter])
                 results.append(parsed_table)
-                if parsed_table.snps:
-                    for snp in parsed_table.snps:
-                        snps.append(snp)
+                if parsed_table.markers:
+                    for marker in parsed_table.markers:
+                        markers.append(marker)
             table_num += 1
             caption_counter += 1
-        return results, snps
+        return results, markers
 
     @staticmethod
     def __char_encoding_filter(input_string):
@@ -345,7 +345,7 @@ class PreProcessing:
         #  Tables
         table_data = PreProcessing.__get_tables(tree)
         study.__tables = table_data[0]
-        study.set_snps(table_data[1])
+        study.set_markers(table_data[1])
 
         # Sections
         study.sections = PreProcessing.__get_sections(tree)

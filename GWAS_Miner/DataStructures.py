@@ -14,23 +14,17 @@ def convert_to_list(num):
 class Study:
     def __init__(self, study_json, study_tables_json):
         self.title = None
-        self.abstract = ""
-        self.introduction = ""
-        self.discussion = ""
-        self.methods = ""
-        self.results = ""
-        self.acknowledgements = ""
-        self.citations = ""
         self.authors = None
-        self.__snps = None
+        self.__markers = []
         self.concepts = None
         self.p_values = None
         self.pmid = None
         self.gwas_id = None
         self.sections = []
         self.__tables = []
-        self.table_text = ""
+        self.__table_text = ""
         self.original = None
+        self.__add_core_sections()
         self.__populate_study(study_json)
         self.__load_tables(study_tables_json)
 
@@ -38,21 +32,26 @@ class Study:
         """
         Parses the study JSON data to populate the study object.
         """
+        misc = []
         self.title = list(study_json.keys())[0]
-        for section in study_json[self.title]:
-            if "abstract" in section[0].lower():
-                self.abstract = self.abstract + section[2]
-            elif "acknowledgements" in section[0].lower():
-                self.acknowledgements = self.acknowledgements + section[2]
-            elif "discussion" in section[0].lower():
-                self.discussion = self.discussion + section[2]
-            elif "introduction" in section[0].lower():
-                self.introduction = self.introduction + section[2]
-            elif "results" in section[0].lower():
-                self.results = self.results + section[2]
-            elif "methods" in section[0].lower():
-                self.methods = self.methods + section[2]
-            self.sections.append([section[0], section[2]])
+        for input_section in study_json[self.title]:
+            for section in self.sections:
+                match_found = False
+                if section.get_name() in input_section[0].lower():
+                    match_found = True
+                    section.add_text(input_section[2])
+                    break
+                if section.get_name() == "Misc":
+                    section.add_text(input_section[2])
+
+    def __add_core_sections(self):
+        self.sections.append(StudySection("Abstract", weighting=10))
+        self.sections.append(StudySection("Introduction", weighting=3))
+        self.sections.append(StudySection("Discussion", weighting=8))
+        self.sections.append(StudySection("Results", weighting=10))
+        self.sections.append(StudySection("Methods", weighting=5))
+        self.sections.append(StudySection("Acknowledgements", weighting=1))
+        self.sections.append(StudySection("Misc", weighting=5))
 
     def __load_tables(self, study_tables_json):
         """
@@ -61,59 +60,110 @@ class Study:
         for table in study_tables_json["tables"]:
             new_table = Table(table)
             self.__tables.append(new_table)
-            text = new_table.convert_to_text()
+            text = new_table.get_text()
             if text:
-                self.table_text += text
+                self.__table_text += text
             else:
                 self.__tables = None
                 return None
 
+    def get_tables(self):
+        return self.__tables
+
     def get_fulltext(self):
+        """
+        Generates a formatted free text string for visualisation.
+        @return: String containing the full text study
+        """
+        result = F"{self.title} \n <new_line><new_line> \n"
+        for section in self.sections:
+            result += F"{section.get_text()} \n <new_line><new_line> \n"
+        result += self.get_table_text()
+        return result
+
+    def get_formatted_fulltext(self):
         """
         Generates a free text string for the study excluding acknowledgements, citations and tables.
         @return: String containing the full text study
         """
-        if self.sections:
-            result = F"{self.title}.\n{self.abstract}\n"
-            for section in self.sections:
-                result += F" {section[1]}\n"
-            result += F"\n{self.table_text}"
-            return result
-        else:
-            return None
+        result = F"{self.title} \n\n"
+        for section in self.sections:
+            result += F"{section.get_text()} \n\n"
+        result += self.get_table_text()
+        return result
 
-    def append_snp(self, new_snp):
+    def get_table_text(self):
+        result = ""
+        for table in self.__tables:
+            result += F"<new_line><new_line> Table {table.table_num} \n <new_line><new_line> \n"
+            result += F"{table.caption} \n <new_line><new_line> \n {table.get_text()}"
+        return result  # self.__table_text
+
+    def get_formatted_table_text(self):
+        return self.__table_text
+
+    def append_marker(self, new_marker):
         """
-        Append a new unique SNP object to the study
-        @param new_snp: SNP object to append to the study
+        Append a new unique marker object to the study
+        @param new_marker: marker object to append to the study
         @return: True on a successful append, False if a duplicate is found
         """
-        duplicate_found = False
-        for snp in self.__snps:
-            if snp.__dict__ == new_snp.__dict__:
-                duplicate_found = True
-                break
-        if duplicate_found:
-            return False
-        else:
-            self.__snps.append(new_snp)
-            return True
+        if not isinstance(new_marker, list):
+            new_marker = [new_marker]
+        for input_marker in new_marker:
+            duplicate_found = False
+            for marker in self.__markers:
+                if marker.__dict__ == input_marker.__dict__:
+                    duplicate_found = True
+                    break
+            if duplicate_found:
+                continue
+            else:
+                self.__markers.append(input_marker)
 
-    def set_snps(self, new_snps):
+    def set_markers(self, new_markers):
         """
-        Setter for the list of SNP objects of this study.
-        @param new_snps: List of snps to assign to the study.
+        Setter for the list of marker objects of this study.
+        @param new_markers: List of markers to assign to the study.
         @return: True on success
         """
-        self.__snps = new_snps
+        self.__markers = new_markers
         return True
 
-    def get_snps(self):
+    def get_markers(self):
         """
-        Getter for all SNP objects for this study
-        @return: List of SNP objects
+        Getter for all marker objects for this study
+        @return: List of marker objects
         """
-        return self.__snps
+        return self.__markers
+
+
+class StudySection:
+    def __init__(self, name, text="", weighting=0):
+        self.__name = name.lower()
+        self.__text = text.lower()
+        self.__weighting = weighting
+
+    def set_name(self, name):
+        self.__name = name
+
+    def get_name(self):
+        return self.__name
+
+    def add_text(self, text):
+        self.__text += text
+
+    def set_text(self, text):
+        self.__text = text
+
+    def get_text(self):
+        return self.__text
+
+    def set_weighting(self, value):
+        self.__weighting = value
+
+    def get_weighting(self):
+        return self.__weighting
 
 
 class TableSection:
@@ -133,16 +183,14 @@ class Table:
         self.data = data
         self.caption = self.data["title"]
         self.p_values = None
-        self.snps = []
+        self.markers = []
         self.targets = targets
         self.table_num = self.data["identifier"]
         self.sections = [TableSection(x) for x in self.data["section"]]
         self.rows = self.__get_rows()
         self.columns = [x for x in self.data["columns"]]
         self.target_indexes = None
-        # if self.targets: ###removed while testing sentence conversion.
-        #     self.target_indexes = Table.__get_target_headings(self.targets)
-        # self.__get_snps()
+        self.__text = self.__convert_to_text()
 
     def __get_rows(self):
         rows = []
@@ -161,7 +209,7 @@ class Table:
         self.target_indexes = Table.__get_target_headings(table=self.data, target_headings=self.targets)
 
     def __get_table_column_types(self):
-        valuable_fields = {"Phenotypes": [], "GEE": [], "FBAT": [], "MISC_PVAL": [], "SNP": []}
+        valuable_fields = {"Phenotypes": [], "GEE": [], "FBAT": [], "MISC_PVAL": [], "marker": []}
         acceptable_threshold = 80
         value_test_count = len(self.rows)
         data = [x for x in [i for i in self.columns] if x]
@@ -198,9 +246,9 @@ class Table:
                 is_phenotype = (phenotype_count * (100 / value_test_count)) > acceptable_threshold
                 is_p_val = (p_val_count * (100 / value_test_count)) > acceptable_threshold
             heading = self.columns[i].lower()
-            if "snp" in heading:
+            if "marker" in heading:
                 if is_rsid:
-                    valuable_fields["SNP"].append(i)
+                    valuable_fields["marker"].append(i)
             elif "gee" in heading:
                 if is_p_val:
                     valuable_fields["GEE"].append(i)
@@ -214,7 +262,7 @@ class Table:
                 if "p-val" not in heading:
                     if is_phenotype:
                         valuable_fields["Phenotypes"].append([i, heading])  # Do not remove heading!
-        if not valuable_fields["Phenotypes"] or not valuable_fields["SNP"]:
+        if not valuable_fields["Phenotypes"] or not valuable_fields["marker"]:
             return None
         elif not valuable_fields["GEE"] and not valuable_fields["FBAT"] and not valuable_fields["MISC_PVAL"]:
             return None
@@ -241,7 +289,7 @@ class Table:
         else:
             return None
 
-    def __get_snps(self):
+    def __get_markers(self):
         """
         Assigns genetic markers with their RS identifier and associated P-values & phenotype.
         @return:
@@ -250,8 +298,8 @@ class Table:
         if not table_targets:
             return
         for i in range(len(self.rows)):
-            new_snp = SNP()
-            is_snp_added = False
+            new_marker = Marker()
+            is_marker_added = False
             if table_targets["Phenotypes"]:
                 pheno_val = self.rows[i][table_targets["Phenotypes"][0][0]]
                 if not pheno_val.replace(" ", ""):
@@ -264,28 +312,29 @@ class Table:
                         else:
                             pheno_val = self.rows[back_counter][table_targets["Phenotypes"][0][0]]
                             break
-                new_snp.phenotype = pheno_val
+                new_marker.phenotype = pheno_val
             if table_targets["GEE"]:
                 if len(table_targets["GEE"]) > 1:
                     for entry in table_targets["GEE"]:
                         if len(entry) == 3:
                             if entry[2].replace(" ", ""):
-                                new_snp = SNP()
-                                new_snp.phenotype = entry[2]
-                                new_snp.gee_p_val = Table.__strip_pval(self.rows[i][entry[1]])
-                                if table_targets["SNP"]:
-                                    new_snp.rs_identifier = Table.__strip_rsid(self.rows[i][table_targets["SNP"][0]])
-                                self.snps.append(new_snp)
-                                is_snp_added = True
+                                new_marker = Marker()
+                                new_marker.phenotype = entry[2]
+                                new_marker.gee_p_val = Table.__strip_pval(self.rows[i][entry[1]])
+                                if table_targets["marker"]:
+                                    new_marker.rs_identifier = Table.__strip_rsid(
+                                        self.rows[i][table_targets["marker"][0]])
+                                self.markers.append(new_marker)
+                                is_marker_added = True
                 else:
-                    new_snp.gee_p_val = Table.__strip_pval(self.rows[i][table_targets["GEE"][0]])
+                    new_marker.gee_p_val = Table.__strip_pval(self.rows[i][table_targets["GEE"][0]])
 
             if table_targets["FBAT"]:
-                new_snp.fbat_p_val = Table.__strip_pval(self.rows[i][table_targets["FBAT"][0]])
-            if table_targets["SNP"]:
-                new_snp.rs_identifier = Table.__strip_rsid(self.rows[i][table_targets["SNP"][0]])
-            if not is_snp_added:
-                self.snps.append(new_snp)
+                new_marker.fbat_p_val = Table.__strip_pval(self.rows[i][table_targets["FBAT"][0]])
+            if table_targets["marker"]:
+                new_marker.rs_identifier = Table.__strip_rsid(self.rows[i][table_targets["marker"][0]])
+            if not is_marker_added:
+                self.markers.append(new_marker)
 
     @staticmethod
     def __get_target_headings(table, target_headings):
@@ -311,7 +360,7 @@ class Table:
                 target_indexes[target] = tmp
         return target_indexes
 
-    def convert_to_text(self):
+    def __convert_to_text(self):
         output = ""
         try:
             for i in range(len(self.rows)):
@@ -332,48 +381,141 @@ class Table:
             return None
         return output.replace("<!>", "")
 
+    def get_text(self):
+        return self.__text
 
-class SNP:
-    def __init__(self, rs_identifier=None):
+
+class Marker:
+    def __init__(self, rs_identifier=None, gee_p_val=None, fbat_p_val=None, misc_p_val=None, phenotype=None,
+                 internal_marker=None, weight=0):
         self.rs_identifier = rs_identifier
-        self.gee_p_val = None
-        self.fbat_p_val = None
-        self.misc_p_val = None
-        self.phenotype = None
-        self.internal_marker = None
+        self.gee_p_val = gee_p_val
+        self.fbat_p_val = fbat_p_val
+        self.misc_p_val = misc_p_val
+        self.phenotype = phenotype
+        self.internal_marker = internal_marker
+        self.weight = weight
+
+
+class LexiconEntry:
+    def __init__(self, identifer, name):
+        self.identifier = identifer
+        self.__name = name
+        self.__synonyms = []
+        self.__token_size = name.count(" ")
+
+    def get_token_size(self):
+        return self.__token_size
+
+    def set_name(self, name):
+        self.__name = name
+        self.__token_size = name.count(" ")
+
+    def name(self):
+        return self.__name
+
+    def add_synonym(self, synonym):
+        if synonym not in self.__synonyms:
+            self.__synonyms.append(synonym)
+
+    def remove_synonym(self, synonym):
+        self.__synonyms.remove(synonym)
+
+    def synonyms(self):
+        return self.__synonyms
+
+
+class Lexicon:
+    def __init__(self, name):
+        self.name = name
+        self.__entries = []
+        self.__identifiers = []
+        self.__longest_term = 0
+
+    def add_entry(self, entry):
+        if isinstance(entry, LexiconEntry):
+            self.__entries.append(entry)
+            if entry.get_token_size() > self.__longest_term:
+                self.__longest_term = entry.get_token_size()
+            self.__identifiers.append(entry.identifier)
+        else:
+            raise TypeError("entry input must be of type LexiconEntry")
+
+    def remove_entry(self, entry):
+        if isinstance(entry, LexiconEntry):
+            self.__entries.remove(entry)
+        else:
+            raise TypeError("entry input must be of type LexiconEntry")
+
+    def get_entries(self):
+        return self.__entries
+
+    def identifier_used(self, identifier):
+        return identifier in self.__identifiers
+
+    def assign_synonym(self, identifier, name):
+        entry = next((x for x in self.__entries if x.identifier == identifier), None)
+        if entry:
+            entry.add_synonym(name)
+
+    def get_entry_by_term(self, term):
+        for entry in self.__entries:
+            if entry.name().lower() == term:
+                return entry
+            if term in [x.lower() for x in entry.synonyms()]:
+                return entry
+        return None
 
 
 class MasterLexicon:
-    def __init__(self, vocab=None):
-        self.vocab = None
-        self.master = None
-        if vocab:
-            self.parse(vocab)
+    def __init__(self):
+        self.__lexicons = []
+        self.__priority_order = {}
 
-    def parse(self, vocab):
-        self.vocab = vocab
-        self.master = self.__separate_lexicon()
-        return self.master
+    def add_lexicon(self, new_lexicon):
+        if isinstance(new_lexicon, Lexicon):
+            if new_lexicon not in self.__lexicons:
+                self.__lexicons.append(new_lexicon)
+            else:
+                logger.info("Lexicon already present in MasterLexicon object.")
 
-    def __separate_lexicon(self):
-        """
-        (Internal) Divide the input vocabulary by the number of tokens in each term, for each ontology dict entry.
-        @return: Dictionary containing the master lexicon generated.
-        """
-        master = {}
-        for ontology in self.vocab.keys():
-            master[ontology] = {}
-            for phrase in self.vocab[ontology]:
-                space_count = phrase.count(" ")
-                if space_count in master[ontology]:
-                    master[ontology][space_count].append(phrase)
-                else:
-                    master[ontology][space_count] = [phrase]
-        return master
+    def remove_lexicon(self, target_lexicon):
+        if not isinstance(target_lexicon, Lexicon):
+            raise TypeError("Input must be of type Lexicon")
+        for lexicon in self.__lexicons:
+            if lexicon is target_lexicon:
+                self.__lexicons.remove(lexicon)
+                return True
+        return False
 
-    def vocab_count(self, key):
+    def get_lexicon_by_name(self, name):
+        for lexicon in self.__lexicons:
+            if lexicon.name == name:
+                return lexicon
+
+    def set_priority_order(self, new_priority):
         """
-        Calculate the number of vocabularies in the master lexicon for a specified key.
-        @return: Integer count of master lexicon vocabularies.
+
+        :param new_priority: dict containing lexicon name (case insensitive) -> priority integer pairs
+            (lower numbers have higher priority)
+        :return: True if successful else False.
         """
-        return len(self.master[key].keys())
+        if not isinstance(new_priority, dict):
+            raise TypeError("Input must be a dictionary")
+        if len(new_priority.keys()) != len(self.__lexicons):
+            raise IndexError("Dictionary key length does not match the number of current lexicons.")
+        self.__priority_order = {k: v for k, v in sorted(new_priority.items(), key=lambda item: item[1])}
+        return True
+
+    def get_priority_order(self):
+        return self.__priority_order
+
+    def get_ordered_lexicons(self):
+        ordered_lexicons = []
+        for key in self.__priority_order:
+            ordered_lexicons.append(self.get_lexicon_by_name(key))
+        return ordered_lexicons
+
+    def get_lexicon_entry(self, term, lexicon_name):
+        lexicon = self.get_lexicon_by_name(lexicon_name)
+        return lexicon.get_entry_by_term(term)
