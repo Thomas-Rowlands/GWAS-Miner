@@ -90,15 +90,15 @@ def __get_tagging_data():
     #                         """
 
     # hpo2Mesh = ontology.get_hpo_2_mesh(connection.query(query_string))
-    tagging_data = {"HPO": [], "MeSH": [], "EFO": []}
+    tagging_data = {"HPO": [], "MESH": [], "EFO": []}
     for (id, label) in hpo_data:
         tagging_data["HPO"].append(label)
     for (id, label) in hpo_syns:
         tagging_data["HPO"].append(label)
     tagging_data["HPO"] = list(set(tagging_data["HPO"]))
     for (id, label) in mesh_data:
-        tagging_data["MeSH"].append(label)
-    tagging_data["MeSH"] = list(set(tagging_data["MeSH"]))
+        tagging_data["MESH"].append(label)
+    tagging_data["MESH"] = list(set(tagging_data["MESH"]))
     # for (id, label) in efo_terms:
     #     tagging_data["EFO"].append(label)
     # for (id, label) in efo_syns:

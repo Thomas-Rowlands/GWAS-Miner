@@ -24,7 +24,7 @@ class Interpreter:
         self.__basic_matcher = None
         self.__phrase_matcher = None
         self.__logger = logging.getLogger("GWAS Miner")
-        self.__entity_labels = ["MeSH", "HPO"]
+        self.__entity_labels = ["MESH", "HPO"]
         if not ontology_only:
             self.__add_matchers(lexicon)
 
@@ -238,7 +238,7 @@ class Interpreter:
         prev_token = None
         for token in sent:
             if prev_token:
-                if "PVAL" in token.ent_type_ and prev_token.ent_type_ == "MeSH":
+                if "PVAL" in token.ent_type_ and prev_token.ent_type_ == "MESH":
                     result.append(
                         [(prev_token, F"{prev_token.lower_}<id{prev_token.i}>"),
                          (token, F"{token.lower_}<id{token.i}>")])
@@ -255,7 +255,7 @@ class Interpreter:
             [dict]: [Dictionary containing extracted phenotype, marker and p-values associated together based on SDP calculation.]
         """
         phenotype_sents = Interpreter.__filter_sents_by_entity(
-            doc.sents, [["MeSH", "HPO"], ["PVAL", "PVAL-G"], "RSID"])
+            doc.sents, [["MESH", "HPO"], ["PVAL", "PVAL-G"], "RSID"])
         results = self.calculate_sdp(phenotype_sents)
         return results
 
@@ -283,7 +283,7 @@ class Interpreter:
             graph = nx.Graph(edges)
 
             phenotypes = Interpreter.__validate_node_entities(
-                [x for x in sent.ents if x.label_ == 'MeSH'], graph.nodes)
+                [x for x in sent.ents if x.label_ == 'MESH'], graph.nodes)
             markers = Interpreter.__validate_node_entities(
                 [x for x in sent.ents if x.label_ == 'RSID'], graph.nodes)
             pvals = Interpreter.__validate_node_entities(
@@ -363,7 +363,7 @@ class Interpreter:
 
         Args:
             doc ([SpaCy doc object]): SpaCy processed document containing entities to count]
-            label ([string]): [Label of entities that will be counted e.g. 'MeSH'.]
+            label ([string]): [Label of entities that will be counted e.g. 'MESH'.]
 
         Returns:
             [int]: [Total number of entities found matching the supplied label]
