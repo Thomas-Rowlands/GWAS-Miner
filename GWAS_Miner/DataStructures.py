@@ -414,9 +414,9 @@ class LexiconEntry:
     def name(self):
         return self.__name
 
-    def add_synonym(self, synonym):
-        if synonym not in self.__synonyms:
-            self.__synonyms.append(synonym)
+    def add_synonym(self, id, name):
+        if id not in [x["id"] for x in self.__synonyms]:
+            self.__synonyms.append({"id": id, "name": name})
 
     def remove_synonym(self, synonym):
         self.__synonyms.remove(synonym)

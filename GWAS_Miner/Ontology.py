@@ -8,6 +8,7 @@ from collections import namedtuple
 import config
 import owlready2
 import rdflib
+from bs4 import BeautifulSoup
 from lxml import etree
 from rtgo import ReadyThready
 
@@ -30,18 +31,18 @@ def validate_data(ont_data):
 
 def set_master_lexicon():
     mesh_lexicon = Mesh.get_lexicon()
-    hpo_lexicon = HPO.get_lexicon()
+    # hpo_lexicon = HPO.get_lexicon()
     master = MasterLexicon()
-    master.add_lexicon(mesh_lexicon)
-    master.add_lexicon(hpo_lexicon)
-    master.set_priority_order({mesh_lexicon.name: 1, hpo_lexicon.name: 2})
-    try:
-        with open("../ontology_data/lexicon.lexi", "wb") as file:
-            pickle.dump(master, file)
-    except IOError as io:
-        logger.error(F"Unable to create lexicon cache: {io}")
-    except Exception as ex:
-        logger.error(F"An unexpected error occurred creating lexicon cache: {ex}")
+    # master.add_lexicon(mesh_lexicon)
+    # master.add_lexicon(hpo_lexicon)
+    # master.set_priority_order({mesh_lexicon.name: 1, hpo_lexicon.name: 2})
+    # try:
+    #     with open("../ontology_data/lexicon.lexi", "wb") as file:
+    #         pickle.dump(master, file)
+    # except IOError as io:
+    #     logger.error(F"Unable to create lexicon cache: {io}")
+    # except Exception as ex:
+    #     logger.error(F"An unexpected error occurred creating lexicon cache: {ex}")
     return master
 
 
@@ -166,32 +167,17 @@ class EFO:
 
 
 class Mesh:
-    mesh_namespace = rdflib.namespace.Namespace("http://id.nlm.nih.gov/mesh/vocab#")
-    mesh_namespaces = {"owl": rdflib.namespace.OWL, "rdf": rdflib.namespace.RDF, "rdfs": rdflib.namespace.RDFS,
-                       "meshv": mesh_namespace}
-
-    @staticmethod
-    def get_mesh_phenotypes():
-        data = None
-        with open("../ontology_data/MeSH_Phenotypes.csv", "r") as input_file:
-            reader = csv.reader(input_file)
-            data = list(reader)[1:]
-        for i in range(len(data)):
-            data[i][0], data[i][1] = data[i][1], data[i][0].replace("\"", "")  # Swap order and remove quotes
-        return data
 
     @staticmethod
     def get_lexicon():
         new_lexicon = Lexicon(name="MESH")
-        data = []
-        with open("../ontology_data/mesh.json") as file:
-            terms = json.load(file)
-        for id, label in terms:
-            if new_lexicon.identifier_used(id):
-                new_lexicon.assign_synonym(id, label)
-                continue
-            entry = LexiconEntry(identifer=id, name=label)
-            new_lexicon.add_entry(entry)
+        data = Mesh.extract_mesh_data()
+        # for id, label in terms:
+        #     if new_lexicon.identifier_used(id):
+        #         new_lexicon.assign_synonym(id, label)
+        #         continue
+        #     entry = LexiconEntry(identifer=id, name=label)
+        #     new_lexicon.add_entry(entry)
         return new_lexicon
 
     @staticmethod
@@ -208,25 +194,53 @@ class Mesh:
                         return False
         return result
 
+
     @staticmethod
     def extract_mesh_data():
         filtered_descriptors = []
         try:
-            parser = etree.XMLParser(encoding='utf-8')
-            tree = etree.parse("../ontology_data/desc2020.xml")
-            unwanted_descriptors = []
-            all_descriptors = [x for x in tree.xpath("//DescriptorRecord", smart_string=False)]
-            for desc in all_descriptors:
-                for tree_num in desc.xpath(".//TreeNumberList//TreeNumber//text()"):
-                    result = Mesh.validate_branch(tree_num)
-                    if not result:
-                        unwanted_descriptors.append(tree_num)
-                        break
-                    else:
-                        filtered_descriptors.append(desc)
-            for desc in unwanted_descriptors:
-                if desc in filtered_descriptors:
-                    filtered_descriptors.remove(desc)
+            import xml.etree.cElementTree as ET
+            context = ET.iterparse("../ontology_data/desc2020.xml", events=("start", "end"))
+            test = {}
+            current_descriptor = None
+            template = {"Name": "", "ID": "", "TreeNums": [], "Concepts": []}
+            concept_template = {"Name": "", "UI": ""}
+            path = []
+            for event, elem in context:
+                if event == "start":
+                    path.append(elem.tag)
+                elif event == "end":
+                    if elem.tag == "DescriptorUI":
+                        current_descriptor = elem.text
+                        test[current_descriptor] = template
+                    elif elem.tag == "String":
+                        if "DescriptorName" in path:
+                            test[current_descriptor]["Name"] = elem.text
+                    elif elem.tag == "TreeNumber":
+                        if "TreeNumberList" in path:
+                            test[current_descriptor]["TreeNum"].append(elem.text)
+                    elif elem.tag == "ConceptUI":
+                        if "Concept" in path:
+                            test[current_descriptor]["Concepts"]
+                    path.pop()
+
+
+
+            # parser = etree.XMLParser(encoding='utf-8')
+            # tree = etree.parse("../ontology_data/desc2020.xml")
+            #unwanted_descriptors = []
+            # all_descriptors = [x for x in tree.xpath("//DescriptorRecord", smart_string=False)]
+            # for desc in all_descriptors:
+            #     for tree_num in desc.xpath(".//TreeNumberList//TreeNumber//text()"):
+            #         result = Mesh.validate_branch(tree_num)
+            #         if not result:
+            #             unwanted_descriptors.append(tree_num)
+            #             break
+            #         else:
+            #             filtered_descriptors.append(desc)
+            # for desc in unwanted_descriptors:
+            #     if desc in filtered_descriptors:
+            #         filtered_descriptors.remove(desc)
 
         except IOError as io:
             logger.error(F"IO error parsing MeSH descriptors XML file: {io.errno} -> {io.strerror}")
