@@ -8,7 +8,7 @@ Main access point,
 """
 import logging
 
-from GWAS_Miner.DataStructures import MasterLexicon
+from DataStructures import MasterLexicon
 
 
 def __load_config():

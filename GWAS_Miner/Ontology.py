@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 from lxml import etree
 from rtgo import ReadyThready
 
-from GWAS_Miner.DataStructures import Lexicon, LexiconEntry, MasterLexicon
+from DataStructures import Lexicon, LexiconEntry, MasterLexicon, MeshDescriptor, MeshTerm, MeshConcept
 
 logger = logging.getLogger("GWAS Miner")
 
@@ -194,90 +194,58 @@ class Mesh:
                         return False
         return result
 
-
     @staticmethod
     def extract_mesh_data():
-        filtered_descriptors = []
+        descriptors = []
         try:
             import xml.etree.cElementTree as ET
             context = ET.iterparse("../ontology_data/desc2020.xml", events=("start", "end"))
-            test = {}
             current_descriptor = None
-            template = {"Name": "", "ID": "", "TreeNums": [], "Concepts": []}
-            concept_template = {"Name": "", "UI": ""}
+            current_concept = None
+            current_term = None
             path = []
             for event, elem in context:
                 if event == "start":
                     path.append(elem.tag)
+                    if elem.tag == "Concept":
+                        current_concept = MeshConcept()
+                        current_concept.is_preferred = elem.attrib["PreferredConceptYN"]
+                    elif elem.tag == "DescriptorRecord":
+                        current_descriptor = MeshDescriptor()
+                    elif elem.tag == "Term":
+                        current_term = MeshTerm()
+                        current_term.is_preferred = elem.attrib["ConceptPreferredTermYN"]
                 elif event == "end":
                     if elem.tag == "DescriptorUI":
-                        current_descriptor = elem.text
-                        test[current_descriptor] = template
+                        current_descriptor.ui = elem.text
                     elif elem.tag == "String":
                         if "DescriptorName" in path:
-                            test[current_descriptor]["Name"] = elem.text
+                            current_descriptor.name = elem.text
+                        elif "ConceptName" in path:
+                            current_concept.name = elem.text
+                        elif "Term" in path:
+                            current_term.name = elem.text
                     elif elem.tag == "TreeNumber":
                         if "TreeNumberList" in path:
-                            test[current_descriptor]["TreeNum"].append(elem.text)
+                            current_descriptor.tree_nums.append(elem.text)
                     elif elem.tag == "ConceptUI":
                         if "Concept" in path:
-                            test[current_descriptor]["Concepts"]
+                            current_concept.ui = elem.text
+                    elif elem.tag == "TermUI":
+                        current_term.ui = elem.text
+                    elif elem.tag == "Term":
+                        current_concept.terms.append(current_term)
+                    elif elem.tag == "Concept":
+                        current_descriptor.concepts.append(current_concept)
+                    elif elem.tag == "DescriptorRecord":
+                        descriptors.append(current_descriptor)
                     path.pop()
-
-
-
-            # parser = etree.XMLParser(encoding='utf-8')
-            # tree = etree.parse("../ontology_data/desc2020.xml")
-            #unwanted_descriptors = []
-            # all_descriptors = [x for x in tree.xpath("//DescriptorRecord", smart_string=False)]
-            # for desc in all_descriptors:
-            #     for tree_num in desc.xpath(".//TreeNumberList//TreeNumber//text()"):
-            #         result = Mesh.validate_branch(tree_num)
-            #         if not result:
-            #             unwanted_descriptors.append(tree_num)
-            #             break
-            #         else:
-            #             filtered_descriptors.append(desc)
-            # for desc in unwanted_descriptors:
-            #     if desc in filtered_descriptors:
-            #         filtered_descriptors.remove(desc)
-
         except IOError as io:
             logger.error(F"IO error parsing MeSH descriptors XML file: {io.errno} -> {io.strerror}")
         except BaseException as ex:
             logger.error(F"An unexpected error occurred whilst parsing MeSH descriptors XML file: {ex}")
-
-        results = []
-        try:
-            for desc in filtered_descriptors:
-                descriptors = [str(x) for x in desc.xpath("./DescriptorUI/text() | "
-                                                          "./DescriptorName/String/text()", smart_string=False)]
-                concepts = [str(x) for x in desc.xpath("./ConceptList/Concept/ConceptUI/text() | "
-                                                       "./ConceptList/Concept/ConceptName/String/text()",
-                                                       smart_string=False)]
-                terms = [str(x) for x in desc.xpath("./ConceptList/Concept/TermList/Term/TermUI/text() | "
-                                                    "./ConceptList/Concept/TermList/Term/String/text()",
-                                                    smart_string=False)]
-                descriptors = [descriptors[i:i + 2] for i in range(0, len(descriptors), 2)]
-                concepts = [concepts[i:i + 2] for i in range(0, len(concepts), 2)]
-                terms = [terms[i:i + 2] for i in range(0, len(terms), 2)]
-
-                for (id, descriptor) in descriptors:
-                    results.append([id, descriptor])
-                for (id, concept) in concepts:
-                    results.append([id, concept])
-                for (id, term) in terms:
-                    results.append([id, term])
-
-            output = json.dumps(results)
-            file = open("../ontology_data/mesh.json", "w")
-            file.write(output)
-            file.close()
-        except IOError as io:
-            logger.error(F"IO error saving MeSH descriptors JSON file: {io.errno} -> {io.strerror}")
-        except BaseException as ex:
-            logger.error(F"An unexpected error occurred whilst parsing MeSH descriptors XML file: {ex}")
-        return results
+        descriptors = [x for x in descriptors if False not in [Mesh.validate_branch(y) for y in x.tree_nums]]
+        return descriptors
 
     @staticmethod
     def update_mesh_file():

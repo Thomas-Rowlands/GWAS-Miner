@@ -396,6 +396,27 @@ class Marker:
         self.internal_marker = internal_marker
         self.weight = weight
 
+class MeshDescriptor:
+    def __init__(self):
+        self.name = ""
+        self.ui = ""
+        self.concepts = []
+        self.tree_nums = []
+
+
+class MeshConcept:
+    def __init__(self):
+        self.name = ""
+        self.ui = ""
+        self.is_preferred = ''
+        self.terms = []
+
+
+class MeshTerm:
+    def __init__(self):
+        self.name = ""
+        self.ui = ""
+        self.is_preferred = ''
 
 class LexiconEntry:
     def __init__(self, identifer, name):
@@ -431,6 +452,7 @@ class Lexicon:
         self.__entries = []
         self.__identifiers = []
         self.__longest_term = 0
+        self.__descriptors = []
 
     def add_entry(self, entry):
         if isinstance(entry, LexiconEntry):
@@ -449,6 +471,25 @@ class Lexicon:
 
     def get_entries(self):
         return self.__entries
+
+    def add_descriptor(self, descriptor):
+        if isinstance(descriptor, MeshDescriptor):
+            self.__descriptors.append(descriptor)
+        else:
+            raise TypeError("descriptor input must be of type MeshDescriptor")
+
+    def remove_descriptor(self, descriptor):
+        if isinstance(descriptor, MeshDescriptor):
+            self.__descriptors.remove(descriptor)
+        else:
+            raise TypeError("descriptor input must be of type MeshDescriptor")
+
+    def add_descriptors(self, descriptors):
+        if isinstance(descriptors, list):
+            for descriptor in descriptors:
+                self.add_descriptor(descriptor)
+        else:
+            raise TypeError("descriptors input must be of type List containing MeshDescriptor items")
 
     def identifier_used(self, identifier):
         return identifier in self.__identifiers
