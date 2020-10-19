@@ -1,21 +1,16 @@
 import codecs
-import csv
 import json
 import logging
 import pickle
-from collections import namedtuple
 
 import config
 import owlready2
 import rdflib
-from bs4 import BeautifulSoup
-from lxml import etree
 from rtgo import ReadyThready
 
 from DataStructures import Lexicon, LexiconEntry, MasterLexicon, MeshDescriptor, MeshTerm, MeshConcept
 
 logger = logging.getLogger("GWAS Miner")
-
 
 def validate_data(ont_data):
     if ont_data:
@@ -31,18 +26,18 @@ def validate_data(ont_data):
 
 def set_master_lexicon():
     mesh_lexicon = Mesh.get_lexicon()
-    # hpo_lexicon = HPO.get_lexicon()
+    hpo_lexicon = HPO.get_lexicon()
     master = MasterLexicon()
-    # master.add_lexicon(mesh_lexicon)
-    # master.add_lexicon(hpo_lexicon)
-    # master.set_priority_order({mesh_lexicon.name: 1, hpo_lexicon.name: 2})
-    # try:
-    #     with open("../ontology_data/lexicon.lexi", "wb") as file:
-    #         pickle.dump(master, file)
-    # except IOError as io:
-    #     logger.error(F"Unable to create lexicon cache: {io}")
-    # except Exception as ex:
-    #     logger.error(F"An unexpected error occurred creating lexicon cache: {ex}")
+    master.add_lexicon(mesh_lexicon)
+    master.add_lexicon(hpo_lexicon)
+    master.set_priority_order({mesh_lexicon.name: 1, hpo_lexicon.name: 2})
+    try:
+        with open("../ontology_data/lexicon.lexi", "wb") as file:
+            pickle.dump(master, file)
+    except IOError as io:
+        logger.error(F"Unable to create lexicon cache: {io}")
+    except Exception as ex:
+        logger.error(F"An unexpected error occurred creating lexicon cache: {ex}")
     return master
 
 
@@ -172,12 +167,9 @@ class Mesh:
     def get_lexicon():
         new_lexicon = Lexicon(name="MESH")
         data = Mesh.extract_mesh_data()
-        # for id, label in terms:
-        #     if new_lexicon.identifier_used(id):
-        #         new_lexicon.assign_synonym(id, label)
-        #         continue
-        #     entry = LexiconEntry(identifer=id, name=label)
-        #     new_lexicon.add_entry(entry)
+        for descriptor in data:
+            entry = LexiconEntry(identifer=descriptor.ui, name=descriptor.name, mesh_descriptor=descriptor)
+            new_lexicon.add_entry(entry)
         return new_lexicon
 
     @staticmethod

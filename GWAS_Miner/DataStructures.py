@@ -396,6 +396,7 @@ class Marker:
         self.internal_marker = internal_marker
         self.weight = weight
 
+
 class MeshDescriptor:
     def __init__(self):
         self.name = ""
@@ -418,9 +419,11 @@ class MeshTerm:
         self.ui = ""
         self.is_preferred = ''
 
+
 class LexiconEntry:
-    def __init__(self, identifer, name):
+    def __init__(self, identifer, name, mesh_descriptor=None):
         self.identifier = identifer
+        self.__mesh_descriptor = mesh_descriptor
         self.__name = name
         self.__synonyms = []
         self.__token_size = name.count(" ")
@@ -452,7 +455,6 @@ class Lexicon:
         self.__entries = []
         self.__identifiers = []
         self.__longest_term = 0
-        self.__descriptors = []
 
     def add_entry(self, entry):
         if isinstance(entry, LexiconEntry):

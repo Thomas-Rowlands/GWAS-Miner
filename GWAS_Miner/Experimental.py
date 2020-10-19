@@ -30,10 +30,18 @@ def load_study(directory, file_name):
             F"An error occurred attempting to read publication file {file_name}:\n {e}")
         return None
     if json_text_data:
-        pmc_id = file_name[3:-14]
+        pmc_id = file_name[3:-15]
         try:
             with open(F"{directory}/{file_name.replace('_maintext', '_tables')}", 'r', encoding="utf-8") as file:
                 json_table_data = json.load(file)
+        except FileNotFoundError as fnfe:
+            logger.error(F"Tables file was not found for PMCID: {pmc_id}, continuing without tables.")
+            if not validate_json_maintext(json_text_data):
+                return None
+            else:
+                study = Study(json_text_data)
+                study.pmid = pmc_id
+                return study
         except IOError as io:
             logger.error(F"IO Error: {io}")
             return None

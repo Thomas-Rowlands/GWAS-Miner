@@ -29,18 +29,14 @@ def __load_config():
 
 def __prepare_ontology_data():
     import Ontology
-    test = MasterLexicon()
-    test = Ontology.get_master_lexicon()
-    return test
-
+    return Ontology.get_master_lexicon()
 
 logger = logging.getLogger("GWAS Miner")
 config = __load_config()
-lexicon = __prepare_ontology_data()
+lexicon = None
 nlp = None
 gui = None
 is_cancelled = False
-
 
 def theme():
     return config.get(section="preferences", option="theme").lower()
@@ -55,7 +51,7 @@ def load_nlp_object(qt_progress_signal=None, qt_finished_signal=None):
     from NLP import Interpreter
     global lexicon, nlp
     if not lexicon:
-        update_gui_progress(qt_progress_signal, "Gathering Ontology Data...")
+        update_gui_progress(qt_progress_signal, "Loading Ontology Data...")
         lexicon = __prepare_ontology_data()
     if not nlp:
         update_gui_progress(qt_progress_signal, "Loading NLP Pipeline...")
@@ -156,7 +152,6 @@ def process_studies(directory, visualise=None, shortlist=None, qt_progress_signa
         cancel_response = QtFinishedResponse(True, "Cancelled.", 1)
     # Structure ontology data ready for NLP tagging
     update_gui_progress(qt_progress_signal, "Gathering ontology data...")
-    __prepare_ontology_data()
     if is_cancelled:
         qt_study_finished_signal.emit(cancel_response)
         return
@@ -253,6 +248,9 @@ def main():
         import Ontology
         Ontology.update_ontology_cache()
 
+    if not using_gui:
+        global lexicon
+        lexicon = __prepare_ontology_data()
     # Begin running either the GUI or processing studies immediately.
     if using_gui:
         os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
