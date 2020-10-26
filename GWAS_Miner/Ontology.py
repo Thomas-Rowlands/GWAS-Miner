@@ -1,20 +1,16 @@
 import codecs
-import csv
 import json
 import logging
 import pickle
-from collections import namedtuple
 
 import config
 import owlready2
 import rdflib
-from lxml import etree
 from rtgo import ReadyThready
 
-from GWAS_Miner.DataStructures import Lexicon, LexiconEntry, MasterLexicon
+from DataStructures import Lexicon, LexiconEntry, MasterLexicon, MeshDescriptor, MeshTerm, MeshConcept
 
 logger = logging.getLogger("GWAS Miner")
-
 
 def validate_data(ont_data):
     if ont_data:
@@ -166,31 +162,13 @@ class EFO:
 
 
 class Mesh:
-    mesh_namespace = rdflib.namespace.Namespace("http://id.nlm.nih.gov/mesh/vocab#")
-    mesh_namespaces = {"owl": rdflib.namespace.OWL, "rdf": rdflib.namespace.RDF, "rdfs": rdflib.namespace.RDFS,
-                       "meshv": mesh_namespace}
-
-    @staticmethod
-    def get_mesh_phenotypes():
-        data = None
-        with open("../ontology_data/MeSH_Phenotypes.csv", "r") as input_file:
-            reader = csv.reader(input_file)
-            data = list(reader)[1:]
-        for i in range(len(data)):
-            data[i][0], data[i][1] = data[i][1], data[i][0].replace("\"", "")  # Swap order and remove quotes
-        return data
 
     @staticmethod
     def get_lexicon():
         new_lexicon = Lexicon(name="MESH")
-        data = []
-        with open("../ontology_data/mesh.json") as file:
-            terms = json.load(file)
-        for id, label in terms:
-            if new_lexicon.identifier_used(id):
-                new_lexicon.assign_synonym(id, label)
-                continue
-            entry = LexiconEntry(identifer=id, name=label)
+        data = Mesh.extract_mesh_data()
+        for descriptor in data:
+            entry = LexiconEntry(identifer=descriptor.ui, name=descriptor.name, mesh_descriptor=descriptor)
             new_lexicon.add_entry(entry)
         return new_lexicon
 
@@ -210,60 +188,56 @@ class Mesh:
 
     @staticmethod
     def extract_mesh_data():
-        filtered_descriptors = []
+        descriptors = []
         try:
-            parser = etree.XMLParser(encoding='utf-8')
-            tree = etree.parse("../ontology_data/desc2020.xml")
-            unwanted_descriptors = []
-            all_descriptors = [x for x in tree.xpath("//DescriptorRecord", smart_string=False)]
-            for desc in all_descriptors:
-                for tree_num in desc.xpath(".//TreeNumberList//TreeNumber//text()"):
-                    result = Mesh.validate_branch(tree_num)
-                    if not result:
-                        unwanted_descriptors.append(tree_num)
-                        break
-                    else:
-                        filtered_descriptors.append(desc)
-            for desc in unwanted_descriptors:
-                if desc in filtered_descriptors:
-                    filtered_descriptors.remove(desc)
-
+            import xml.etree.cElementTree as ET
+            context = ET.iterparse("../ontology_data/desc2020.xml", events=("start", "end"))
+            current_descriptor = None
+            current_concept = None
+            current_term = None
+            path = []
+            for event, elem in context:
+                if event == "start":
+                    path.append(elem.tag)
+                    if elem.tag == "Concept":
+                        current_concept = MeshConcept()
+                        current_concept.is_preferred = elem.attrib["PreferredConceptYN"]
+                    elif elem.tag == "DescriptorRecord":
+                        current_descriptor = MeshDescriptor()
+                    elif elem.tag == "Term":
+                        current_term = MeshTerm()
+                        current_term.is_preferred = elem.attrib["ConceptPreferredTermYN"]
+                elif event == "end":
+                    if elem.tag == "DescriptorUI":
+                        current_descriptor.ui = elem.text
+                    elif elem.tag == "String":
+                        if "DescriptorName" in path:
+                            current_descriptor.name = elem.text
+                        elif "ConceptName" in path:
+                            current_concept.name = elem.text
+                        elif "Term" in path:
+                            current_term.name = elem.text
+                    elif elem.tag == "TreeNumber":
+                        if "TreeNumberList" in path:
+                            current_descriptor.tree_nums.append(elem.text)
+                    elif elem.tag == "ConceptUI":
+                        if "Concept" in path:
+                            current_concept.ui = elem.text
+                    elif elem.tag == "TermUI":
+                        current_term.ui = elem.text
+                    elif elem.tag == "Term":
+                        current_concept.terms.append(current_term)
+                    elif elem.tag == "Concept":
+                        current_descriptor.concepts.append(current_concept)
+                    elif elem.tag == "DescriptorRecord":
+                        descriptors.append(current_descriptor)
+                    path.pop()
         except IOError as io:
             logger.error(F"IO error parsing MeSH descriptors XML file: {io.errno} -> {io.strerror}")
         except BaseException as ex:
             logger.error(F"An unexpected error occurred whilst parsing MeSH descriptors XML file: {ex}")
-
-        results = []
-        try:
-            for desc in filtered_descriptors:
-                descriptors = [str(x) for x in desc.xpath("./DescriptorUI/text() | "
-                                                          "./DescriptorName/String/text()", smart_string=False)]
-                concepts = [str(x) for x in desc.xpath("./ConceptList/Concept/ConceptUI/text() | "
-                                                       "./ConceptList/Concept/ConceptName/String/text()",
-                                                       smart_string=False)]
-                terms = [str(x) for x in desc.xpath("./ConceptList/Concept/TermList/Term/TermUI/text() | "
-                                                    "./ConceptList/Concept/TermList/Term/String/text()",
-                                                    smart_string=False)]
-                descriptors = [descriptors[i:i + 2] for i in range(0, len(descriptors), 2)]
-                concepts = [concepts[i:i + 2] for i in range(0, len(concepts), 2)]
-                terms = [terms[i:i + 2] for i in range(0, len(terms), 2)]
-
-                for (id, descriptor) in descriptors:
-                    results.append([id, descriptor])
-                for (id, concept) in concepts:
-                    results.append([id, concept])
-                for (id, term) in terms:
-                    results.append([id, term])
-
-            output = json.dumps(results)
-            file = open("../ontology_data/mesh.json", "w")
-            file.write(output)
-            file.close()
-        except IOError as io:
-            logger.error(F"IO error saving MeSH descriptors JSON file: {io.errno} -> {io.strerror}")
-        except BaseException as ex:
-            logger.error(F"An unexpected error occurred whilst parsing MeSH descriptors XML file: {ex}")
-        return results
+        descriptors = [x for x in descriptors if False not in [Mesh.validate_branch(y) for y in x.tree_nums]]
+        return descriptors
 
     @staticmethod
     def update_mesh_file():
@@ -309,7 +283,7 @@ class HPO:
     hp_namespaces = {"owl": rdflib.namespace.OWL, "rdf": rdflib.namespace.RDF, "rdfs": rdflib.namespace.RDFS}
 
     @staticmethod
-    def set_terms():
+    def get_terms():
         results = None
         try:
             ont = owlready2.get_ontology(config.hpo_file)
@@ -318,12 +292,8 @@ class HPO:
             hpo_ontology_terms = g.query(config.hpo_statement, initNs=HPO.hp_namespaces)
             g.close()
             results = [[id[id.rfind("/") + 1:], term.toPython().lower()] for (id, term) in hpo_ontology_terms]
-            output = json.dumps(results)
-            file = open("../ontology_data/hp.json", "w")
-            file.write(output)
-            file.close()
         except IOError as io:
-            logger.error(F"IO error storing new HPO terms: {io.errno} -> {io.strerror}")
+            logger.error(F"IO error reading new HPO terms: {io.errno} -> {io.strerror}")
         except BaseException as ex:
             logger.error(F"An unexpected error occurred whilst storing new HPO terms: {ex}")
         return results
@@ -334,10 +304,8 @@ class HPO:
         syns = None
         new_lexicon = Lexicon(name="HPO")
         try:
-            with open("../ontology_data/hp.json", "r") as file:
-                terms = json.load(file)
-            with open("../ontology_data/hp_syns.json", "r") as file:
-                syns = json.load(file)
+            terms = HPO.get_terms()
+            syns = HPO.get_hpo_synonyms()
         except IOError as io:
             logger.error(F"IO error retrieving cached HPO terms: {io.errno} -> {io.strerror}")
         except BaseException as ex:
@@ -351,23 +319,13 @@ class HPO:
         return new_lexicon
 
     @staticmethod
-    def set_hpo_synonyms():
+    def get_hpo_synonyms():
         ont = owlready2.get_ontology(config.hpo_file)
         ont.load()
         g = owlready2.default_world.as_rdflib_graph()
         hpo_ontology_syns = g.query(config.hpo_syns_statement, initNs=HPO.hp_namespaces)
         g.close()
         results = [[id, synonym.toPython().lower()] for (id, synonym) in hpo_ontology_syns]
-        output = json.dumps(results)
-        file = open("../ontology_data/hp_syns.json", "w")
-        file.write(output)
-        file.close()
-        return results
-
-    @staticmethod
-    def get_syns():
-        file = open("../ontology_data/hp_syns.json", "r")
-        results = json.load(file)
         return results
 
     @staticmethod

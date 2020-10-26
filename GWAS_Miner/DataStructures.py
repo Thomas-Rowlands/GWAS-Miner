@@ -397,9 +397,33 @@ class Marker:
         self.weight = weight
 
 
+class MeshDescriptor:
+    def __init__(self):
+        self.name = ""
+        self.ui = ""
+        self.concepts = []
+        self.tree_nums = []
+
+
+class MeshConcept:
+    def __init__(self):
+        self.name = ""
+        self.ui = ""
+        self.is_preferred = ''
+        self.terms = []
+
+
+class MeshTerm:
+    def __init__(self):
+        self.name = ""
+        self.ui = ""
+        self.is_preferred = ''
+
+
 class LexiconEntry:
-    def __init__(self, identifer, name):
+    def __init__(self, identifer, name, mesh_descriptor=None):
         self.identifier = identifer
+        self.__mesh_descriptor = mesh_descriptor
         self.__name = name
         self.__synonyms = []
         self.__token_size = name.count(" ")
@@ -414,9 +438,9 @@ class LexiconEntry:
     def name(self):
         return self.__name
 
-    def add_synonym(self, synonym):
-        if synonym not in self.__synonyms:
-            self.__synonyms.append(synonym)
+    def add_synonym(self, id, name):
+        if id not in [x["id"] for x in self.__synonyms]:
+            self.__synonyms.append({"id": id, "name": name})
 
     def remove_synonym(self, synonym):
         self.__synonyms.remove(synonym)

@@ -26,6 +26,7 @@ setuptools.setup(
        "svglib>=1.0.1",
        "reportlab>=3.5.49",
        "PyQt5>=5.15.0",
+        "bs4"
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
