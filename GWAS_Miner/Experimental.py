@@ -32,7 +32,7 @@ def load_study(directory, file_name):
     if json_text_data:
         pmc_id = file_name[3:-15]
         try:
-            with open(F"{directory}/{file_name.replace('_maintext', '_tables')}", 'r', encoding="utf-8") as file:
+            with open(F"{directory}/{file_name.replace('._maintext', '')}", 'r', encoding="utf-8") as file:
                 json_table_data = json.load(file)
         except FileNotFoundError as fnfe:
             logger.error(F"Tables file was not found for PMCID: {pmc_id}, continuing without tables.")

@@ -283,7 +283,7 @@ class HPO:
     hp_namespaces = {"owl": rdflib.namespace.OWL, "rdf": rdflib.namespace.RDF, "rdfs": rdflib.namespace.RDFS}
 
     @staticmethod
-    def set_terms():
+    def get_terms():
         results = None
         try:
             ont = owlready2.get_ontology(config.hpo_file)
@@ -292,12 +292,8 @@ class HPO:
             hpo_ontology_terms = g.query(config.hpo_statement, initNs=HPO.hp_namespaces)
             g.close()
             results = [[id[id.rfind("/") + 1:], term.toPython().lower()] for (id, term) in hpo_ontology_terms]
-            output = json.dumps(results)
-            file = open("../ontology_data/hp.json", "w")
-            file.write(output)
-            file.close()
         except IOError as io:
-            logger.error(F"IO error storing new HPO terms: {io.errno} -> {io.strerror}")
+            logger.error(F"IO error reading new HPO terms: {io.errno} -> {io.strerror}")
         except BaseException as ex:
             logger.error(F"An unexpected error occurred whilst storing new HPO terms: {ex}")
         return results
@@ -308,10 +304,8 @@ class HPO:
         syns = None
         new_lexicon = Lexicon(name="HPO")
         try:
-            with open("../ontology_data/hp.json", "r") as file:
-                terms = json.load(file)
-            with open("../ontology_data/hp_syns.json", "r") as file:
-                syns = json.load(file)
+            terms = HPO.get_terms()
+            syns = HPO.get_hpo_synonyms()
         except IOError as io:
             logger.error(F"IO error retrieving cached HPO terms: {io.errno} -> {io.strerror}")
         except BaseException as ex:
@@ -325,23 +319,13 @@ class HPO:
         return new_lexicon
 
     @staticmethod
-    def set_hpo_synonyms():
+    def get_hpo_synonyms():
         ont = owlready2.get_ontology(config.hpo_file)
         ont.load()
         g = owlready2.default_world.as_rdflib_graph()
         hpo_ontology_syns = g.query(config.hpo_syns_statement, initNs=HPO.hp_namespaces)
         g.close()
         results = [[id, synonym.toPython().lower()] for (id, synonym) in hpo_ontology_syns]
-        output = json.dumps(results)
-        file = open("../ontology_data/hp_syns.json", "w")
-        file.write(output)
-        file.close()
-        return results
-
-    @staticmethod
-    def get_syns():
-        file = open("../ontology_data/hp_syns.json", "r")
-        results = json.load(file)
         return results
 
     @staticmethod
