@@ -227,7 +227,7 @@ class MainForm:
         if self.validate_directory(path):
             self.form.file_select_all_checkbox.setChecked(True)
             for file in os.listdir(self.form.study_directory_input.text()):
-                if file.endswith("_maintext.json"):
+                if file.endswith(".json"):
                     # Add analysis button for the study.
                     analyse_btn = QPushButton()
                     analyse_icon = QIcon("res/icons/statistics.png")

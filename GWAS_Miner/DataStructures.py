@@ -139,10 +139,11 @@ class Study:
 
 
 class StudySection:
-    def __init__(self, name, text="", weighting=0):
+    def __init__(self, name, text="", weighting=0, offset=None):
         self.__name = name.lower()
         self.__text = text.lower()
         self.__weighting = weighting
+        self.__offset = offset
 
     def set_name(self, name):
         self.__name = name

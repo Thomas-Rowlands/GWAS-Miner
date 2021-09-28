@@ -2,6 +2,7 @@ import json
 import logging
 
 from DataStructures import Study
+from BioC import *
 
 logger = logging.getLogger("GWAS Miner")
 
@@ -12,6 +13,13 @@ def validate_json_maintext(json_data):
         return False
     else:
         return True
+
+
+def load_bioc_study(directory, file_name):
+    bioc_study = None
+    with open(F"{directory}/{file_name}", "r") as fin:
+        bioc_study = json.load(fin)
+    return bioc_study
 
 
 def load_study(directory, file_name):
@@ -53,4 +61,5 @@ def load_study(directory, file_name):
         return None
     study = Study(json_text_data, json_table_data)
     study.pmid = pmc_id
+
     return study

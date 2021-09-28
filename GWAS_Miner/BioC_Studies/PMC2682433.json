@@ -1,0 +1,1249 @@
+{
+  "source": "PMC",
+  "date": "20201231",
+  "key": "pmc.key",
+  "infons": {},
+  "documents": [
+    {
+      "id": "2682433",
+      "infons": {
+        "license": "author_manuscript"
+      },
+      "passages": [
+        {
+          "offset": 0,
+          "infons": {
+            "article-id_doi": "10.1038/ng.240",
+            "article-id_manuscript": "UKMS4348",
+            "article-id_pmc": "2682433",
+            "article-id_pmid": "18997786",
+            "fpage": "1472",
+            "issue": "12",
+            "license": "\n          This file is available for text mining. It may also be used consistent with the principles of fair use under the copyright law.\n        ",
+            "lpage": "1477",
+            "name_0": "surname:Bilguvar;given-names:Kaya",
+            "name_1": "surname:Yasuno;given-names:Katsuhito",
+            "name_10": "surname:Gaal;given-names:Emilia",
+            "name_11": "surname:Bayri;given-names:Yasar",
+            "name_12": "surname:Kolb;given-names:Luis",
+            "name_13": "surname:Arlier;given-names:Zulfikar",
+            "name_14": "surname:Ravuri;given-names:Sudhakar",
+            "name_15": "surname:Ronkainen;given-names:Antti",
+            "name_16": "surname:Tajima;given-names:Atsushi",
+            "name_17": "surname:Laakso;given-names:Aki",
+            "name_18": "surname:Hata;given-names:Akira",
+            "name_19": "surname:Kasuya;given-names:Hidetoshi",
+            "name_2": "surname:Niemela;given-names:Mika",
+            "name_20": "surname:Koivisto;given-names:Timo",
+            "name_21": "surname:Rinne;given-names:Jaakko",
+            "name_22": "surname:Ohman;given-names:Juha",
+            "name_23": "surname:Breteler;given-names:Monique M B",
+            "name_24": "surname:Wijmenga;given-names:Cisca",
+            "name_25": "surname:State;given-names:Matthew W",
+            "name_26": "surname:Rinkel;given-names:Gabriel J E",
+            "name_27": "surname:Hernesniemi;given-names:Juha",
+            "name_28": "surname:Jaaskelainen;given-names:Juha E",
+            "name_29": "surname:Palotie;given-names:Aarno",
+            "name_3": "surname:Ruigrok;given-names:Ynte M",
+            "name_30": "surname:Inoue;given-names:Ituro",
+            "name_31": "surname:Lifton;given-names:Richard P",
+            "name_32": "surname:Gunel;given-names:Murat",
+            "name_4": "surname:von und zu Fraunberg;given-names:Mikael",
+            "name_5": "surname:van Duijn;given-names:Cornelia M",
+            "name_6": "surname:van den Berg;given-names:Leonard H",
+            "name_7": "surname:Mane;given-names:Shrikant",
+            "name_8": "surname:Mason;given-names:Christopher E",
+            "name_9": "surname:Choi;given-names:Murim",
+            "section_type": "TITLE",
+            "type": "front",
+            "volume": "40",
+            "year": "2009"
+          },
+          "text": "Susceptibility loci for intracranial aneurysm in European and Japanese populations",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 83,
+          "infons": {
+            "section_type": "ABSTRACT",
+            "type": "abstract"
+          },
+          "text": "Stroke is the world's third leading cause of death. One cause of stroke, intracranial aneurysm, affects ~2% of the population and accounts for 500,000 hemorrhagic strokes annually in midlife (median age 50), most often resulting in death or severe neurological impairment. The pathogenesis of intracranial aneurysm is unknown, and because catastrophic hemorrhage is commonly the first sign of disease, early identification is essential. We carried out a multistage genome-wide association study (GWAS) of Finnish, Dutch and Japanese cohorts including over 2,100 intracranial aneurysm cases and 8,000 controls. Genome-wide genotyping of the European cohorts and replication studies in the Japanese cohort identified common SNPs on chromosomes 2q, 8q and 9p that show significant association with intracranial aneurysm with odds ratios 1.24-1.36. The loci on 2q and 8q are new, whereas the 9p locus was previously found to be associated with arterial diseases, including intracranial aneurysm. Associated SNPs on 8q likely act via SOX17, which is required for formation and maintenance of endothelial cells, suggesting a role in development and repair of the vasculature; CDKN2A at 9p may have a similar role. These findings have implications for the pathophysiology, diagnosis and therapy of intracranial aneurysm.",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 1399,
+          "infons": {
+            "section_type": "INTRO",
+            "type": "paragraph"
+          },
+          "text": "Siblings of intracranial aneurysm probands are at ~fourfold increased risk of hemorrhage from intracranial aneurysm, suggesting a genetic component to risk. Genome-wide linkage studies of familial cases and rare apparently mendelian kindreds have not thus far identified robustly replicable loci, and no underlying mutations have been identified. Similarly, examination of candidate genes in small case-control studies has failed to produce replicable results.",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 1860,
+          "infons": {
+            "section_type": "INTRO",
+            "type": "paragraph"
+          },
+          "text": "These considerations motivate the use of GWAS to identify common variants that contribute to intracranial aneurysm. We carried out a multistage intracranial aneurysm GWAS in three cohorts: a Finnish cohort of 920 cases and 985 controls, a Dutch cohort of 781 cases and 6,424 controls and a Japanese cohort of 495 cases and 676 controls (see Supplementary Methods online).",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 2232,
+          "infons": {
+            "section_type": "INTRO",
+            "type": "paragraph"
+          },
+          "text": "The study design consisted of a first stage of genome-wide genotyping of the European cohorts on the Illumina platform, careful matching of cases and controls, and identification of intervals harboring SNPs that surpassed a significance threshold of 5 x 10-7 for association with intracranial aneurysm. This discovery phase had 80% power to detect common alleles that confer a genotype relative risk (GRR) of 1.31 and 50% power to detect a GRR of 1.25 (assuming an additive model in log-odds scale). Replication of association of SNPs in these intervals was tested in the Japanese cohort, setting P < 0.05 for significant replication. The replication study had 80% and 66% power to replicate SNPs with GRRs of 1.31 and 1.25, respectively. The utility of using a genetically diverse population for replication has been demonstrated by recent studies, thereby extending association results to a broad segment of the world's population.",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 3169,
+          "infons": {
+            "section_type": "INTRO",
+            "type": "paragraph"
+          },
+          "text": "Discovery phase genotypes were processed using rigorous quality controls; because Dutch controls and some Finnish controls were genotyped separately on Illumina chips of varying SNP density, particular attention was paid to ensuring consistent genotyping performance and excluding nonrandom genotyping error within and across cohorts (Supplementary Methods and Supplementary Tables 1 and 2 online). To control for population stratification, we genetically matched cases and controls from each cohort, resulting in a dataset in which cases and controls are similarly distributed along axes of significant principal components (Supplementary Table 1).",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 3819,
+          "infons": {
+            "section_type": "INTRO",
+            "type": "paragraph"
+          },
+          "text": "We tested for association between each SNP and intracranial aneurysm by using the Cochran-Armitage trend test in each cohort and combined the results using the Mantel extension test. The distribution of test statistics for association of SNPs with intracranial aneurysm in the combined cohort is shown in Figure 1a. The genomic inflation factor (lambda) was 1.043 and 1.136 for the Finnish and Dutch, respectively, and 1.114 combined, indicating well-matched populations (Fig. 1a); further logistic regression including principal components as covariates did not significantly change lambda (Supplementary Fig. 1 online), nor did exclusion of SNPs with call rates <99% in any case or control cohort (Supplementary Methods); in contrast, because genomic inflation factor increases with sample size, the large Dutch control sample was a major contributor to lambda (Supplementary Methods). The association results reveal a number of SNPs whose P values exceed those expected under the null hypothesis; these persist after correction for lambda (Fig. 1b). The P values across each chromosome are shown in Figure 1c. Four intervals (on 1q, 2q, 8q and 9p) harbored SNPs that surpassed the threshold for genome-wide significance; these include multiple SNPs with correlated P values and comprise 15 of the 16 SNPs with P < 10-6 (Fig. 1c). Associated SNPs in each interval have very high call rates in every cohort and none violate HWE in any cohort (Supplementary Table 2). The first three loci have not previously shown association with intracranial aneurysm or other diseases, whereas SNPs on 9p are in the block of linkage disequilibrium (LD) that has previously been shown to be associated with myocardial infarction, abdominal aortic aneurysm and intracranial aneurysm. Both Finnish and Dutch cohorts contributed to the significance of each locus, the risk alleles were identical and their odds ratios were not significantly different between cohorts (Table 1).",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 5780,
+          "infons": {
+            "section_type": "INTRO",
+            "type": "paragraph"
+          },
+          "text": "To attempt to replicate these four loci, we genotyped 15 SNPs from these intervals in the Japanese cohort (Supplementary Tables 2 and 3 online). Eight of the 15 SNPs showed significant association with intracranial aneurysm; these included SNPs on 2q, 8q and 9p (Table 1). At each locus, SNPs in strong LD in the Japanese sample showed highly correlated P values (Fig. 2). For associated SNPs, risk alleles in Japan were identical to and showed similar odds ratios to those found in Europe (Table 1 and Supplementary Table 3). Using the Mantel extension test to combine data from all three cohorts, we found the following P values and odds ratios for the SNPs showing the strongest evidence for association at each locus: 2q, P = 4.4 x 10-8 (odds ratio (OR) = 1.24); 8q, P = 1.4 x 10-10 (OR = 1.36); 9p, P = 1.4 x 10-10 (OR = 1.29) (Table 1). No locus showed significant deviation from an additive model (log-odds scale) (Supplementary Table 3).",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 6729,
+          "infons": {
+            "section_type": "INTRO",
+            "type": "paragraph"
+          },
+          "text": "We examined the distributions of P values in each significant interval. At 2q, association in Europe lies within a large block of LD (197.8-198.6 Mb; Fig. 2 and Supplementary Table 4 online). In Asian subjects, this segment is divided into two smaller blocks of LD and the association seen in Japan is confined to SNPs in the more telomeric block (198.2-198.5 Mb). This interval contains four known genes; the two most strongly associated SNPs, rs700651 and rs700675, lie in introns of adjacent genes, BOLL and PLCL1. PLCL1 is of interest because it has significant homology to phospholipase C, which lies downstream of VEGFR2 signaling. VEGFR2 is a marker of endothelial progenitor cells and has a role in central nervous system angiogenesis.",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 7473,
+          "infons": {
+            "section_type": "INTRO",
+            "type": "paragraph"
+          },
+          "text": "The LD structure at 8q is also of interest (Fig. 2 and Supplementary Table 4). SNP rs10958409 shows the most significant association; SNPs in high LD with rs10958409 show correlated P values. In addition, however, rs9298506, which lies 110 kb distally and shows virtually no LD with rs10958409 (r2 = 0.004 in European HapMap subjects, 0.004 in Finnish cases and 0.0005 in Dutch cases) none-theless also revealed significant association in Europeans; adjacent SNPs in LD showed correlated P values. This observation suggests the presence of two independent risk alleles. A conditional test of association demonstrated that after accounting for the association with rs9298506, rs10958409 still showed significant association with intracranial aneurysm (and vice versa), consistent with two risk loci (Supplementary Table 4). The Japanese cohort replicated association at rs10958409, but not rs9298506, despite having had 88% power to detect association of this latter SNP (Supplementary Table 3). Further work will be required to determine whether the European association with rs9298506 is a true positive result. This 8q interval contains a single gene, SOX17, which lies between these two association peaks, 43 kb from rs10958409 and 64 kb from rs9298506. The next closest genes lie 201 kb distal and 266 kb proximal to rs10958409. Sox17 has an important role in formation and maintenance of the endothelium (see below).",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 8895,
+          "infons": {
+            "section_type": "INTRO",
+            "type": "paragraph"
+          },
+          "text": "Finally, SNPs on 9p that showed association with intracranial aneurysm (22.07-22.10 Mb) (Fig. 2 and Supplementary Table 4) were in LD with SNPs that have previously shown association with multiple arterial diseases. Adjacent SNPs that are associated with type 2 diabetes mellitus showed no significant association with intracranial aneurysm. The strongest association was with rs1333040, which lies 74 kb from the 5' end of CDKN2B and 88 kb from CDKN2A. These genes encode the cyclin-dependent kinase inhibitors p15INK4b and p16INK4a, as well as ARF, a regulator of p53 activity. In addition, a non-protein-coding transcript (ANRIL) lies within this interval. Among these, p16INK4a is of particular interest (see below).",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 9618,
+          "infons": {
+            "section_type": "INTRO",
+            "type": "paragraph"
+          },
+          "text": "To determine whether the effects of these loci are influenced by known risk factors, we examined the odds ratios of the most significant allele at each locus after partitioning cases by gender, family history of intracranial aneurysm, age (older half versus younger) and ruptured versus unruptured aneurysm. The results showed no significant difference in odds ratios after any of these partitions, suggesting independent contributions to risk (Supplementary Table 5 online).",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 10094,
+          "infons": {
+            "section_type": "INTRO",
+            "type": "paragraph"
+          },
+          "text": "Finally, to assess the combined effects of the three loci, we defined each subject's risk score by summing the logarithm of the odds ratio for each risk allele they harbor as determined in each cohort. The observed intracranial aneurysm risk showed a significant linear relationship with risk score in each cohort, with a more than threefold increase from lowest to highest strata (Table 2 and Supplementary Table 6 online).",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 10521,
+          "infons": {
+            "section_type": "INTRO",
+            "type": "paragraph"
+          },
+          "text": "This study provides the first results of a large GWAS of intracranial aneurysm or stroke. Three significant loci have been identified. These results cannot be explained by nonrandom genotyping error or population stratification and are robust to alternative analyses (Supplementary Fig. 1). We calculate that these loci collectively account for 38-46% of the population-attributable fraction of intracranial aneurysm and 2.3-3.8% of the sibling recurrence risk (Table 1). Additional common variants are likely to have a role in intracranial aneurysm, as the study was not well powered to find loci with GRR <1.25. In addition, population-specific effects were not considered in this study design. Given the risk allele frequencies and odds ratios of the identified loci, future replication cohorts will require ~900 to 1,600 cases and controls to have 80% power for replication (alpha = 0.05).",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 11415,
+          "infons": {
+            "section_type": "INTRO",
+            "type": "paragraph"
+          },
+          "text": "After genomic control correction and exclusion of SNPs at the four top loci, 37 SNPs remained with P values less than 10-4 (28 are expected by chance). Some of these may prove to be true risk alleles as additional cohorts are evaluated, as has occurred with type 2 diabetes. In addition, rare variants with larger effects at these same loci may also contribute to the occurrence of intracranial aneurysm.",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 11820,
+          "infons": {
+            "section_type": "INTRO",
+            "type": "paragraph"
+          },
+          "text": "Intracranial aneurysms predominate at arterial branch points and sites of shear stress, locations that incur endothelial damage. Vascular injury mobilizes bone marrow-derived cells that localize to these sites and contribute to repair. SOX17, a member of the Sry-related HMG box transcription factor family, is of particular interest because it is required for both endothelial formation and maintenance. Sox17 plays a key role in the generation and maintenance of fetal and neonatal stem cells of both hematopoietic and endothelial lineages and is expressed in adult endothelium. Sox17-/- mice show multiple vascular abnormalities; moreover, whereas Sox18-/- mice are normal, Sox18-/-;Sox17+/- mice show defective endothelial sprouting and vascular remodeling. Similarly, p16INK4a has a role in regulation of stem (progenitor) cell populations, including bone marrow-derived cells of the vasculature. These considerations suggest that intracranial aneurysm may result from defective stem (progenitor) cell-mediated vascular development and/or repair.",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 12872,
+          "infons": {
+            "section_type": "INTRO",
+            "type": "paragraph"
+          },
+          "text": "Finally, these findings have implications for identification of individuals with intracranial aneurysm before morbid events. The odds ratio of intracranial aneurysm increases greater than threefold in subjects with the highest versus the lowest risk (Table 2 and Supplementary Table 6). Although we caution that further work is required, these findings advance the potential for preclinical diagnosis by combined assessment of inherited susceptibility with previously established risk factors.",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 13366,
+          "infons": {
+            "section_type": "METHODS",
+            "type": "title_1"
+          },
+          "text": "METHODS",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 13374,
+          "infons": {
+            "section_type": "METHODS",
+            "type": "title_2"
+          },
+          "text": "Cohorts",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 13382,
+          "infons": {
+            "section_type": "METHODS",
+            "type": "paragraph"
+          },
+          "text": "The study protocol was approved by the Yale Human Investigation Committee (HIC protocol 7680). In all cases, the diagnosis of intracranial aneurysm was made with computerized tomography angiogram, magnetic resonance angiogram or cerebral digital subtraction angiogram and confirmed at surgery, when applicable. Rupture of aneurysm was defined by identification of acute subarachnoid hemorrhage (via computerized tomography or magnetic resonance imaging) from a proven aneurysm. Cases with a first-degree relative with intracranial aneurysm were considered familial, and other cases were considered sporadic.",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 13990,
+          "infons": {
+            "section_type": "METHODS",
+            "type": "paragraph"
+          },
+          "text": "Three cohorts from independent studies in Finland, The Netherlands and Japan were collected and all participants provided informed consent. There were 960 Finnish cases and 1,017 controls; 786 Dutch cases and 6,424 controls; and 495 Japanese cases and 676 controls. Japanese controls were screened for not harboring intracranial aneurysm.",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 14329,
+          "infons": {
+            "section_type": "METHODS",
+            "type": "title_2"
+          },
+          "text": "Genotyping and SNP quality control",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 14364,
+          "infons": {
+            "section_type": "METHODS",
+            "type": "paragraph"
+          },
+          "text": "Genome-wide genotyping in European cohorts was done on the Illumina platform according to the manufacturer's protocol (Illumina). We genotyped subjects on either the CNV370-Duo, HumanHap300 or HumanHap550 chips. SNPs shared across all platforms (n = 314,125) were extracted. We applied prespecified criteria to exclude samples and SNPs that performed poorly as well as samples that could not be genetically well matched (Supplementary Table 1 and Supplementary Methods). The overall median genotype call rate was 99.7% and the mean heterozygosity of all SNPs was 35%. Seventy-two duplicate pairs of samples were genotyped and showed 99.91% genotype identity. We carried out detailed analysis of the performance of SNPs across cohorts and platforms to ensure that significant associations observed were not due to differences in SNP performance (Supplementary Table 2).",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 15235,
+          "infons": {
+            "section_type": "METHODS",
+            "type": "title_2"
+          },
+          "text": "Cryptic relatedness",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 15255,
+          "infons": {
+            "section_type": "METHODS",
+            "type": "paragraph"
+          },
+          "text": "We determined the identity by state (IBS) similarity and estimated the degree of relatedness for each pair of samples in the GWAS (Supplementary Methods) and excluded inferred first- and second-degree relatives (Supplementary Table 1).",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 15491,
+          "infons": {
+            "section_type": "METHODS",
+            "type": "title_2"
+          },
+          "text": "Analysis of population structure",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 15524,
+          "infons": {
+            "section_type": "METHODS",
+            "type": "paragraph"
+          },
+          "text": "In order to identify population outliers and cases whose genetic ancestry cannot be properly matched to controls (and vice versa), we used the Genetic Matching (GEM) method described previously based on principal component analysis (PCA). After this matching process, three significant principal components remained in the Finnish cohort and none in the Dutch cohort, as previously observed (Supplementary Methods).",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 15940,
+          "infons": {
+            "section_type": "METHODS",
+            "type": "paragraph"
+          },
+          "text": "After quality control and analysis of population structure, there remained 874 cases and 944 controls in the Finnish cohort and 706 cases and 5,332 controls in the Dutch cohort. Among the Finnish cases, 57% were female; 73% had suffered ruptured aneurysm and 43% had positive family history; the median age at diagnosis was 50 years (those with rupture 49 years versus those without rupture 52 years). In the Dutch cohort, 69% were female, 92% had ruptured aneurysm, 15% had a positive family history and the median age was 49 years.",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 16474,
+          "infons": {
+            "section_type": "METHODS",
+            "type": "title_2"
+          },
+          "text": "SNP association analysis",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 16499,
+          "infons": {
+            "section_type": "METHODS",
+            "type": "paragraph"
+          },
+          "text": "To test for association of each SNP with intracranial aneurysm, we assumed an additive (in log-odds scale) model. We used the Cochran-Armitage trend test for each cohort. For the combined sample of European descent or of European and Japanese cohorts, we used the Mantel extension test (Supplementary Methods).",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 16810,
+          "infons": {
+            "section_type": "METHODS",
+            "type": "paragraph"
+          },
+          "text": "We calculated the per-allele and genotype-specific ORs and their 95% confidence intervals by fitting 1-d.f. and 2-d.f. logistic models, respectively. We assessed heterogeneity of ORs among populations by considering the likelihood ratios of a logistic model with population by genotype interaction term(s) versus a linear model without the interaction term(s) and used a P value <0.05 as evidence of significant heterogeneity (Supplementary Table 3). To evaluate the degree of overdispersion of test statistics, we calculated the genomic inflation factor (lambda) for each statistical test by the ratio of the mean of the lower 90% of observed test statistics to that of the expected chi2 values. We applied the genomic control method to correct for lambda (Fig. 1b) and then compared a pairwise plot of P values for each SNP in the trend and corrected tests to determine the potential effect of any residual population stratification (Supplementary Fig. 1a,b and Supplementary Methods).",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 17798,
+          "infons": {
+            "section_type": "METHODS",
+            "type": "paragraph"
+          },
+          "text": "We also examined the validity of the assumption of additivity (in log-odds scale) in the association tests by comparing likelihood ratios assuming alternative models of dominance and rejected additivity for P < 0.05 (ref. and Supplementary Table 3).",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 18048,
+          "infons": {
+            "section_type": "METHODS",
+            "type": "paragraph"
+          },
+          "text": "For each chromosome segment showing significant association with intracranial aneurysm, we investigated whether more than one SNP had an independent marginal effect on intracranial aneurysm by the Mantel extension test conditioned on genotypes for SNPs within each interval (Supplementary Table 4).",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 18347,
+          "infons": {
+            "section_type": "METHODS",
+            "type": "paragraph"
+          },
+          "text": "To assess the robustness of our GWAS results, we also performed a weighted Z-score test and found that the results of this alternative analysis were highly correlated with the results of the Mantel extension test (Supplementary Fig. 1c).",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 18585,
+          "infons": {
+            "section_type": "METHODS",
+            "type": "title_2"
+          },
+          "text": "Replication study in Japanese cohort",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 18622,
+          "infons": {
+            "section_type": "METHODS",
+            "type": "paragraph"
+          },
+          "text": "For the Japanese replication study, allelic discrimination assays were done with 15 SNPs on the Sequenom iPLEX genotyping platform according to the manufacturer's protocol. For SNPs that showed significant P values, genotypes were repeated and P values confirmed on the TaqMan platform (Applied Biosystems). Association tests were done as described above, using P = 0.05 (in the Cochran-Armitage trend test with the same allele found associated in Europe) as the threshold for significance (Supplementary Table 3).",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 19139,
+          "infons": {
+            "section_type": "METHODS",
+            "type": "title_2"
+          },
+          "text": "Subset analysis",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 19155,
+          "infons": {
+            "section_type": "METHODS",
+            "type": "paragraph"
+          },
+          "text": "For SNPs with the most significant P values we investigated whether the association results were affected by potential confounding variables such as rupture status, family history or gender. We compared genotype distributions of cases stratified by these variables using the trend test (Supplementary Table 5).",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 19466,
+          "infons": {
+            "section_type": "METHODS",
+            "type": "title_2"
+          },
+          "text": "Population-attributable fraction and proportion of genetic variance attributable to SNPs",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 19555,
+          "infons": {
+            "section_type": "METHODS",
+            "type": "paragraph"
+          },
+          "text": "We investigated two risk measures based on replicated SNPs: the population attributable fraction (PAF) and the proportion of the sibling recurrence risk attributable to a SNP ('recurrence risk fraction') as previously described (Table 1 and Supplementary Methods). For these calculations we assumed intracranial aneurysm population prevalence of 2% and lambdasib of 4 (ref.). The combined contribution of SNPs was obtained by assuming the multiplicative model (Supplementary Methods).",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 20040,
+          "infons": {
+            "section_type": "METHODS",
+            "type": "title_2"
+          },
+          "text": "Cumulative effects of risk alleles",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 20075,
+          "infons": {
+            "section_type": "METHODS",
+            "type": "paragraph"
+          },
+          "text": "We analyzed the cumulative effects of the risk alleles at the most significant SNP at 2q, 8q and 9p (rs700651, rs10958409 and rs1333040) by calculating the risk score for each individual by the weighted sum of the number of risk alleles as defined by  where psi[i] is the logarithm of the calculated per-allel odds ratio at each locus and n[i] is the number of risk alleles at the same locus. We then assessed the risk score for each of the 27 possible three-locus genotypes in each cohort (Supplementary Table 6). We fitted a simple linear logistic model with an additive effect (on log-odds scale) for each cohort and performed a likelihood-ratio test. For display purposes, the 27 strata of Supplementary Table 6 are compressed into 5 strata shown in Table 2 according to the absolute number of risk alleles, which closely parallels the risk score.",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 20927,
+          "infons": {
+            "section_type": "SUPPL",
+            "type": "title_1"
+          },
+          "text": "Supplementary Material",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 20950,
+          "infons": {
+            "fpage": "2742",
+            "lpage": "2750",
+            "name_0": "surname:Bederson;given-names:JB",
+            "pub-id_pmid": "11062304",
+            "section_type": "REF",
+            "source": "Stroke",
+            "type": "ref",
+            "volume": "31",
+            "year": "2000"
+          },
+          "text": "Recommendations for the management of patients with unruptured intracranial aneurysms: a Statement for healthcare professionals from the Stroke Council of the American Heart Association",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 21136,
+          "infons": {
+            "fpage": "661",
+            "lpage": "678",
+            "pub-id_pmid": "17554300",
+            "section_type": "REF",
+            "source": "Nature",
+            "type": "ref",
+            "volume": "447",
+            "year": "2007"
+          },
+          "text": "Genome-wide association study of 14,000 cases of seven common diseases and 3,000 shared controls",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 21233,
+          "infons": {
+            "fpage": "1488",
+            "lpage": "1491",
+            "name_0": "surname:McPherson;given-names:R",
+            "pub-id_pmid": "17478681",
+            "section_type": "REF",
+            "source": "Science",
+            "type": "ref",
+            "volume": "316",
+            "year": "2007"
+          },
+          "text": "A common allele on chromosome 9 associated with coronary heart disease",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 21304,
+          "infons": {
+            "fpage": "1491",
+            "lpage": "1493",
+            "name_0": "surname:Helgadottir;given-names:A",
+            "pub-id_pmid": "17478679",
+            "section_type": "REF",
+            "source": "Science",
+            "type": "ref",
+            "volume": "316",
+            "year": "2007"
+          },
+          "text": "A common variant on chromosome 9p21 affects the risk of myocardial infarction",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 21382,
+          "infons": {
+            "fpage": "217",
+            "lpage": "224",
+            "name_0": "surname:Helgadottir;given-names:A",
+            "pub-id_pmid": "18176561",
+            "section_type": "REF",
+            "source": "Nat. Genet",
+            "type": "ref",
+            "volume": "40",
+            "year": "2008"
+          },
+          "text": "The same sequence variant on 9p21 associates with myocardial infarction, abdominal aortic aneurysm and intracranial aneurysm",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 21507,
+          "infons": {
+            "fpage": "3513",
+            "lpage": "3526",
+            "name_0": "surname:Matsui;given-names:T",
+            "pub-id_pmid": "16895970",
+            "section_type": "REF",
+            "source": "J. Cell Sci",
+            "type": "ref",
+            "volume": "119",
+            "year": "2006"
+          },
+          "text": "Redundant roles of Sox17 and Sox18 in postnatal angiogenesis in mice",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 21576,
+          "infons": {
+            "fpage": "539",
+            "lpage": "544",
+            "name_0": "surname:Sakamoto;given-names:Y",
+            "pub-id_pmid": "17610846",
+            "section_type": "REF",
+            "source": "Biochem. Biophys. Res. Commun",
+            "type": "ref",
+            "volume": "360",
+            "year": "2007"
+          },
+          "text": "Redundant roles of Sox17 and Sox18 in early cardiovascular development of mouse embryos",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 21664,
+          "infons": {
+            "fpage": "470",
+            "lpage": "483",
+            "name_0": "surname:Kim;given-names:I",
+            "name_1": "surname:Saunders;given-names:TL",
+            "name_2": "surname:Morrison;given-names:SJ",
+            "pub-id_pmid": "17655922",
+            "section_type": "REF",
+            "source": "Cell",
+            "type": "ref",
+            "volume": "130",
+            "year": "2007"
+          },
+          "text": "Sox17 dependence distinguishes the transcriptional regulation of fetal from adult hematopoietic stem cells",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 21771,
+          "infons": {
+            "fpage": "421",
+            "lpage": "426",
+            "name_0": "surname:Janzen;given-names:V",
+            "pub-id_pmid": "16957735",
+            "section_type": "REF",
+            "source": "Nature",
+            "type": "ref",
+            "volume": "443",
+            "year": "2006"
+          },
+          "text": "Stem-cell ageing modified by the cyclin-dependent kinase inhibitor p16INK4a",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 21847,
+          "infons": {
+            "fpage": "426",
+            "lpage": "429",
+            "name_0": "surname:Schievink;given-names:WI",
+            "name_1": "surname:Schaid;given-names:DJ",
+            "name_2": "surname:Michels;given-names:VV",
+            "name_3": "surname:Piepgras;given-names:DG",
+            "pub-id_pmid": "7666217",
+            "section_type": "REF",
+            "source": "J. Neurosurg",
+            "type": "ref",
+            "volume": "83",
+            "year": "1995"
+          },
+          "text": "Familial aneurysmal subarachnoid hemorrhage: a community-based study",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 21916,
+          "infons": {
+            "fpage": "1434",
+            "lpage": "1440",
+            "name_0": "surname:Foroud;given-names:T",
+            "pub-id_pmid": "18323491",
+            "section_type": "REF",
+            "source": "Stroke",
+            "type": "ref",
+            "volume": "39",
+            "year": "2008"
+          },
+          "text": "Genome screen to detect linkage to intracranial aneurysm susceptibility genes: the Familial Intracranial Aneurysm (FIA) study",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 22042,
+          "infons": {
+            "fpage": "172",
+            "lpage": "179",
+            "name_0": "surname:Nahed;given-names:BV",
+            "pub-id_pmid": "15540160",
+            "section_type": "REF",
+            "source": "Am. J. Hum. Genet",
+            "type": "ref",
+            "volume": "76",
+            "year": "2005"
+          },
+          "text": "Mapping a mendelian form of intracranial aneurysm to 1p34.3-p36.13",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 22109,
+          "infons": {
+            "fpage": "1021",
+            "lpage": "1027",
+            "name_0": "surname:Ozturk;given-names:AK",
+            "pub-id_pmid": "16497978",
+            "section_type": "REF",
+            "source": "Stroke",
+            "type": "ref",
+            "volume": "37",
+            "year": "2006"
+          },
+          "text": "Molecular genetic analysis of two large kindreds with intracranial aneurysms demonstrates linkage to 11q24-25 and 14q23-31",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 22232,
+          "infons": {
+            "fpage": "1096",
+            "lpage": "1102",
+            "name_0": "surname:Ruigrok;given-names:YM",
+            "pub-id_pmid": "18309175",
+            "section_type": "REF",
+            "source": "Stroke",
+            "type": "ref",
+            "volume": "39",
+            "year": "2008"
+          },
+          "text": "Genomewide linkage in a large Dutch family with intracranial aneurysms: replication of 2 loci for intracranial aneurysms to chromosome 1p36.11-p36.13 and Xp22.2-p22.32",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 22400,
+          "infons": {
+            "fpage": "353",
+            "lpage": "357",
+            "name_0": "surname:Gudbjartsson;given-names:DF",
+            "pub-id_pmid": "17603472",
+            "section_type": "REF",
+            "source": "Nature",
+            "type": "ref",
+            "volume": "448",
+            "year": "2007"
+          },
+          "text": "Variants conferring risk of atrial fibrillation on chromosome 4q25",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 22467,
+          "infons": {
+            "fpage": "453",
+            "lpage": "463",
+            "name_0": "surname:Luca;given-names:D",
+            "pub-id_pmid": "18252225",
+            "section_type": "REF",
+            "source": "Am. J. Hum. Genet",
+            "type": "ref",
+            "volume": "82",
+            "year": "2008"
+          },
+          "text": "On the use of general control samples for genome-wide association studies: genetic matching highlights causal variants",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 22586,
+          "infons": {
+            "fpage": "1243",
+            "lpage": "1246",
+            "name_0": "surname:Clayton;given-names:DG",
+            "pub-id_pmid": "16228001",
+            "section_type": "REF",
+            "source": "Nat. Genet",
+            "type": "ref",
+            "volume": "37",
+            "year": "2005"
+          },
+          "text": "Population structure, differential bias and genomic control in a large-scale, case-control association study",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 22695,
+          "infons": {
+            "fpage": "388",
+            "lpage": "393",
+            "name_0": "surname:Freedman;given-names:ML",
+            "pub-id_pmid": "15052270",
+            "section_type": "REF",
+            "source": "Nat. Genet",
+            "type": "ref",
+            "volume": "36",
+            "year": "2004"
+          },
+          "text": "Assessing the impact of population stratification on genetic association studies",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 22776,
+          "infons": {
+            "fpage": "469",
+            "lpage": "478",
+            "name_0": "surname:Shibuya;given-names:M",
+            "pub-id_pmid": "17002866",
+            "section_type": "REF",
+            "source": "J. Biochem. Mol. Biol",
+            "type": "ref",
+            "volume": "39",
+            "year": "2006"
+          },
+          "text": "Differential roles of vascular endothelial growth factor receptor-1 and receptor-2 in angiogenesis",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 22875,
+          "infons": {
+            "fpage": "1553",
+            "lpage": "1558",
+            "name_0": "surname:Ziegler;given-names:BL",
+            "pub-id_pmid": "10477517",
+            "section_type": "REF",
+            "source": "Science",
+            "type": "ref",
+            "volume": "285",
+            "year": "1999"
+          },
+          "text": "KDR receptor: a key marker defining hematopoietic stem cells",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 22936,
+          "infons": {
+            "fpage": "851",
+            "lpage": "861",
+            "name_0": "surname:Frazer;given-names:KA",
+            "pub-id_pmid": "17943122",
+            "section_type": "REF",
+            "source": "Nature",
+            "type": "ref",
+            "volume": "449",
+            "year": "2007"
+          },
+          "text": "A second generation human haplotype map of over 3.1 million SNPs",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 23001,
+          "infons": {
+            "fpage": "1336",
+            "lpage": "1341",
+            "name_0": "surname:Zeggini;given-names:E",
+            "pub-id_pmid": "17463249",
+            "section_type": "REF",
+            "source": "Science",
+            "type": "ref",
+            "volume": "316",
+            "year": "2007"
+          },
+          "text": "Replication of genome-wide association signals in UK samples reveals risk loci for type 2 diabetes",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 23100,
+          "infons": {
+            "fpage": "1341",
+            "lpage": "1345",
+            "name_0": "surname:Scott;given-names:LJ",
+            "pub-id_pmid": "17463248",
+            "section_type": "REF",
+            "source": "Science",
+            "type": "ref",
+            "volume": "316",
+            "year": "2007"
+          },
+          "text": "A genome-wide association study of type 2 diabetes in Finns detects multiple susceptibility variants",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 23201,
+          "infons": {
+            "fpage": "1331",
+            "lpage": "1336",
+            "name_0": "surname:Saxena;given-names:R",
+            "pub-id_pmid": "17463246",
+            "section_type": "REF",
+            "source": "Science",
+            "type": "ref",
+            "volume": "316",
+            "year": "2007"
+          },
+          "text": "Genome-wide association analysis identifies loci for type 2 diabetes and triglyceride levels",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 23294,
+          "infons": {
+            "fpage": "3963",
+            "lpage": "3969",
+            "name_0": "surname:Pasmant;given-names:E",
+            "pub-id_pmid": "17440112",
+            "section_type": "REF",
+            "source": "Cancer Res",
+            "type": "ref",
+            "volume": "67",
+            "year": "2007"
+          },
+          "text": "Characterization of a germ-line deletion, including the entire INK4/ARF locus, in a melanoma-neural system tumor family: identification of ANRIL, an antisense noncoding RNA whose expression coclusters with ARF",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 23504,
+          "infons": {
+            "fpage": "638",
+            "lpage": "645",
+            "name_0": "surname:Zeggini;given-names:E",
+            "pub-id_pmid": "18372903",
+            "section_type": "REF",
+            "source": "Nat. Genet",
+            "type": "ref",
+            "volume": "40",
+            "year": "2008"
+          },
+          "text": "Meta-analysis of genome-wide association data and large-scale replication identifies additional susceptibility loci for type 2 diabetes",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 23640,
+          "infons": {
+            "fpage": "513",
+            "lpage": "516",
+            "name_0": "surname:Romeo;given-names:S",
+            "pub-id_pmid": "17322881",
+            "section_type": "REF",
+            "source": "Nat. Genet",
+            "type": "ref",
+            "volume": "39",
+            "year": "2007"
+          },
+          "text": "Population-based resequencing of ANGPTL4 uncovers variations that reduce triglycerides and increase HDL",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 23744,
+          "infons": {
+            "fpage": "592",
+            "lpage": "599",
+            "name_0": "surname:Ji;given-names:W",
+            "pub-id_pmid": "18391953",
+            "section_type": "REF",
+            "source": "Nat. Genet",
+            "type": "ref",
+            "volume": "40",
+            "year": "2008"
+          },
+          "text": "Rare independent mutations in renal salt handling genes contribute to blood pressure variation",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 23839,
+          "infons": {
+            "fpage": "964",
+            "lpage": "967",
+            "name_0": "surname:Asahara;given-names:T",
+            "pub-id_pmid": "9020076",
+            "section_type": "REF",
+            "source": "Science",
+            "type": "ref",
+            "volume": "275",
+            "year": "1997"
+          },
+          "text": "Isolation of putative progenitor endothelial cells for angiogenesis",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 23907,
+          "infons": {
+            "fpage": "6620",
+            "lpage": "6625",
+            "name_0": "surname:Purhonen;given-names:S",
+            "pub-id_pmid": "18443294",
+            "section_type": "REF",
+            "source": "Proc. Natl. Acad. Sci. USA",
+            "type": "ref",
+            "volume": "105",
+            "year": "2008"
+          },
+          "text": "Bone marrow-derived circulating endothelial precursors do not contribute to vascular endothelium and are not needed for tumor growth",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 24040,
+          "infons": {
+            "file": "ukmss-4348-f0001.jpg",
+            "id": "F1",
+            "section_type": "FIG",
+            "type": "fig_caption"
+          },
+          "text": "Genome-wide association of SNPs with intracranial aneurysm in the combined European cohort. (a) Quantile-quantile plot of the observed chi2 values derived from the Mantel-extension test statistics versus the expected chi2 distribution. The solid line represents concordance of observed and expected values. The slope of the dashed line represents the genomic inflation factor (lambda = 1.11). (b) The plot of expected and observed chi2 values for association of SNPs with intracranial aneurysm after correction for the genomic inflation factor (lambda = 1.0). Significant deviation from the expected values suggests association of these SNPs with intracranial aneurysm phenotype. (c) The -log10 of uncorrected P values for association of each SNP and intracranial aneurysm is plotted according to its physical position on successive chromosomes. Green dots indicate SNPs yielding P values <1 x 10-5, and red dots denote SNPs that surpass a significance level of 5 x 10-7.",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 25012,
+          "infons": {
+            "file": "ukmss-4348-f0002.jpg",
+            "id": "F2",
+            "section_type": "FIG",
+            "type": "fig_caption"
+          },
+          "text": "Regional association plots and linkage disequilibrium structure. (a-c) The -log10 of the P value for association of each SNP and intracranial aneurysm in discovery phase across segments of 2q (a), 8q (b) and 9q (c) are shown as small diamonds (using NCBI build 36 for map locations). Fifteen SNPs that were genotyped in the Japanese replication cohort are shown as triangles that show the combined (discovery + replication) P values: blue triangles represent SNPs that demonstrate replication in the Japanese cohort with P < 0.05, and gray triangles denote SNPs with P > 0.05 in the replication study. SNPs with the most significant P values in each interval in the combined analysis are marked with their SNP IDs. Known transcripts (RefSeq database) are represented as horizontal bars at the bottom of each panel. Population-specific LD structures based on D' are shown for the HapMap European (CEU) and Asian (CHB + JPT) cohorts. The results demonstrate that on chromosome 2, SNPs spanning an ~800-kb interval are in strong LD in the CEU population and show evidence of association with intracranial aneurysm in the Finnish and Dutch cohorts. In Asia, this segment is broken into two smaller blocks of LD that are not strongly correlated with one another, and significant association with intracranial aneurysm in Japanese cohort is seen only for the telomeric segment. For chromosome 8, SNPs in two blocks that are not in significant LD with one another both show significant association with intracranial aneurysm in the European cohort; only SNPs located within the proximal block replicate in Japan. Cohort-specific r2 values among all SNPs genotyped in the replication studies are shown in Supplementary Table 4.",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 26734,
+          "infons": {
+            "file": "T1.xml",
+            "id": "T1",
+            "section_type": "TABLE",
+            "type": "table_caption"
+          },
+          "text": "Summary of results for five SNPs that characterize the association with intracranial aneurysm on chromosomes 2, 8 and 9",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 26854,
+          "infons": {
+            "file": "T1.xml",
+            "id": "T1",
+            "section_type": "TABLE",
+            "type": "table",
+            "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<table frame=\"hsides\" rules=\"groups\">\n        <thead>\n          <tr>\n            <th align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <th align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <th align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <th colspan=\"3\" align=\"center\" valign=\"top\" rowspan=\"1\">Odds ratio (95% CI)<hr/></th>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n          </tr>\n          <tr>\n            <th align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Chr.</th>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">SNP</th>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Pos. (Mb)</th>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Risk allele</th>\n            <th align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Dataset</th>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">RAF (control/case)</th>\n            <th align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"><italic>P</italic> value<xref ref-type=\"table-fn\" rid=\"TFN1\">a</xref></th>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Per allele</th>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Heterozygous</th>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Homozygous</th>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Heterogeneity <italic>P</italic><xref ref-type=\"table-fn\" rid=\"TFN2\">b</xref></th>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Dom. <italic>P</italic><xref ref-type=\"table-fn\" rid=\"TFN3\">c</xref></th>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">PAF(%)</th>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">RRF(%)</th>\n          </tr>\n        </thead>\n        <tbody>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">2</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">rs1429412</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">197.9</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">G</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Finland</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.42/0.48</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">4.4 x 10<sup>-4</sup></td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.27 (1.11-1.45)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.33 (1.07-1.65)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.60 (1.22-2.10)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.60</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Netherlands</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.34/0.39</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.6 x 10<sup>-4</sup></td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.25 (1.11-1.40)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.35 (1.14-1.61)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.48 (1.15-1.90)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.21</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Europe</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">2.5 x 10<sup>-7</sup></td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.26 (1.15-1.37)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.34 (1.18-1.54)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.54 (1.28-1.85)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.85</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.21</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Japan</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.29/0.30</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.42</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.08 (0.90-1.30)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.05 (0.82-1.35)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.21 (0.78-1.86)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.76</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">All</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">5.8 x 10<sup>-7</sup></td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.22 (1.13-1.32)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.27 (1.13-1.43)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.46 (1.24-1.73)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.32</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.40</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">\n<italic>rs700651</italic>\n</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">198.3</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">G</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Finland</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.39/0.44</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">5.6 x 10<sup>-3</sup></td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.21 (1.06-1.39)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.19 (0.96-1.46)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.48 (1.12-1.96)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.81</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">14.1</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.7</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Netherlands</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.35/0.40</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">5.0 x 10<sup>-4</sup></td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.23 (1.09-1.38)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.22 (1.03-1.46)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.50 (1.18-1.91)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.99</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">14.1</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.7</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Europe</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">8.9 x 10<sup>-6</sup></td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.22 (1.12-1.33)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.21 (1.06-1.38)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.49 (1.25-1.79)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.89</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.87</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Japan</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.46/0.54</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.0011</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.30 (1.11-1.53)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.05 (0.79-1.41)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.70 (1.24-2.33)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.08</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">14.8</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.6</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">All</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">4.4 x 10<sup>-8</sup></td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.24 (1.15-1.34)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.18 (1.04-1.33)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.56 (1.34-1.83)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.77</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.30</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">8</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">\n<italic>rs10958409</italic>\n</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">55.5</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">A</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Finland</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.18/0.22</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.4 x 10<sup>-3</sup></td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.31 (1.11-1.55)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.40 (1.15-1.71)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.34 (0.81-2.21)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.20</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">11.7</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.9</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Netherlands</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.15/0.20</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.4 x 10<sup>-7</sup></td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.46 (1.27-1.68)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.42 (1.20-1.69)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">2.28 (1.51-3.45)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.65</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">12.1</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.7</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Europe</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.6 x 10<sup>-9</sup></td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.39 (1.25-1.55)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.42 (1.25-1.61)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.83 (1.31-2.55)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.34</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.64</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Japan</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.25/0.30</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.016</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.26 (1.04-1.51)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.21 (0.94-1.55)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.66 (1.07-2.59)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.66</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">10.9</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.8</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">All</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.4 x 10<sup>-10</sup></td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.36 (1.24-1.49)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.37 (1.22-1.54)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.79 (1.37-2.33)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.40</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.77</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">rs9298506</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">55.6</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">A</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Finland</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.73/0.80</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">4.6 x 10<sup>-7</sup></td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.50 (1.28-1.75)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.26 (0.82-1.94)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.99 (1.31-3.01)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.41</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">38.5</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">2.0</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Netherlands</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.81/0.85</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">2.3 x 10<sup>-4</sup></td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.34 (1.15-1.56)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.50 (0.87-2.59)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.97 (1.15-3.35)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.66</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Europe</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">8.6 x 10<sup>-10</sup></td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.41 (1.27-1.58)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.37 (0.98-1.91)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.95 (1.41-2.70)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.32</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.84</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Japan</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.81/0.83</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.25</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.14 (0.92-1.41)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.59 (0.30-1.13)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.78 (0.41-1.47)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.04</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">All</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.8 x 10<sup>-9</sup></td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.35 (1.22-1.49)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.16 (0.87-1.56)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.63 (1.23-2.16)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.13</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.29</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">9</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">\n<italic>rs1333040</italic>\n</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">22.1</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">T</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Finland</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.47/0.52</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">2.8 x 10<sup>-3</sup></td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.22 (1.07-1.40)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.23 (0.98-1.54)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.50 (1.15-1.95)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.96</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">18.5</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.7</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Netherlands</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.55/0.62</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">9.5 x 10<sup>-7</sup></td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.33 (1.19-1.50)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.38 (1.09-1.75)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.80 (1.41-2.31)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.73</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">30.2</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.4</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Europe</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.5 x 10<sup>-8</sup></td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.29 (1.18-1.40)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.30 (1.10-1.53)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.66 (1.39-1.98)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.34</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.89</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Japan</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.65/0.72</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.0024</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.32 (1.10-1.58)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.26 (0.83-1.91)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.69 (1.13-2.55)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.81</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">29.3</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.1</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">All</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.4 x 10<sup>-10</sup></td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.29 (1.19-1.40)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.29 (1.11-1.50)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.67 (1.42-1.96)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.61</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.00</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">-</td>\n          </tr>\n        </tbody>\n      </table>\n"
+          },
+          "text": "\t\t\t\t\t\t\tOdds ratio (95% CI)\t\t\t\t\t \tChr.\tSNP\tPos. (Mb)\tRisk allele\tDataset\tRAF (control/case)\tP valuea\tPer allele\tHeterozygous\tHomozygous\tHeterogeneity Pb\tDom. Pc\tPAF(%)\tRRF(%)\t \t2\trs1429412\t197.9\tG\tFinland\t0.42/0.48\t4.4 x 10-4\t1.27 (1.11-1.45)\t1.33 (1.07-1.65)\t1.60 (1.22-2.10)\t-\t0.60\t-\t-\t \t\t\t\t\tNetherlands\t0.34/0.39\t1.6 x 10-4\t1.25 (1.11-1.40)\t1.35 (1.14-1.61)\t1.48 (1.15-1.90)\t-\t0.21\t-\t-\t \t\t\t\t\tEurope\t-\t2.5 x 10-7\t1.26 (1.15-1.37)\t1.34 (1.18-1.54)\t1.54 (1.28-1.85)\t0.85\t0.21\t-\t-\t \t\t\t\t\tJapan\t0.29/0.30\t0.42\t1.08 (0.90-1.30)\t1.05 (0.82-1.35)\t1.21 (0.78-1.86)\t-\t0.76\t-\t-\t \t\t\t\t\tAll\t-\t5.8 x 10-7\t1.22 (1.13-1.32)\t1.27 (1.13-1.43)\t1.46 (1.24-1.73)\t0.32\t0.40\t-\t-\t \t\trs700651\t198.3\tG\tFinland\t0.39/0.44\t5.6 x 10-3\t1.21 (1.06-1.39)\t1.19 (0.96-1.46)\t1.48 (1.12-1.96)\t-\t0.81\t14.1\t0.7\t \t\t\t\t\tNetherlands\t0.35/0.40\t5.0 x 10-4\t1.23 (1.09-1.38)\t1.22 (1.03-1.46)\t1.50 (1.18-1.91)\t-\t0.99\t14.1\t0.7\t \t\t\t\t\tEurope\t-\t8.9 x 10-6\t1.22 (1.12-1.33)\t1.21 (1.06-1.38)\t1.49 (1.25-1.79)\t0.89\t0.87\t-\t-\t \t\t\t\t\tJapan\t0.46/0.54\t0.0011\t1.30 (1.11-1.53)\t1.05 (0.79-1.41)\t1.70 (1.24-2.33)\t-\t0.08\t14.8\t1.6\t \t\t\t\t\tAll\t-\t4.4 x 10-8\t1.24 (1.15-1.34)\t1.18 (1.04-1.33)\t1.56 (1.34-1.83)\t0.77\t0.30\t-\t-\t \t8\trs10958409\t55.5\tA\tFinland\t0.18/0.22\t1.4 x 10-3\t1.31 (1.11-1.55)\t1.40 (1.15-1.71)\t1.34 (0.81-2.21)\t-\t0.20\t11.7\t0.9\t \t\t\t\t\tNetherlands\t0.15/0.20\t1.4 x 10-7\t1.46 (1.27-1.68)\t1.42 (1.20-1.69)\t2.28 (1.51-3.45)\t-\t0.65\t12.1\t1.7\t \t\t\t\t\tEurope\t-\t1.6 x 10-9\t1.39 (1.25-1.55)\t1.42 (1.25-1.61)\t1.83 (1.31-2.55)\t0.34\t0.64\t-\t-\t \t\t\t\t\tJapan\t0.25/0.30\t0.016\t1.26 (1.04-1.51)\t1.21 (0.94-1.55)\t1.66 (1.07-2.59)\t-\t0.66\t10.9\t0.8\t \t\t\t\t\tAll\t-\t1.4 x 10-10\t1.36 (1.24-1.49)\t1.37 (1.22-1.54)\t1.79 (1.37-2.33)\t0.40\t0.77\t-\t-\t \t\trs9298506\t55.6\tA\tFinland\t0.73/0.80\t4.6 x 10-7\t1.50 (1.28-1.75)\t1.26 (0.82-1.94)\t1.99 (1.31-3.01)\t-\t0.41\t38.5\t2.0\t \t\t\t\t\tNetherlands\t0.81/0.85\t2.3 x 10-4\t1.34 (1.15-1.56)\t1.50 (0.87-2.59)\t1.97 (1.15-3.35)\t-\t0.66\t-\t-\t \t\t\t\t\tEurope\t-\t8.6 x 10-10\t1.41 (1.27-1.58)\t1.37 (0.98-1.91)\t1.95 (1.41-2.70)\t0.32\t0.84\t-\t-\t \t\t\t\t\tJapan\t0.81/0.83\t0.25\t1.14 (0.92-1.41)\t0.59 (0.30-1.13)\t0.78 (0.41-1.47)\t-\t0.04\t-\t-\t \t\t\t\t\tAll\t-\t1.8 x 10-9\t1.35 (1.22-1.49)\t1.16 (0.87-1.56)\t1.63 (1.23-2.16)\t0.13\t0.29\t-\t-\t \t9\trs1333040\t22.1\tT\tFinland\t0.47/0.52\t2.8 x 10-3\t1.22 (1.07-1.40)\t1.23 (0.98-1.54)\t1.50 (1.15-1.95)\t-\t0.96\t18.5\t0.7\t \t\t\t\t\tNetherlands\t0.55/0.62\t9.5 x 10-7\t1.33 (1.19-1.50)\t1.38 (1.09-1.75)\t1.80 (1.41-2.31)\t-\t0.73\t30.2\t1.4\t \t\t\t\t\tEurope\t-\t1.5 x 10-8\t1.29 (1.18-1.40)\t1.30 (1.10-1.53)\t1.66 (1.39-1.98)\t0.34\t0.89\t-\t-\t \t\t\t\t\tJapan\t0.65/0.72\t0.0024\t1.32 (1.10-1.58)\t1.26 (0.83-1.91)\t1.69 (1.13-2.55)\t-\t0.81\t29.3\t1.1\t \t\t\t\t\tAll\t-\t1.4 x 10-10\t1.29 (1.19-1.40)\t1.29 (1.11-1.50)\t1.67 (1.42-1.96)\t0.61\t1.00\t-\t-\t \t",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 29514,
+          "infons": {
+            "file": "T1.xml",
+            "id": "T1",
+            "section_type": "TABLE",
+            "type": "table_foot"
+          },
+          "text": "SNPs that replicate with P < 0.05 in the Japanese cohort are italicized. Position shown is from NCBI build 36 coordinates. Risk allele is indexed to the forward strand of NCBI build 36.",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 29700,
+          "infons": {
+            "file": "T1.xml",
+            "id": "T1",
+            "section_type": "TABLE",
+            "type": "table_footnote"
+          },
+          "text": "The Cochran-Armitage trend test P value for cohorts from Finland, Netherlands and Japan, respectively, and the Mantel extension test (uncorrected for lambda) P value for combined cohorts.",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 29888,
+          "infons": {
+            "file": "T1.xml",
+            "id": "T1",
+            "section_type": "TABLE",
+            "type": "table_footnote"
+          },
+          "text": "P value of the test of heterogeneity in effect size among populations.",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 29959,
+          "infons": {
+            "file": "T1.xml",
+            "id": "T1",
+            "section_type": "TABLE",
+            "type": "table_footnote"
+          },
+          "text": "P value of the test of deviation from an additive model. PAF, population attributable fraction. RRF, recurrence risk fraction attributable to each SNP, assuming the overall sibling recurrence risk of 4 (ref.).",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 30169,
+          "infons": {
+            "file": "T2.xml",
+            "id": "T2",
+            "section_type": "TABLE",
+            "type": "table_caption"
+          },
+          "text": "Increased intracranial aneurysm risk with increased risk score based on genotypes for rs700651, rs10958409 and rs133040",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 30289,
+          "infons": {
+            "file": "T2.xml",
+            "id": "T2",
+            "section_type": "TABLE",
+            "type": "table",
+            "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<table frame=\"hsides\" rules=\"groups\">\n        <thead>\n          <tr>\n            <th align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <th colspan=\"3\" align=\"center\" valign=\"top\" rowspan=\"1\">Japan</th>\n            <th colspan=\"3\" align=\"center\" valign=\"top\" rowspan=\"1\">Netherlands</th>\n            <th colspan=\"3\" align=\"center\" valign=\"top\" rowspan=\"1\">Finland</th>\n          </tr>\n          <tr>\n            <th align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">No. of risk alleles</th>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Frequency (control/case)</th>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Average risk score (min-max)</th>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">OR (95% CI)</th>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Frequency (control/case)</th>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Average risk score (min-max)</th>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">OR (95% CI)</th>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Frequency (control/case)</th>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">Average risk score (min-max)</th>\n            <th align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">OR (95% CI)</th>\n          </tr>\n        </thead>\n        <tbody>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0 or 1</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.14/0.08</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.23 (0.00-0.28)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.3/0.21</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.22 (0.00-0.38)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.32/0.21</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.17 (0.00-0.27)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">2</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.28/0.21</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.53 (0.46-0.55)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.29 (0.81-2.05)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.36/0.29</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.54 (0.41-0.75)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.13 (0.9-1.41)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.34/0.34</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.42 (0.38-0.54)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.47 (1.15-1.88)</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">3</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.33/0.32</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.79 (0.72-0.82)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.63 (1.05-2.55)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.25/0.33</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.82 (0.70-1.04)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.88 (1.51-2.34)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.24/0.3</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.63 (0.59-0.74)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.82 (1.41-2.36)</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">4</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.19/0.28</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.05 (0.99-1.08)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">2.41 (1.51-3.83)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.08/0.14</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.10 (0.98-1.33)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">2.40 (1.82-3.16)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.07/0.13</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.85 (0.79-0.94)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">2.83 (1.98-4.04)</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">5 or 6</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.06/0.10</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.34 (1.26-1.54)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">2.91 (1.62-5.21)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.02/0.03</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.41 (1.36-1.74)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">2.63 (1.56-4.41)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">0.03/0.02</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.09 (1.06-1.33)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">1.16 (0.62-2.19)</td>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\"><italic>P</italic> value<xref ref-type=\"table-fn\" rid=\"TFN4\">a</xref></td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">3.3 x 10<sup>-7</sup></td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">8.4 x 10<sup>-16</sup></td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">7.8 x 10<sup>-8</sup></td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n          </tr>\n          <tr>\n            <td align=\"left\" valign=\"top\" rowspan=\"1\" colspan=\"1\">OR (95% CI)<xref ref-type=\"table-fn\" rid=\"TFN5\">b</xref></td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">2.91 (1.92-4.41)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">2.81 (2.19-3.61)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\">2.88 (1.95-4.25)</td>\n            <td align=\"center\" valign=\"top\" rowspan=\"1\" colspan=\"1\"/>\n          </tr>\n        </tbody>\n      </table>\n"
+          },
+          "text": "\tJapan\tNetherlands\tFinland\t \tNo. of risk alleles\tFrequency (control/case)\tAverage risk score (min-max)\tOR (95% CI)\tFrequency (control/case)\tAverage risk score (min-max)\tOR (95% CI)\tFrequency (control/case)\tAverage risk score (min-max)\tOR (95% CI)\t \t0 or 1\t0.14/0.08\t0.23 (0.00-0.28)\t1\t0.3/0.21\t0.22 (0.00-0.38)\t1\t0.32/0.21\t0.17 (0.00-0.27)\t1\t \t2\t0.28/0.21\t0.53 (0.46-0.55)\t1.29 (0.81-2.05)\t0.36/0.29\t0.54 (0.41-0.75)\t1.13 (0.9-1.41)\t0.34/0.34\t0.42 (0.38-0.54)\t1.47 (1.15-1.88)\t \t3\t0.33/0.32\t0.79 (0.72-0.82)\t1.63 (1.05-2.55)\t0.25/0.33\t0.82 (0.70-1.04)\t1.88 (1.51-2.34)\t0.24/0.3\t0.63 (0.59-0.74)\t1.82 (1.41-2.36)\t \t4\t0.19/0.28\t1.05 (0.99-1.08)\t2.41 (1.51-3.83)\t0.08/0.14\t1.10 (0.98-1.33)\t2.40 (1.82-3.16)\t0.07/0.13\t0.85 (0.79-0.94)\t2.83 (1.98-4.04)\t \t5 or 6\t0.06/0.10\t1.34 (1.26-1.54)\t2.91 (1.62-5.21)\t0.02/0.03\t1.41 (1.36-1.74)\t2.63 (1.56-4.41)\t0.03/0.02\t1.09 (1.06-1.33)\t1.16 (0.62-2.19)\t \tP valuea\t\t3.3 x 10-7\t\t\t8.4 x 10-16\t\t\t7.8 x 10-8\t\t \tOR (95% CI)b\t\t2.91 (1.92-4.41)\t\t\t2.81 (2.19-3.61)\t\t\t2.88 (1.95-4.25)\t\t \t",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 31307,
+          "infons": {
+            "file": "T2.xml",
+            "id": "T2",
+            "section_type": "TABLE",
+            "type": "table_foot"
+          },
+          "text": "Individuals with non-missing genotypes for all six alleles were included in the analysis.",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 31397,
+          "infons": {
+            "file": "T2.xml",
+            "id": "T2",
+            "section_type": "TABLE",
+            "type": "table_footnote"
+          },
+          "text": "P value for linear relationship of risk score and logarithm of ORs (complete data set is listed in Supplementary Table 6).",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        },
+        {
+          "offset": 31520,
+          "infons": {
+            "file": "T2.xml",
+            "id": "T2",
+            "section_type": "TABLE",
+            "type": "table_footnote"
+          },
+          "text": "Increase in odds ratio per one unit change in risk score.",
+          "sentences": [],
+          "annotations": [],
+          "relations": []
+        }
+      ],
+      "annotations": [],
+      "relations": []
+    }
+  ]
+}

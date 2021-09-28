@@ -305,6 +305,15 @@ class PreProcessing:
         return results, markers
 
     @staticmethod
+    def get_text_sentences(text):
+        """
+
+        :param text: String containing the input text paragraph.
+        :return: List of strings containing sentences extracted from the text input.
+        """
+        return text.split(". ")
+
+    @staticmethod
     def __char_encoding_filter(input_string):
         """
         Removes all problematic characters from the input string.
