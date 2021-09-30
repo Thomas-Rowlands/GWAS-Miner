@@ -116,19 +116,34 @@ def process_study(nlp, study, qt_progress_signal=None, qt_study_finished_signal=
     t, m, p = 0, 0, 0
     for passage in study['documents'][0]['passages']:
         doc = nlp.process_corpus(passage['text'])
-        markers = nlp.extract_phenotypes(doc)
-        if markers:
-            for marker in markers:
-                marker_significance = marker.gee_p_val if marker.gee_p_val else marker.fbat_p_val if marker.fbat_p_val else marker.misc_p_val
-                genomic_trait = BioC.BioCAnnotation(id=F"T{t}", infons={"type": "genomic_trait"}, location=passage['text'].find(marker.phenotype))
-                marker_identifier = BioC.BioCAnnotation(id=F"M{m}", infons={"type": "marker"}, location=passage['text'].find(marker.rs_identifier))
-                p_value = BioC.BioCAnnotation(id=F"P{p}", infons={"type": "significance"}, location=passage['text'].find(marker_significance))
-                passage['annotations'].append(genomic_trait)
-                passage['annotations'].append(marker_identifier)
-                passage['annotations'].append(p_value)
-                t += 1
-                m += 1
-                p += 1
+        annotations = nlp.get_entities(doc, ["MESH", "HPO", "RSID", "PVAL"])
+        used_annots = []
+        if annotations:
+            for annot in annotations:
+                loc = BioC.BioCLocation(offset=annot["offset"], length=annot["length"])
+                if annot["text"] in used_annots:
+                    for old_annot in passage['annotations']:
+                        if old_annot.text == annot["text"]:
+                            old_annot.locations.append(loc)
+                if annot["entity_type"] in ["MESH", "HPO"]:
+                    genomic_trait = BioC.BioCAnnotation(id=F"T{t}", infons={"type": "genomic_trait"},
+                                                    locations=[loc], length=annot["length"], text=annot["text"])
+                    passage['annotations'].append(genomic_trait)
+                    t += 1
+                elif annot["entity_type"] == "RSID":
+                    marker_identifier = BioC.BioCAnnotation(id=F"M{m}", infons={"type": "marker"},
+                                                            locations=[loc], length=annot["length"], text=annot["text"])
+                    passage['annotations'].append(marker_identifier)
+                    m += 1
+                elif annot["entity_type"] == "PVAL":
+                    p_value = BioC.BioCAnnotation(id=F"P{p}", infons={"type": "significance"},
+                                                  locations=[loc], length=annot["length"], text=annot["text"])
+                    passage['annotations'].append(p_value)
+                    p += 1
+                used_annots.append(annot["text"])
+
+        # relations = nlp.extract_phenotypes(doc)
+
 
     output_study_results(study, qt_study_finished_signal)
     return True

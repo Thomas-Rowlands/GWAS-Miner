@@ -245,6 +245,18 @@ class Interpreter:
             prev_token = token
         return result
 
+    def get_entities(self, doc, entity_list):
+        result = []
+        for ent in doc.ents:
+            if ent.label_ in entity_list:
+                result.append({
+                    "entity_type": ent.label_,
+                    "text": ent.text_with_ws,
+                    "offset": ent.start_char,
+                    "length": ent.end_char - ent.start_char
+                })
+        return result
+
     def extract_phenotypes(self, doc):
         """[Extract phenotype to genotype associations from the provided SpaCy doc object]
 
