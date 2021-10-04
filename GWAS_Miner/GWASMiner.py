@@ -120,14 +120,14 @@ def process_study(nlp, study, qt_progress_signal=None, qt_study_finished_signal=
         used_annots = []
         if annotations:
             for annot in annotations:
-                loc = BioC.BioCLocation(offset=annot["offset"], length=annot["length"])
+                loc = BioC.BioCLocation(offset=annot["offset"] + passage["offset"], length=annot["length"])
                 if annot["text"] in used_annots:
                     for old_annot in passage['annotations']:
                         if old_annot.text == annot["text"]:
                             old_annot.locations.append(loc)
                 if annot["entity_type"] in ["MESH", "HPO"]:
                     genomic_trait = BioC.BioCAnnotation(id=F"T{t}", infons={"type": "genomic_trait"},
-                                                    locations=[loc], length=annot["length"], text=annot["text"])
+                                                        locations=[loc], length=annot["length"], text=annot["text"])
                     passage['annotations'].append(genomic_trait)
                     t += 1
                 elif annot["entity_type"] == "RSID":
@@ -143,7 +143,6 @@ def process_study(nlp, study, qt_progress_signal=None, qt_study_finished_signal=
                 used_annots.append(annot["text"])
 
         # relations = nlp.extract_phenotypes(doc)
-
 
     output_study_results(study, qt_study_finished_signal)
     return True
