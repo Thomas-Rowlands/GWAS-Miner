@@ -125,17 +125,17 @@ def process_study(nlp, study, qt_progress_signal=None, qt_study_finished_signal=
                     for old_annot in passage['annotations']:
                         if old_annot.text == annot["text"]:
                             old_annot.locations.append(loc)
-                if annot["entity_type"] in ["MESH", "HPO"]:
-                    genomic_trait = BioC.BioCAnnotation(id=F"T{t}", infons={"type": "genomic_trait"},
+                if [x for x in ["MESH", "HPO"] if x in annot["entity_type"]]:
+                    genomic_trait = BioC.BioCAnnotation(id=F"T{t}", infons={"type": "trait", "identifier": annot["id"]},
                                                         locations=[loc], length=annot["length"], text=annot["text"])
                     passage['annotations'].append(genomic_trait)
                     t += 1
-                elif annot["entity_type"] == "RSID":
-                    marker_identifier = BioC.BioCAnnotation(id=F"M{m}", infons={"type": "marker"},
+                elif "RSID" in annot["entity_type"]:
+                    marker_identifier = BioC.BioCAnnotation(id=F"M{m}", infons={"type": "genomic_marker"},
                                                             locations=[loc], length=annot["length"], text=annot["text"])
                     passage['annotations'].append(marker_identifier)
                     m += 1
-                elif annot["entity_type"] == "PVAL":
+                elif "PVAL" in annot["entity_type"]:
                     p_value = BioC.BioCAnnotation(id=F"P{p}", infons={"type": "significance"},
                                                   locations=[loc], length=annot["length"], text=annot["text"])
                     passage['annotations'].append(p_value)

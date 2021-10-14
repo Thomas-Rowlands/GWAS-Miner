@@ -7,10 +7,11 @@ import config
 import owlready2
 import rdflib
 from rtgo import ReadyThready
-
+from py2neo import Graph
 from DataStructures import Lexicon, LexiconEntry, MasterLexicon, MeshDescriptor, MeshTerm, MeshConcept
 
 logger = logging.getLogger("GWAS Miner")
+
 
 def validate_data(ont_data):
     if ont_data:
@@ -25,12 +26,7 @@ def validate_data(ont_data):
 
 
 def set_master_lexicon():
-    mesh_lexicon = Mesh.get_lexicon()
-    hpo_lexicon = HPO.get_lexicon()
-    master = MasterLexicon()
-    master.add_lexicon(mesh_lexicon)
-    master.add_lexicon(hpo_lexicon)
-    master.set_priority_order({mesh_lexicon.name: 1, hpo_lexicon.name: 2})
+    master = get_graph_ontology_data()
     try:
         with open("../ontology_data/lexicon.lexi", "wb") as file:
             pickle.dump(master, file)
@@ -105,17 +101,84 @@ def __get_tagging_data():
 def update_ontology_cache(qt_progress_signal=None, qt_finished_signal=None):
     """[Updates the ontology cache files with data from the source ontology files.]
     """
-    logger.info("Updating ontology cache files.")
-    funcs = [Mesh.extract_mesh_data,
-             HPO.set_terms,
-             HPO.set_hpo_synonyms,
-             EFO.set_terms]
-    ReadyThready.go_cluster(funcs)
-    logger.info("Finished updating ontology cache files.")
+    logger.info("Updating ontology cache.")
+    # set_master_lexicon()
+    get_graph_ontology_data()
+    logger.info("Finished updating ontology cache.")
     if qt_finished_signal:
         from GUI import QtFinishedResponse
         response = QtFinishedResponse(status=True, text="Updated ontology data.")
         qt_finished_signal.emit(response)
+
+
+def filter_mesh_lexicon(lexi):
+    included = ["A", "C", "G", "F", "D", "E01", "N06.850"]
+    excluded = ["G05", "F02.463.425.069", "F04.754.720.346", "F01.829.263", "I01.880.853.150"]
+    for entry in lexi.get_entries():
+        in_included = False
+        in_excluded = False
+        for branch in included:
+            for tree_id in entry.tree_id():
+                if tree_id and tree_id.startswith(branch):
+                    in_included = True
+                    break
+            if in_included:
+                break
+        if not in_included:
+            for branch in excluded:
+                for tree_id in entry.tree_id():
+                    if tree_id and tree_id.startswith(branch):
+                        in_excluded = True
+                        break
+                if in_excluded:
+                    break
+        if not in_included:
+            lexi.remove_entry(entry)
+    return lexi
+
+
+def get_graph_ontology_data():
+    ontologies = ["MESH", "HPO"]
+    master_lexi = MasterLexicon()
+    for ont in ontologies:
+        lexi = __retrieve_ont_lexicon(ont)
+        if lexi.name == "MESH":
+            lexi = filter_mesh_lexicon(lexi)
+            output_lexicon_terms(lexi)
+        master_lexi.add_lexicon(lexi)
+    return master_lexi
+
+
+def output_lexicon_terms(lexi):
+    with open("lexi_dump.tsv", "w", encoding="utf-8") as fout:
+        for entry in lexi.get_entries():
+            fout.write(", ".join(entry.tree_id()) + "\t" + entry.identifier + "\t" + entry.name())
+
+
+def __retrieve_ont_lexicon(ontology_name):
+    try:
+        graph = Graph(scheme="bolt", host="localhost", password="12345")
+        mesh_query = F"""
+        MATCH (n:{ontology_name})-[:HAS_SYNONYM*0..]->(m)
+        WHERE n:Term
+        WITH n, COLLECT(m.FSN) AS syns
+        RETURN n.id, n.FSN, n.treeid, syns
+        """
+        cursor = graph.run(mesh_query)
+        lexi = Lexicon(name=ontology_name)
+        while cursor.forward():
+            old_entry = lexi.get_entry_by_term(str(cursor.current[1]))
+            if old_entry:
+                if ontology_name == "MESH":
+                    old_entry.add_tree_id(str(cursor.current[2]))
+                continue
+            entry = LexiconEntry(str(cursor.current[0]), name=str(cursor.current[1]), tree_id=str(cursor.current[2]))
+            for syn in cursor.current[3]:
+                entry.add_synonym(id=entry.identifier, name=syn)
+            lexi.add_entry(entry)
+        return lexi
+    except ConnectionRefusedError as cre:
+        raise cre
 
 
 class EFO:

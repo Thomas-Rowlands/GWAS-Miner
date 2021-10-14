@@ -40,7 +40,7 @@ class Interpreter:
                 for synonym in entry.synonyms():
                     patterns.append(synonym)
                 patterns = self.__nlp.tokenizer.pipe(patterns)
-                new_matcher.add(lexicon.name, self.__on_match, *patterns)
+                new_matcher.add(lexicon.name + ": " + entry.identifier, self.__on_match, *patterns)
         self.__phrase_matcher = new_matcher
 
         # for entry in lexicon.keys():
@@ -245,16 +245,24 @@ class Interpreter:
             prev_token = token
         return result
 
+    @staticmethod
+    def trim_brackets(input):
+        if input[0] == "(":
+            input = input[1:]
+        if input[-1] == ")":
+            input = input[:-1]
+        return input
+
     def get_entities(self, doc, entity_list):
         result = []
         for ent in doc.ents:
-            if ent.label_ in entity_list:
-                result.append({
-                    "entity_type": ent.label_,
-                    "text": ent.text_with_ws,
-                    "offset": ent.start_char,
-                    "length": ent.end_char - ent.start_char
-                })
+            result.append({
+                "entity_type": ent.label_,
+                "id": ent.label_[ent.label_.index(":") + 2:] if ":" in ent.label_ else ent.label_,
+                "text": self.trim_brackets(ent.text),
+                "offset": ent.start_char,
+                "length": ent.end_char - ent.start_char
+            })
         return result
 
     def extract_phenotypes(self, doc):

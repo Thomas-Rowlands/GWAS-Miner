@@ -422,12 +422,12 @@ class MeshTerm:
 
 
 class LexiconEntry:
-    def __init__(self, identifer, name, mesh_descriptor=None):
+    def __init__(self, identifer, name, tree_id=None):
         self.identifier = identifer
-        self.__mesh_descriptor = mesh_descriptor
         self.__name = name
         self.__synonyms = []
         self.__token_size = name.count(" ")
+        self.__tree_id = [tree_id]
 
     def get_token_size(self):
         return self.__token_size
@@ -448,6 +448,12 @@ class LexiconEntry:
 
     def synonyms(self):
         return self.__synonyms
+
+    def tree_id(self):
+        return self.__tree_id
+
+    def add_tree_id(self, tree_id):
+        self.__tree_id.append(tree_id)
 
 
 class Lexicon:
@@ -484,10 +490,11 @@ class Lexicon:
             entry.add_synonym(name)
 
     def get_entry_by_term(self, term):
+        term = term.lower()
         for entry in self.__entries:
             if entry.name().lower() == term:
                 return entry
-            if term in [x.lower() for x in entry.synonyms()]:
+            if term in [x["name"].lower() for x in entry.synonyms()]:
                 return entry
         return None
 
