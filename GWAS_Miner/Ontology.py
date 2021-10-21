@@ -142,9 +142,9 @@ def get_graph_ontology_data():
     master_lexi = MasterLexicon()
     for ont in ontologies:
         lexi = __retrieve_ont_lexicon(ont)
-        if lexi.name == "MESH":
-            lexi = filter_mesh_lexicon(lexi)
-            output_lexicon_terms(lexi)
+        # if lexi.name == "MESH":
+        # lexi = filter_mesh_lexicon(lexi)
+        # output_lexicon_terms(lexi)
         master_lexi.add_lexicon(lexi)
     return master_lexi
 
@@ -158,13 +158,30 @@ def output_lexicon_terms(lexi):
 def __retrieve_ont_lexicon(ontology_name):
     try:
         graph = Graph(scheme="bolt", host="localhost", password="12345")
-        mesh_query = F"""
-        MATCH (n:{ontology_name})-[:HAS_SYNONYM*0..]->(m)
-        WHERE n:Term
-        WITH n, COLLECT(m.FSN) AS syns
-        RETURN n.id, n.FSN, n.treeid, syns
-        """
-        cursor = graph.run(mesh_query)
+        ont_query = ""
+        if ontology_name == "MESH":
+            ont_query = F"""
+            MATCH (n:MESH)
+            WHERE n.miner_included = true
+            WITH COLLECT(n.id) AS included
+            
+            MATCH (m:MESH)
+            WHERE m.miner_included = false
+            WITH COLLECT(m.id) AS excluded, included
+            
+            MATCH (n:MESH)-[:HAS_SYNONYM*0..]->(m)
+            WHERE n.id IN included AND NOT n.id in excluded AND n.miner_included = true
+            WITH n, COLLECT(m.FSN) AS syns
+            RETURN DISTINCT n.id, n.FSN, n.treeid, syns
+            """
+        else:
+            ont_query = F"""
+            MATCH (n:{ontology_name})-[:HAS_SYNONYM*0..]->(m)
+            WHERE n:Term
+            WITH n, COLLECT(m.FSN) AS syns
+            RETURN n.id, n.FSN, n.treeid, syns
+            """
+        cursor = graph.run(ont_query)
         lexi = Lexicon(name=ontology_name)
         while cursor.forward():
             old_entry = lexi.get_entry_by_term(str(cursor.current[1]))
