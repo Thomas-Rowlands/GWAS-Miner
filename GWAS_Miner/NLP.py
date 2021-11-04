@@ -38,7 +38,8 @@ class Interpreter:
             for entry in lexicon.get_entries():
                 patterns = [entry.name()]
                 for synonym in entry.synonyms():
-                    patterns.append(synonym)
+                    if synonym["name"] not in patterns:
+                        patterns.append(synonym["name"])
                 patterns = self.__nlp.tokenizer.pipe(patterns)
                 new_matcher.add(lexicon.name + ": " + entry.identifier, self.__on_match, *patterns)
         self.__phrase_matcher = new_matcher
@@ -612,6 +613,31 @@ class Interpreter:
                     input_text = input_text.replace(change[0], change[1])
         # Interpreter.__logger.info(changes) #  Can error due to strange encodings used.
         return Interpreter.__clean_reference_remains(input_text)
+
+    @staticmethod
+    def get_all_abbreviations(fulltext):
+        """
+        Returns a list of all abbreviations and their expanded forms.
+        @param fulltext: The document containing the abbreviations and their declarations
+        @return: 2D list containing abbreviations and their expanded forms.
+        """
+        abbreviations = []
+        # r"([^(-]\b[a-z]{0,}[A-Z]{2,}[a-z]{0,}\b[^)-])"
+        pattern = r"([^ \"',.(-]\b)?([a-z]{0,})([A-Z]{2,})([a-z]{0,})(\b[^;,.'\" )-]?)"
+        input_text = fulltext
+        for match in re.findall(pattern, input_text):
+            target = ""
+            if type(match) == str:
+                target = match
+            else:
+                target = match[2]
+            target = target.strip()
+            if target not in [x for [x, y] in abbreviations]:
+                expanded = Interpreter.__check_single_word_abbrev(fulltext, target)
+                if expanded:
+                    abbreviations.append([target, expanded])
+        # Interpreter.__logger.info(changes) #  Can error due to strange encodings used.
+        return abbreviations
 
     @staticmethod
     def __clean_reference_remains(text):

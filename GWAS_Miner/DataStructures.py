@@ -544,6 +544,8 @@ class MasterLexicon:
 
     def get_ordered_lexicons(self):
         ordered_lexicons = []
+        if not self.__priority_order:
+            self.__priority_order = {"MESH": 1, "HPO": 2}
         for key in self.__priority_order:
             ordered_lexicons.append(self.get_lexicon_by_name(key))
         return ordered_lexicons

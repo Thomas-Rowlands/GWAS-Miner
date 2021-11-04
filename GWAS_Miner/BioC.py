@@ -38,10 +38,10 @@ class BioCLocation:
 
 class BioCAnnotation:
 
-    def __init__(self, id=None, infons=None, locations=None, text=None, length=None):
-        self.id = id
-        self.infons = infons
+    def __init__(self, id=None, infons=None, locations=None, text=None):
         self.text = text
+        self.infons = infons
+        self.id = id
         self.locations = locations
 
     def jsonable(self):

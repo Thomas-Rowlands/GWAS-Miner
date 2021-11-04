@@ -7,6 +7,8 @@ Main access point,
 @author: Thomas Rowlands
 """
 import logging
+from datetime import datetime
+
 import BioC
 import json
 from DataStructures import MasterLexicon
@@ -114,30 +116,45 @@ def process_study(nlp, study, qt_progress_signal=None, qt_study_finished_signal=
 
     update_gui_progress(qt_progress_signal, F"Identifying data from study {study['documents'][0]['id']}...")
     t, m, p = 0, 0, 0
+    study_fulltext = "\n".join([x['text'] for x in study['documents'][0]['passages']])
+    # abbreviations = nlp.get_all_abbreviations(study_fulltext)
     for passage in study['documents'][0]['passages']:
-        doc = nlp.process_corpus(passage['text'])
+        passage_text = passage['text']
+        # if abbreviations:
+        #     for abbrev in abbreviations:
+        #         passage_text = passage_text.replace(abbrev[0], abbrev[1])
+
+        doc = nlp.process_corpus(passage_text)
         annotations = nlp.get_entities(doc, ["MESH", "HPO", "RSID", "PVAL"])
         used_annots = []
         if annotations:
             for annot in annotations:
                 loc = BioC.BioCLocation(offset=annot["offset"] + passage["offset"], length=annot["length"])
+                current_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
                 if annot["text"] in used_annots:
                     for old_annot in passage['annotations']:
                         if old_annot.text == annot["text"]:
                             old_annot.locations.append(loc)
-                if [x for x in ["MESH", "HPO"] if x in annot["entity_type"]]:
-                    genomic_trait = BioC.BioCAnnotation(id=F"T{t}", infons={"type": "trait", "identifier": annot["id"]},
-                                                        locations=[loc], length=annot["length"], text=annot["text"])
+                if "MESH" in annot["entity_type"] or "HPO" in annot["entity_type"]:
+                    genomic_trait = BioC.BioCAnnotation(id=F"T{t}", infons={"type": "trait", "identifier": annot["id"],
+                                                                            "annotator": "tr142@le.ac.uk",
+                                                                            "updated_at": current_datetime},
+                                                        locations=[loc], text=annot["text"])
                     passage['annotations'].append(genomic_trait)
                     t += 1
                 elif "RSID" in annot["entity_type"]:
-                    marker_identifier = BioC.BioCAnnotation(id=F"M{m}", infons={"type": "genomic_marker"},
-                                                            locations=[loc], length=annot["length"], text=annot["text"])
+                    marker_identifier = BioC.BioCAnnotation(id=F"M{m}",
+                                                            infons={"type": "genomic_marker", "identifier": annot["id"],
+                                                                    "annotator": "tr142@le.ac.uk",
+                                                                    "updated_at": current_datetime},
+                                                            locations=[loc], text=annot["text"])
                     passage['annotations'].append(marker_identifier)
                     m += 1
                 elif "PVAL" in annot["entity_type"]:
-                    p_value = BioC.BioCAnnotation(id=F"P{p}", infons={"type": "significance"},
-                                                  locations=[loc], length=annot["length"], text=annot["text"])
+                    p_value = BioC.BioCAnnotation(id=F"P{p}", infons={"type": "significance", "identifier": annot["id"],
+                                                                      "annotator": "tr142@le.ac.uk",
+                                                                      "updated_at": current_datetime},
+                                                  locations=[loc], text=annot["text"])
                     passage['annotations'].append(p_value)
                     p += 1
                 used_annots.append(annot["text"])
