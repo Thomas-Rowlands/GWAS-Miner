@@ -9,9 +9,11 @@ Main access point,
 import logging
 from datetime import datetime
 
+import bioc
+from bioc import BioCFileType
+
 import BioC
 import json
-from DataStructures import MasterLexicon
 
 
 def __load_config():
@@ -41,7 +43,8 @@ lexicon = None
 nlp = None
 gui = None
 is_cancelled = False
-use_bioc = True
+global output_xml
+output_xml = False
 processed_files = []
 
 
@@ -81,8 +84,16 @@ def output_study_results(study, qt_study_finished_signal=None):
     #     response = QtFinishedResponse(False, F"PMC{study['documents'][0]['id']}")
     #     qt_study_finished_signal.emit(response)
     #     return
-    with open(F"output/PMC{study['documents'][0]['id']}_result.json", "w", encoding="utf-8") as out_file:
-        json.dump(study, out_file, default=BioC.ComplexHandler)
+    global output_xml
+    if output_xml:
+        #  Convert study to json, then convert to BioC XML document for output.
+        xml_study = json.dumps(study, default=BioC.ComplexHandler)
+        xml_study = bioc.loads(xml_study, BioCFileType.BIOC_JSON)
+        with open(F"output/PMC{study['documents'][0]['id']}_result.xml", "w", encoding="utf-8") as out_file:
+            bioc.dump(xml_study, out_file)
+    else:
+        with open(F"output/PMC{study['documents'][0]['id']}_result.json", "w", encoding="utf-8") as out_file:
+            json.dump(study, out_file, default=BioC.ComplexHandler)
     if qt_study_finished_signal:
         from GUI import QtFinishedResponse
         response = QtFinishedResponse(True, F"PMC{study['documents'][0]['id']}")
@@ -253,6 +264,7 @@ def main():
     parser.add_argument('-v', '--visualise', type=str, help='Start displacy visualisation server for entities or '
                                                             'dependencies by specifying ents or sents respectively.')
     parser.add_argument('-g', '--interface', action='store_true', help='Launch using the graphical user interface.')
+    parser.add_argument('-x', '--xml', action='store_true', help='Output results in BioC XML format rather than JSON.')
 
     # Parse input arguments
     args = parser.parse_args()
@@ -261,6 +273,9 @@ def main():
     visualise = args.visualise
     using_gui = args.interface
     update_ont = args.update_ont
+    global output_xml
+    output_xml = args.xml
+
 
     # Setup folder for log files.
     if not os.path.isdir("logs"):

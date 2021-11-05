@@ -113,7 +113,7 @@ def update_ontology_cache(qt_progress_signal=None, qt_finished_signal=None):
 
 def filter_mesh_lexicon(lexi):
     included = ["A", "C", "G", "F", "D", "E01", "N06.850"]
-    excluded = ["G05", "F02.463.425.069", "F04.754.720.346", "F01.829.263", "I01.880.853.150"]
+    excluded = ["G17", "G05", "F02.463.425.069", "F04.754.720.346", "F01.829.263", "I01.880.853.150"]
     for entry in lexi.get_entries():
         in_included = False
         in_excluded = False
@@ -150,9 +150,9 @@ def get_graph_ontology_data():
 
 
 def output_lexicon_terms(lexi):
-    with open("lexi_dump.tsv", "w", encoding="utf-8") as fout:
+    with open("included_only.tsv", "w", encoding="utf-8") as fout:
         for entry in lexi.get_entries():
-            fout.write(", ".join(entry.tree_id()) + "\t" + entry.identifier + "\t" + entry.name())
+            fout.write(", ".join(entry.tree_id()) + "\t" + entry.identifier + "\t" + entry.name() + "\n")
 
 
 def __retrieve_ont_lexicon(ontology_name):
