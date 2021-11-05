@@ -57,6 +57,9 @@ class Interpreter:
     def add_rule_matcher(self, label, rule):
         self.__basic_matcher.add(label, self.__on_match, rule)
 
+    # def add_study_specific_abbreviations(self, abbrevs):
+    #     self.__nlp
+
     def __on_match(self, matcher, doc, i, matches):
         """
         (Event handler) Add matched entity to document entity list if no overlap is caused.

@@ -108,7 +108,8 @@ def get_study_visualisations(study, qt_progress_signal=None, qt_finished_signal=
         qt_finished_signal.emit(response)
         return
     update_gui_progress(qt_progress_signal, F"Processing study {study['documents'][0]['id']}...")
-    doc = nlp_object.process_corpus(nlp_object.replace_all_abbreviations(study.get_fulltext()))
+    study_fulltext = "<!break!>".join([x['text'] for x in study['documents'][0]['passages']])
+    doc = nlp_object.process_corpus(nlp_object.replace_all_abbreviations(study_fulltext))
     phenotype_stats = nlp_object.get_phenotype_stats(doc, lexicon)
     update_gui_progress(qt_progress_signal, "Generating HTML")
     entities = nlp_object.display_ents(doc, True, theme())
