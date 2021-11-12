@@ -41,7 +41,7 @@ class Interpreter:
                         patterns.append(synonym["name"])
                         patterns.append(Interpreter.get_plural_variation(synonym["name"]))
                 patterns = self.__nlp.tokenizer.pipe(patterns)
-                new_matcher.add(entry.identifier, patterns, on_match=self.__on_trait_match)
+                new_matcher.add(entry.identifier, patterns, on_match=self.__on_match)
         self.__phrase_matcher = new_matcher
 
         # Add matcher patterns for parsing hyphenated and compound words.
@@ -117,8 +117,17 @@ class Interpreter:
         match_id, start, end = matches[i]
         entity = Span(doc, start, end,
                       label=self.__nlp.vocab.strings[match_id])
-        if not entity.has_extension("is_trait"):
-            entity.set_extension("is_trait", default=False)
+        if entity.label_ in ["RSID", "PVAL"]:
+            if not entity.has_extension("is_trait"):
+                entity.set_extension("is_trait", default=False)
+            if not entity.has_extension("ontology"):
+                entity.set_extension("ontology", default=None)
+        else:
+            if not entity.has_extension("ontology"):
+                entity.set_extension("ontology", getter=self.get_ent_ontology)
+            if not entity.has_extension("is_trait"):
+                entity.set_extension("is_trait", default=True)
+
         try:
             doc.ents += (entity,)
         except:

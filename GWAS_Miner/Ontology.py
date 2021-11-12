@@ -157,6 +157,10 @@ def output_lexicon_terms(lexi):
 
 def __retrieve_ont_lexicon(ontology_name):
     try:
+        blacklist = []
+        with open("settings/Blacklist.txt", "r", encoding="UTF-8") as fin:
+            for line in fin:
+                blacklist.append(line[:-1])
         graph = Graph(scheme="bolt", host="localhost", password="12345")
         ont_query = ""
         if ontology_name == "MESH":
@@ -184,6 +188,8 @@ def __retrieve_ont_lexicon(ontology_name):
         cursor = graph.run(ont_query)
         lexi = Lexicon(name=ontology_name)
         while cursor.forward():
+            if str(cursor.current[0]) in blacklist:
+                continue
             old_entry = lexi.get_entry_by_term(str(cursor.current[1]))
             if old_entry:
                 if ontology_name == "MESH":

@@ -9,6 +9,6 @@ regex_entity_patterns = {
         # "([pP][- ]{1,2}[val]{0,3}[ue]{0,}[^0-9]{0,9})([0-9]+)([0-9.e-]+)",
         # r"([pP][VAL]{0,3}[ =]+[xX× _\-−]+[0-9]+)"
     ],
-    "PTYPE": r"(\(?GEE\)?)|(\(?FBAT\)?)",
-    "Table Ref": r"(table[- ]{0,}\d{1,})"
+    # "PTYPE": r"(\(?GEE\)?)|(\(?FBAT\)?)",
+    # "Table Ref": r"(table[- ]{0,}\d{1,})"
 }
