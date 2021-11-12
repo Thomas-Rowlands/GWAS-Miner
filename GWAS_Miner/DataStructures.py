@@ -498,6 +498,12 @@ class Lexicon:
                 return entry
         return None
 
+    def get_entry_by_id(self, ident):
+        for entry in self.__entries:
+            if entry.identifier == ident:
+                return entry
+        return None
+
 
 class MasterLexicon:
     def __init__(self):
@@ -550,6 +556,6 @@ class MasterLexicon:
             ordered_lexicons.append(self.get_lexicon_by_name(key))
         return ordered_lexicons
 
-    def get_lexicon_entry(self, term, lexicon_name):
+    def get_lexicon_entry(self, ident, lexicon_name):
         lexicon = self.get_lexicon_by_name(lexicon_name)
-        return lexicon.get_entry_by_term(term)
+        return lexicon.get_entry_by_id(ident)

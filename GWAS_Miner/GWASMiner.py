@@ -85,15 +85,15 @@ def output_study_results(study, qt_study_finished_signal=None):
     #     qt_study_finished_signal.emit(response)
     #     return
     global output_xml
-    if output_xml:
+    # if output_xml:
         #  Convert study to json, then convert to BioC XML document for output.
-        xml_study = json.dumps(study, default=BioC.ComplexHandler)
-        xml_study = bioc.loads(xml_study, BioCFileType.BIOC_JSON)
-        with open(F"output/PMC{study['documents'][0]['id']}_result.xml", "w", encoding="utf-8") as out_file:
-            bioc.dump(xml_study, out_file)
-    else:
-        with open(F"output/PMC{study['documents'][0]['id']}_result.json", "w", encoding="utf-8") as out_file:
-            json.dump(study, out_file, default=BioC.ComplexHandler)
+    xml_study = json.dumps(study, default=BioC.ComplexHandler)
+    xml_study = bioc.loads(xml_study, BioCFileType.BIOC_JSON)
+    with open(F"output/PMC{study['documents'][0]['id']}_result.xml", "w", encoding="utf-8") as out_file:
+        bioc.dump(xml_study, out_file)
+    # else:
+    with open(F"output/PMC{study['documents'][0]['id']}_result.json", "w", encoding="utf-8") as out_file:
+        json.dump(study, out_file, default=BioC.ComplexHandler)
     if qt_study_finished_signal:
         from GUI import QtFinishedResponse
         response = QtFinishedResponse(True, F"PMC{study['documents'][0]['id']}")
@@ -172,7 +172,9 @@ def process_study(nlp, study, qt_progress_signal=None, qt_study_finished_signal=
                 used_annots.append(annot["text"])
 
         # relations = nlp.extract_phenotypes(doc)
-
+        relations = None
+        if relations:
+            print(relations)
     output_study_results(study, qt_study_finished_signal)
     return True
 

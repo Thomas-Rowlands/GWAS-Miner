@@ -5,44 +5,57 @@ import config
 import networkx as nx
 import spacy
 from DataStructures import Marker
-# from nlpre import dedash, titlecaps, separate_reference, unidecoder, identify_parenthetical_phrases, replace_acronyms
 from spacy import displacy
-from spacy.matcher import Matcher
-from spacy.matcher import PhraseMatcher
+from spacy.matcher import Matcher, PhraseMatcher, DependencyMatcher
 from spacy.tokens import Span
 
 
 class Interpreter:
     def __init__(self, lexicon, ontology_only=False):
-        self.__nlp = spacy.load("en_core_sci_md", disable=["ner"])
+        self.lexicon = lexicon
+        self.__nlp = spacy.load("en_core_sci_lg", disable=["ner"])
         self.__failed_matches = []
         self.__nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
-        self.__rsid_regex = [{"TEXT": {"REGEX": "(?:rs[0-9]{1,}){1}"}}]
-        self.__marker_regex = [
-            {"TEXT": {"REGEX": r"([ATCG]{1}[a-z]{1,}[0-9]{1,}[ATCG]{1}[a-z]{1,})"}}]
-        self.__gene_seq_regex = [{"TEXT": {"REGEX": "([ ][ACTG]{3,}[ ])"}}]
+        self.__rsid_regex = {"TEXT": {"REGEX": "(?:rs[0-9]{1,}){1}"}}
+        self.__marker_regex = {"TEXT": {"REGEX": r"([ATCG]{1}[a-z]{1,}[0-9]{1,}[ATCG]{1}[a-z]{1,})"}}
+        self.__gene_seq_regex = {"TEXT": {"REGEX": "([ ][ACTG]{3,}[ ])"}}
         self.__basic_matcher = None
         self.__phrase_matcher = None
+        self.__dep_matcher = None
         self.__logger = logging.getLogger("GWAS Miner")
         self.__entity_labels = ["MESH", "HPO"]
         if not ontology_only:
             self.__add_matchers(lexicon)
 
-    def __add_matchers(self, master_lexicon):
+    def __add_matchers(self, lexicon):
         self.__basic_matcher = Matcher(self.__nlp.vocab)
-        self.__basic_matcher.add('RSID', self.__on_match, self.__rsid_regex)
-        self.__basic_matcher.add('marker', self.__on_match, self.__marker_regex)
+        self.__basic_matcher.add('RSID', [[self.__rsid_regex]], on_match=self.__on_match)
+        self.__basic_matcher.add('marker', [[self.__marker_regex]], on_match=self.__on_match)
 
         new_matcher = PhraseMatcher(self.__nlp.vocab, attr="LOWER")
-        for lexicon in master_lexicon.get_ordered_lexicons():
+        for lexicon in lexicon.get_ordered_lexicons():
             for entry in lexicon.get_entries():
-                patterns = [entry.name()]
+                patterns = [entry.name(), Interpreter.get_plural_variation(entry.name())]
                 for synonym in entry.synonyms():
                     if synonym["name"] not in patterns:
                         patterns.append(synonym["name"])
+                        patterns.append(Interpreter.get_plural_variation(synonym["name"]))
                 patterns = self.__nlp.tokenizer.pipe(patterns)
-                new_matcher.add(lexicon.name + ": " + entry.identifier, self.__on_match, *patterns)
+                new_matcher.add(entry.identifier, patterns, on_match=self.__on_trait_match)
         self.__phrase_matcher = new_matcher
+
+        # Add matcher patterns for parsing hyphenated and compound words.
+        hyphenated_pattern = [{'POS': 'PROPN'}, {
+            'IS_PUNCT': True, 'LOWER': '-'}, {'POS': 'VERB'}]
+        compound_pattern = [{'POS': 'NOUN', 'DEP': 'compound'}, {
+            'POS': 'NOUN', 'DEP': 'compound'}, {'POS': 'NOUN'}]
+        self.__basic_matcher.add(
+            "JOIN", [hyphenated_pattern, compound_pattern])
+
+        # Trait - Marker - PVal Semgrex
+        disease_assoc_pattern = [
+
+        ]
 
         # for entry in lexicon.keys():
         #     new_matcher = PhraseMatcher(self.__nlp.vocab, attr="LOWER")
@@ -54,11 +67,44 @@ class Interpreter:
         #         new_matcher.add(entry, self.__on_match, *patterns)
         #     self.__phrase_matchers.append(new_matcher)
 
+    @staticmethod
+    def get_plural_variation(term: str):
+        if term.lower()[-1] == "s":
+            return term[:-1]
+        else:
+            return term + "s"
+
     def add_rule_matcher(self, label, rule):
         self.__basic_matcher.add(label, self.__on_match, rule)
 
     # def add_study_specific_abbreviations(self, abbrevs):
     #     self.__nlp
+
+    def __on_trait_match(self, matcher, doc, i, matches):
+        """
+        (Event handler) Add matched entity to document entity list if no overlap is caused.
+        @param matcher: Matcher object which fired the event
+        @param doc: nlp doc object
+        @param i: index of the current match
+        @param matches: list of matches found by the matcher object
+        """
+        match_id, start, end = matches[i]
+        entity = Span(doc, start, end,
+                      label=self.__nlp.vocab.strings[match_id])
+        if not entity.has_extension("ontology"):
+            entity.set_extension("ontology", getter=self.get_ent_ontology)
+        if not entity.has_extension("is_trait"):
+            entity.set_extension("is_trait", default=True)
+        try:
+            doc.ents += (entity,)
+        except:
+            self.__failed_matches.append(entity.text)
+
+    def get_ent_ontology(self, ent):
+        if "HP:" in ent.label_:
+            return "HPO"
+        else:
+            return "MESH"
 
     def __on_match(self, matcher, doc, i, matches):
         """
@@ -71,6 +117,8 @@ class Interpreter:
         match_id, start, end = matches[i]
         entity = Span(doc, start, end,
                       label=self.__nlp.vocab.strings[match_id])
+        if not entity.has_extension("is_trait"):
+            entity.set_extension("is_trait", default=False)
         try:
             doc.ents += (entity,)
         except:
@@ -112,21 +160,17 @@ class Interpreter:
                 if isinstance(config.regex_entity_patterns[ent_label], list):
                     for pattern in config.regex_entity_patterns[ent_label]:
                         self.__regex_match(pattern, doc, ent_label)
-                        self.__entity_labels.append(ent_label)
+                        if ent_label not in self.__entity_labels:
+                            self.__entity_labels.append(ent_label)
                 else:
                     self.__regex_match(config.regex_entity_patterns[ent_label], doc, ent_label)
-                    self.__entity_labels.append(ent_label)
-
-        # Add matcher patterns for parsing hyphenated and compound words.
-        hyphenated_pattern = [{'POS': 'PROPN'}, {
-            'IS_PUNCT': True, 'LOWER': '-'}, {'POS': 'VERB'}]
-        compound_pattern = [{'POS': 'NOUN', 'DEP': 'compound'}, {
-            'POS': 'NOUN', 'DEP': 'compound'}, {'POS': 'NOUN'}]
-        self.__basic_matcher.add(
-            "JOIN", None, hyphenated_pattern, compound_pattern)
+                    if ent_label not in self.__entity_labels:
+                        self.__entity_labels.append(ent_label)
 
         self.__basic_matcher(doc)
         self.__phrase_matcher(doc)
+
+
 
         # Ensure that rule-matched entities override data model entities when needed.
         if not ontology_only:
@@ -164,18 +208,18 @@ class Interpreter:
         output = []
         for sent in sents:
             missing_entity = False
-            ents = [x.label_ for x in sent.ents]
+            ents = sent.ents
             for ent in entity_list:
                 if type(ent) == list:
                     found_match = False
                     for or_ent in ent:
-                        if or_ent in ents:
+                        if or_ent in [x.label_ for x in ents] or or_ent in [x._.ontology for x in ents if x.has_extension("ontology")]:
                             found_match = True
                             break
                     if not found_match:
                         missing_entity = True
                         break
-                elif ent not in ents:
+                elif ent not in [x.label_ for x in ents] and ent not in [x._.ontology for x in ents if x.has_extension("ontology")]:
                     missing_entity = True
                     break
             if not missing_entity:
@@ -188,7 +232,7 @@ class Interpreter:
         used_indexes = []
         for item in ents:
             for node in nodes:
-                if F"{item.lower_}<id{item.start}>" == str(node):
+                if F"{item.text.lower()}<id{item.start}>" == str(node):
                     output.append((item, F"{item}<id{item.start}>"))
         return output
 
@@ -251,10 +295,13 @@ class Interpreter:
 
     @staticmethod
     def trim_brackets(input):
+        removed_brackets = 0
         if input[0] == "(":
             input = input[1:]
+            removed_brackets += 1
         if input[-1] == ")":
             input = input[:-1]
+            removed_brackets += 1
         return input
 
     def get_entities(self, doc, entity_list):
@@ -263,7 +310,7 @@ class Interpreter:
             result.append({
                 "entity_type": ent.label_,
                 "id": ent.label_[ent.label_.index(":") + 2:] if ":" in ent.label_ else ent.label_,
-                "text": self.trim_brackets(ent.text),
+                "text": ent.text, #self.trim_brackets(ent.text),
                 "offset": ent.start_char,
                 "length": ent.end_char - ent.start_char
             })
@@ -307,7 +354,7 @@ class Interpreter:
             graph = nx.Graph(edges)
 
             phenotypes = Interpreter.__validate_node_entities(
-                [x for x in sent.ents if x.label_ == 'MESH'], graph.nodes)
+                [x for x in sent.ents if "MESH" in x.label_], graph.nodes)
             markers = Interpreter.__validate_node_entities(
                 [x for x in sent.ents if x.label_ == 'RSID'], graph.nodes)
             pvals = Interpreter.__validate_node_entities(
@@ -513,14 +560,16 @@ class Interpreter:
     def get_phenotype_stats(doc, master_lexicon):
         results = {}
         for ent in doc.ents:
-            if ent.label_ in ["MESH", "HPO"]:
-                entry = master_lexicon.get_lexicon_entry(lexicon_name=ent.label_, term=ent.lower_)
+            if ent.has_extension("ontology") and ent._.ontology == "MESH": #in ["MESH", "HPO"]:
+                entry = master_lexicon.get_lexicon_entry(lexicon_name="MESH", ident=ent.label_)
+                if not entry:
+                    print(ent)
                 if entry.name() in results:
                     results[entry.name()]["Count"] += 1
                 else:
                     results[entry.name()] = {}
                     results[entry.name()]["Count"] = 1
-                    results[entry.name()]["Ontology"] = ent.label_
+                    results[entry.name()]["Ontology"] = "MESH"
                     results[entry.name()]["ID"] = entry.identifier
 
         return results
