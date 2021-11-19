@@ -34,6 +34,8 @@ class Interpreter:
 
         new_matcher = PhraseMatcher(self.__nlp.vocab, attr="LOWER")
         for lexicon in lexicon.get_ordered_lexicons():
+            if lexicon.name == "HPO":
+                continue
             for entry in lexicon.get_entries():
                 patterns = [entry.name(), Interpreter.get_plural_variation(entry.name())]
                 for synonym in entry.synonyms():
@@ -57,7 +59,8 @@ class Interpreter:
         disease_assoc_pattern = [
 
         ]
-
+        # self.__dep_matcher = DependencyMatcher(self.__nlp.vocab)
+        # self.__dep_matcher.add("Disease Association", [disease_assoc_pattern])
         # for entry in lexicon.keys():
         #     new_matcher = PhraseMatcher(self.__nlp.vocab, attr="LOWER")
         #     sub_list = sorted(lexicon[entry].keys(), reverse=True)
@@ -113,7 +116,8 @@ class Interpreter:
         try:
             doc.ents += (entity,)
         except:
-            self.__failed_matches.append(entity.text)
+            self.__logger.log(level=0, msg=entity.text)
+            # print(entity.text)#self.__failed_matches.append(entity.text)
 
     @staticmethod
     def __regex_match(pattern, doc, label):
@@ -517,7 +521,10 @@ class Interpreter:
         if markup_only:
             svgs = []
             for sent in sentence_spans:
-                svgs.append(displacy.render(sent, style="dep", options=options))
+                ent_labels = [x.label_ for x in sent.ents]
+                ent_traits = [x._.is_trait for x in sent.ents]
+                if "RSID" in ent_labels and "PVAL" in ent_labels and ent_traits:
+                    svgs.append(displacy.render(sent, style="dep", options=options))
             return svgs
         displacy.serve(sentence_spans, style="dep", options=options)
 
