@@ -102,8 +102,8 @@ def update_ontology_cache(qt_progress_signal=None, qt_finished_signal=None):
     """[Updates the ontology cache files with data from the source ontology files.]
     """
     logger.info("Updating ontology cache.")
-    # set_master_lexicon()
-    get_graph_ontology_data()
+    set_master_lexicon()
+    # get_graph_ontology_data()
     logger.info("Finished updating ontology cache.")
     if qt_finished_signal:
         from GUI import QtFinishedResponse
@@ -157,10 +157,15 @@ def output_lexicon_terms(lexi):
 
 def __retrieve_ont_lexicon(ontology_name):
     try:
-        blacklist = []
-        with open("settings/Blacklist.txt", "r", encoding="UTF-8") as fin:
-            for line in fin:
-                blacklist.append(line[:-1])
+        # blacklist_terms = []
+        # blacklist_descendants = []
+        # with open("settings/Blacklist.txt", "r", encoding="UTF-8") as fin:
+        #     for line in fin:
+        #         line_data = line[:-1].split("\t")
+        #         if line_data[2] == "TRUE":
+        #             blacklist_descendants.append(line_data[0])
+        #         else:
+        #             blacklist_terms.append(line_data[0])
         graph = Graph(scheme="bolt", host="localhost", password="12345")
         ont_query = ""
         if ontology_name == "MESH":
@@ -188,8 +193,8 @@ def __retrieve_ont_lexicon(ontology_name):
         cursor = graph.run(ont_query)
         lexi = Lexicon(name=ontology_name)
         while cursor.forward():
-            if str(cursor.current[0]) in blacklist:
-                continue
+            # if str(cursor.current[0]) in blacklist:
+            #     continue
             old_entry = lexi.get_entry_by_term(str(cursor.current[1]))
             if old_entry:
                 if ontology_name == "MESH":

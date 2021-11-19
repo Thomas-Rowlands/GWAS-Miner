@@ -43,7 +43,8 @@ class Interpreter:
                 patterns = self.__nlp.tokenizer.pipe(patterns)
                 new_matcher.add(entry.identifier, patterns, on_match=self.__on_match)
         self.__phrase_matcher = new_matcher
-
+        Span.set_extension("ontology", getter=self.get_ent_ontology)
+        Span.set_extension("is_trait", getter=self.get_is_trait)
         # Add matcher patterns for parsing hyphenated and compound words.
         hyphenated_pattern = [{'POS': 'PROPN'}, {
             'IS_PUNCT': True, 'LOWER': '-'}, {'POS': 'VERB'}]
@@ -80,31 +81,17 @@ class Interpreter:
     # def add_study_specific_abbreviations(self, abbrevs):
     #     self.__nlp
 
-    def __on_trait_match(self, matcher, doc, i, matches):
-        """
-        (Event handler) Add matched entity to document entity list if no overlap is caused.
-        @param matcher: Matcher object which fired the event
-        @param doc: nlp doc object
-        @param i: index of the current match
-        @param matches: list of matches found by the matcher object
-        """
-        match_id, start, end = matches[i]
-        entity = Span(doc, start, end,
-                      label=self.__nlp.vocab.strings[match_id])
-        if not entity.has_extension("ontology"):
-            entity.set_extension("ontology", getter=self.get_ent_ontology)
-        if not entity.has_extension("is_trait"):
-            entity.set_extension("is_trait", default=True)
-        try:
-            doc.ents += (entity,)
-        except:
-            self.__failed_matches.append(entity.text)
-
     def get_ent_ontology(self, ent):
         if "HP:" in ent.label_:
             return "HPO"
-        else:
+        elif ent.label_[0] == "D":
             return "MESH"
+        else:
+            return None
+
+    def get_is_trait(self, ent):
+        if ent.label_ in ["RSID", "PVAL"]:
+            return True
 
     def __on_match(self, matcher, doc, i, matches):
         """
@@ -117,17 +104,12 @@ class Interpreter:
         match_id, start, end = matches[i]
         entity = Span(doc, start, end,
                       label=self.__nlp.vocab.strings[match_id])
-        if entity.label_ in ["RSID", "PVAL"]:
-            if not entity.has_extension("is_trait"):
-                entity.set_extension("is_trait", default=False)
-            if not entity.has_extension("ontology"):
-                entity.set_extension("ontology", default=None)
-        else:
-            if not entity.has_extension("ontology"):
-                entity.set_extension("ontology", getter=self.get_ent_ontology)
-            if not entity.has_extension("is_trait"):
-                entity.set_extension("is_trait", default=True)
-
+        # if entity.label_ in ["RSID", "PVAL"]:
+        #     entity.set_extension("is_trait", default=False, force=True)
+        #     entity.set_extension("ontology", default=None, force=True)
+        # else:
+        #     entity.set_extension("ontology", getter=self.get_ent_ontology, force=True)
+        #     entity.set_extension("is_trait", default=True, force=True)
         try:
             doc.ents += (entity,)
         except:
@@ -569,7 +551,7 @@ class Interpreter:
     def get_phenotype_stats(doc, master_lexicon):
         results = {}
         for ent in doc.ents:
-            if ent.has_extension("ontology") and ent._.ontology == "MESH": #in ["MESH", "HPO"]:
+            if ent._.ontology == "MESH": #in ["MESH", "HPO"]:
                 entry = master_lexicon.get_lexicon_entry(lexicon_name="MESH", ident=ent.label_)
                 if not entry:
                     print(ent)
