@@ -5,14 +5,9 @@
 
 #### Write a BioC collection in JSON
 
-from __future__ import print_function
-
 import json
 import sys
 import os
-
-pybioc_path = '/home/comeau/src/PyBioC'
-sys.path.append(os.path.join(pybioc_path, 'src'))
 import bioc
 
 
@@ -103,9 +98,7 @@ class JSON2BioC:
         return rel
 
     def location(this, json_loc):
-        loc = bioc.BioCLocation()
-        loc.offset = str(json_loc['offset'])
-        loc.length = str(json_loc['length'])
+        loc = bioc.BioCLocation(length=str(json_loc['offset']), offset=str(json_loc['length']))
         return loc
 
     def annotation(this, json_note):
@@ -162,32 +155,25 @@ class JSON2BioC:
         return collection
 
 
-if __name__ == "__main__":
+def output_xml(in_file, out_file):
+    bioc_json = None
+    bioc_json = json.loads(in_file)
 
-    if len(sys.argv) != 4:
-        print('usage:', sys.argv[0], '-b|-j in_file out_file')
-        exit(1)
-    pgm, option, in_file, out_file = sys.argv
+    json2bioc = JSON2BioC()
+    bioc_collection = json2bioc.collection(bioc_json)
+    writer = bioc.BioCXMLDocumentWriter(out_file)
+    writer.write_collection_info(bioc_collection)
+    for document in bioc_collection.documents:
+        writer.write_document(document)
+    writer.close()
 
-    if option == '-j':
-        reader = bioc.BioCReader(in_file)
-        reader.read()
 
-        bioc2json = BioC2JSON()
-        bioc_json = bioc2json.collection(reader.collection)
-        with open(out_file, 'w') as f:
-            json.dump(bioc_json, f, indent=2)
-            print(file=f)
+def convert_xml_to_json(in_file, out_file):
+    reader = bioc.BioCReader(in_file)
+    reader.read()
 
-    elif option == '-b':
-        bioc_json = None
-        with open(in_file) as f:
-            bioc_json = json.load(f)
-
-        # print json.dumps(bioc_json, indent=2)
-
-        json2bioc = JSON2BioC()
-        bioc_collection = json2bioc.collection(bioc_json)
-
-        writer = bioc.BioCWriter(out_file, bioc_collection)
-        writer.write()
+    bioc2json = BioC2JSON()
+    bioc_json = bioc2json.collection(reader.collection)
+    with open(out_file, 'w') as f:
+        json.dump(bioc_json, f, indent=2)
+        print(file=f)
