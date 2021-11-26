@@ -12,9 +12,9 @@ from datetime import datetime
 import bioc
 from bioc import BioCFileType
 
-import BioC
+# import BioC
 import json
-import OutputConverter
+# import OutputConverter
 
 
 def __load_config():
@@ -96,7 +96,7 @@ def output_study_results(study, qt_study_finished_signal=None):
     # with open(F"output/PMC{study['documents'][0]['id']}_result.json", "w", encoding="utf-8") as out_file:
     #     json.dump(study, out_file, default=BioC.ComplexHandler)
 
-    OutputConverter.output_xml(json.dumps(study, default=BioC.ComplexHandler), F"output/PMC{study['documents'][0]['id']}_result.xml")
+    # OutputConverter.output_xml(json.dumps(study, default=BioC.ComplexHandler), F"output/PMC{study['documents'][0]['id']}_result.xml")
 
     if qt_study_finished_signal:
         from GUI import QtFinishedResponse
@@ -141,6 +141,17 @@ def process_study(nlp, study, qt_progress_signal=None, qt_study_finished_signal=
         #         passage_text = passage_text.replace(abbrev[0], abbrev[1])
 
         doc = nlp.process_corpus(passage_text)
+        for sent in doc.sents:
+            training_sent = [x.label_ for x in sent.ents]
+            if training_sent:
+                if [x for x in training_sent if x[0] == "D"] and "RSID" in training_sent and "PVAL" in training_sent:
+                    training_string = sent.text_with_ws
+                    for ent in sent.ents:
+                        ent_string = "<!TRAIT!>" if ent.label_[0] == "D" else F"<!{ent.label_}!>"
+                        training_string = training_string.replace(ent.text_with_ws, ent_string)
+                    with open("training_input/training_input.txt", "a+", encoding="utf-8") as f_in:
+                        f_in.write(training_string + "\n")
+
         annotations = nlp.get_entities(doc, ["MESH", "HPO", "RSID", "PVAL"])
         used_annots = []
         if annotations:
@@ -179,7 +190,7 @@ def process_study(nlp, study, qt_progress_signal=None, qt_study_finished_signal=
         relations = None
         if relations:
             print(relations)
-    output_study_results(study, qt_study_finished_signal)
+    # output_study_results(study, qt_study_finished_signal)
     return True
 
 

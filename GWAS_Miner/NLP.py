@@ -16,7 +16,7 @@ class Interpreter:
         self.__nlp = spacy.load("en_core_sci_lg", disable=["ner"])
         self.__failed_matches = []
         self.__nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
-        self.__rsid_regex = {"TEXT": {"REGEX": "(?:rs[0-9]{1,}){1}"}}
+        self.__rsid_regex = {"LOWER": {"REGEX": "((?:[(]?)(rs[0-9]{1,}){1,})"}}#"(?:rs[0-9]{1,}){1}"}}
         self.__marker_regex = {"TEXT": {"REGEX": r"([ATCG]{1}[a-z]{1,}[0-9]{1,}[ATCG]{1}[a-z]{1,})"}}
         self.__gene_seq_regex = {"TEXT": {"REGEX": "([ ][ACTG]{3,}[ ])"}}
         self.__basic_matcher = None
@@ -30,7 +30,7 @@ class Interpreter:
     def __add_matchers(self, lexicon):
         self.__basic_matcher = Matcher(self.__nlp.vocab)
         self.__basic_matcher.add('RSID', [[self.__rsid_regex]], on_match=self.__on_match)
-        self.__basic_matcher.add('marker', [[self.__marker_regex]], on_match=self.__on_match)
+        # self.__basic_matcher.add('marker', [[self.__marker_regex]], on_match=self.__on_match)
 
         new_matcher = PhraseMatcher(self.__nlp.vocab, attr="LOWER")
         for lexicon in lexicon.get_ordered_lexicons():
@@ -164,7 +164,6 @@ class Interpreter:
 
         self.__basic_matcher(doc)
         self.__phrase_matcher(doc)
-
 
 
         # Ensure that rule-matched entities override data model entities when needed.

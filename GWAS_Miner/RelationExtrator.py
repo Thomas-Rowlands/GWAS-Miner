@@ -13,8 +13,10 @@ if __name__ == '__main__':
 
     print("Loading and parsing corpus:")
 
-    with open(args.corpus) as f:
+    with open("training_input") as f:
         corpus = kindred.Corpus(f.read())
+
+    
 
     parser = kindred.Parser()
     parser.parse(corpus)
