@@ -9,12 +9,13 @@ Main access point,
 import logging
 from datetime import datetime
 
-import bioc
-from bioc import BioCFileType
+# import bioc
+# from bioc import BioCFileType
 
-# import BioC
+import BioC
 import json
 # import OutputConverter
+from GWAS_Miner import OutputConverter
 
 
 def __load_config():
@@ -147,7 +148,7 @@ def process_study(nlp, study, qt_progress_signal=None, qt_study_finished_signal=
                 if [x for x in training_sent if x[0] == "D"] and "RSID" in training_sent and "PVAL" in training_sent:
                     training_string = sent.text_with_ws
                     for ent in sent.ents:
-                        ent_string = "<!TRAIT!>" if ent.label_[0] == "D" else F"<!{ent.label_}!>"
+                        ent_string = F"<!TRAIT:{ent.text_with_ws}!>" if ent.label_[0] == "D" else F"<!{ent.label_}:{ent.text_with_ws}!>"
                         training_string = training_string.replace(ent.text_with_ws, ent_string)
                     with open("training_input/training_input.txt", "a+", encoding="utf-8") as f_in:
                         f_in.write(training_string + "\n")
@@ -190,7 +191,7 @@ def process_study(nlp, study, qt_progress_signal=None, qt_study_finished_signal=
         relations = None
         if relations:
             print(relations)
-    # output_study_results(study, qt_study_finished_signal)
+    output_study_results(study, qt_study_finished_signal)
     return True
 
 
