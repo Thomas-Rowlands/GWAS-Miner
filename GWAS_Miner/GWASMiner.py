@@ -88,7 +88,7 @@ def output_study_results(study, qt_study_finished_signal=None):
     #     return
     global output_xml
     # if output_xml:
-         # Convert study to json, then convert to BioC XML document for output.
+    # Convert study to json, then convert to BioC XML document for output.
     # xml_study = json.dumps(study, default=BioC.ComplexHandler)
     # xml_study = bioc.loads(xml_study, BioCFileType.BIOC_JSON)
     # with open(F"output/PMC{study['documents'][0]['id']}_result.xml", "w", encoding="utf-8") as out_file:
@@ -97,7 +97,8 @@ def output_study_results(study, qt_study_finished_signal=None):
     # with open(F"output/PMC{study['documents'][0]['id']}_result.json", "w", encoding="utf-8") as out_file:
     #     json.dump(study, out_file, default=BioC.ComplexHandler)
 
-    # OutputConverter.output_xml(json.dumps(study, default=BioC.ComplexHandler), F"output/PMC{study['documents'][0]['id']}_result.xml")
+    OutputConverter.output_xml(json.dumps(study, default=BioC.ComplexHandler),
+                               F"output/PMC{study['documents'][0]['id']}_result.xml")
 
     if qt_study_finished_signal:
         from GUI import QtFinishedResponse
@@ -136,6 +137,8 @@ def process_study(nlp, study, qt_progress_signal=None, qt_study_finished_signal=
     study_fulltext = "\n".join([x['text'] for x in study['documents'][0]['passages']])
     # abbreviations = nlp.get_all_abbreviations(study_fulltext)
     for passage in study['documents'][0]['passages']:
+        if passage["infons"]["section_type"].lower() != "results":
+            continue
         passage_text = passage['text']
         # if abbreviations:
         #     for abbrev in abbreviations:
@@ -148,7 +151,8 @@ def process_study(nlp, study, qt_progress_signal=None, qt_study_finished_signal=
                 if [x for x in training_sent if x[0] == "D"] and "RSID" in training_sent and "PVAL" in training_sent:
                     training_string = sent.text_with_ws
                     for ent in sent.ents:
-                        ent_string = F"<!TRAIT:{ent.text_with_ws}!>" if ent.label_[0] == "D" else F"<!{ent.label_}:{ent.text_with_ws}!>"
+                        ent_string = F"<!TRAIT:{ent.text_with_ws}!>" if ent.label_[
+                                                                            0] == "D" else F"<!{ent.label_}:{ent.text_with_ws}!>"
                         training_string = training_string.replace(ent.text_with_ws, ent_string)
                     with open("training_input/training_input.txt", "a+", encoding="utf-8") as f_in:
                         f_in.write(training_string + "\n")
@@ -294,7 +298,6 @@ def main():
     update_ont = args.update_ont
     global output_xml
     output_xml = args.xml
-
 
     # Setup folder for log files.
     if not os.path.isdir("logs"):

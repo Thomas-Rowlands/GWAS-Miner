@@ -37,11 +37,17 @@ class Interpreter:
             if lexicon.name == "HPO":
                 continue
             for entry in lexicon.get_entries():
-                patterns = [entry.name(), Interpreter.get_plural_variation(entry.name())]
+                patterns = [entry.name()]
+                if len(entry.name()) > 4:
+                    patterns.append(Interpreter.get_plural_variation(entry.name()))
+                if "," in entry.name():
+                    patterns.append(Interpreter.remove_comma_variation(entry.name()))
                 for synonym in entry.synonyms():
                     if synonym["name"] not in patterns:
                         patterns.append(synonym["name"])
                         patterns.append(Interpreter.get_plural_variation(synonym["name"]))
+                        if "," in synonym["name"]:
+                            patterns.append(Interpreter.remove_comma_variation(synonym["name"]))
                 patterns = self.__nlp.tokenizer.pipe(patterns)
                 new_matcher.add(entry.identifier, patterns, on_match=self.__on_match)
         self.__phrase_matcher = new_matcher
@@ -77,6 +83,16 @@ class Interpreter:
             return term[:-1]
         else:
             return term + "s"
+
+    @staticmethod
+    def remove_comma_variation(term: str):
+        if "," in term:
+            adjusted_term = term.split(",")
+            adjusted_term = adjusted_term[1] + " " + adjusted_term[0]
+            adjusted_term = adjusted_term.lstrip()
+            return adjusted_term
+        else:
+            return None
 
     def add_rule_matcher(self, label, rule):
         self.__basic_matcher.add(label, self.__on_match, rule)
@@ -121,14 +137,27 @@ class Interpreter:
 
     @staticmethod
     def __regex_match(pattern, doc, label):
+        chars_to_tokens = {}
+        for token in doc:
+            for i in range(token.idx, token.idx + len(token.text)):
+                chars_to_tokens[i] = token.i
         for match in re.finditer(pattern, doc.text, flags=re.IGNORECASE):
-            start, end = match.span()
-            span = doc.char_span(start, end, label=label)
+            start, end = match.span(1)
+            span = doc.char_span(start, end, label=label, alignment_mode="expand")
             if span is not None:
                 try:
                     doc.ents += (span,)
                 except:
                     test = None
+            else:
+                start_token = chars_to_tokens.get(start)
+                end_token = chars_to_tokens.get(end)
+                if start_token is not None and end_token is not None:
+                    span = doc[start_token:end_token + 1]
+                    try:
+                        doc.ents += (span,)
+                    except Exception as e:
+                        print(e)
 
     def process_corpus(self, corpus, ontology_only=False):
         """[Applies tokenization, entity recognition and dependency parsing to the supplied corpus.]
