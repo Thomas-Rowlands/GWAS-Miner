@@ -22,10 +22,14 @@ class Interpreter:
         self.__basic_matcher = None
         self.__phrase_matcher = None
         self.__dep_matcher = None
+        self.__abbreviations = []
         self.__logger = logging.getLogger("GWAS Miner")
         self.__entity_labels = ["MESH", "HPO"]
         if not ontology_only:
             self.__add_matchers(lexicon)
+
+    def __set_abbreviations(self, abbrevs):
+        self.__abbreviations = abbrevs
 
     def __add_matchers(self, lexicon):
         self.__basic_matcher = Matcher(self.__nlp.vocab)
@@ -143,7 +147,11 @@ class Interpreter:
                 chars_to_tokens[i] = token.i
         for match in re.finditer(pattern, doc.text, flags=re.IGNORECASE):
             start, end = match.span(1)
-            span = doc.char_span(start, end, label=label, alignment_mode="expand")
+            span = None
+            if label == "PVAL":
+                span = doc.char_span(start, end, label=label, alignment_mode="expand")
+            else:
+                span = doc.char_span(start, end, label=label)
             if span is not None:
                 try:
                     doc.ents += (span,)
@@ -617,6 +625,23 @@ class Interpreter:
         return None
 
     @staticmethod
+    def __check_single_word_abbrev_proto(fulltext, token):
+        temp = [F"(\\b[{token[0]}{token[0].lower()}][\w]+)(?:[a-z\s-]*)"]
+        for char in token[1:]:
+            temp.append(F"([{char}{char.lower()}][\w]+)(?:[a-z\s-]*)")
+        pattern = F"{''.join(temp)}(?:[ ]\({token}[^\w]*\))"
+        match = re.search(pattern, fulltext)
+        if not match:
+            print(token)
+            return None
+        result = []
+        for group in match.groups():
+            result.append(group)
+        return " ".join(result)
+
+
+
+    @staticmethod
     def __check_single_word_abbrev(fulltext, token):
         """
         Locate the expanded phrase for a single abbreviation
@@ -638,14 +663,14 @@ class Interpreter:
             return None
         # First match SHOULD be the declaration of this abbreviation.
         # Split REGEX match to a list of words
-        split_sent = declaration_match.group(0).lower().replace(
+        split_sent = declaration_match.group(0).replace(
             " )", ")").replace("( ", "(").replace("\n", "").split(" ")
         found_counter = 0
         found_indexes = []
         i = len(split_sent) - 2  # Indexing + ignore the actual abbreviation
         #  Moving backwards from the abbreviation, count each word in the sentence matching the first character.
         while i >= 0:
-            if split_sent[i][0:1].lower() == first_char.lower():
+            if split_sent[i][0:1] == first_char:
                 found_counter += 1
                 found_indexes.append(i)
             i -= 1
@@ -701,17 +726,19 @@ class Interpreter:
         """
         abbreviations = []
         # r"([^(-]\b[a-z]{0,}[A-Z]{2,}[a-z]{0,}\b[^)-])"
-        pattern = r"([^ \"',.(-]\b)?([a-z]{0,})([A-Z]{2,})([a-z]{0,})(\b[^;,.'\" )-]?)"
+        # pattern = r"([^ \"',.(-]\b)?([a-z]{0,})([A-Z]{2,})([a-z]{0,})(\b[^;,.'\" )-]?)"
+        pattern = r"(?:[^ \"',.(-]\b)?([a-z]{0,}[A-Z]{2,}[a-z]{0,})(?:\b[^;,.'\" )-]?)"
         input_text = fulltext
         for match in re.findall(pattern, input_text):
             target = ""
             if type(match) == str:
                 target = match
             else:
-                target = match[2]
+                continue
             target = target.strip()
             if target not in [x for [x, y] in abbreviations]:
-                expanded = Interpreter.__check_single_word_abbrev(fulltext, target)
+                # expanded = Interpreter.__check_single_word_abbrev(fulltext, target)
+                expanded = Interpreter.__check_single_word_abbrev_proto(fulltext, target)
                 if expanded:
                     abbreviations.append([target, expanded])
         # Interpreter.__logger.info(changes) #  Can error due to strange encodings used.

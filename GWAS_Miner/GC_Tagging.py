@@ -1,5 +1,6 @@
 import json
 import re
+from copy import deepcopy
 from datetime import datetime
 from os import listdir
 from os.path import isfile, join
@@ -197,17 +198,17 @@ def process_study(nlp, study, pval_patterns, rsid_patterns):
         #         passage_text = passage_text.replace(abbrev[0], abbrev[1])
 
         doc = nlp.process_corpus(passage_text, pval_patterns, rsid_patterns)
-        for sent in doc.sents:
-            training_sent = [x.label_ for x in sent.ents]
-            if training_sent:
-                if [x for x in training_sent if x[0] == "D"] and "RSID" in training_sent and "PVAL" in training_sent:
-                    training_string = sent.text_with_ws
-                    for ent in sent.ents:
-                        ent_string = F"<!TRAIT:{ent.text_with_ws}!>" if ent.label_[
-                                                                            0] == "D" else F"<!{ent.label_}:{ent.text_with_ws}!>"
-                        training_string = training_string.replace(ent.text_with_ws, ent_string)
-                    with open("training_input/training_input.txt", "a+", encoding="utf-8") as f_in:
-                        f_in.write(training_string + "\n")
+        # for sent in doc.sents:
+            # training_sent = [x.label_ for x in sent.ents]
+            # if training_sent:
+            #     if [x for x in training_sent if x[0] == "D"] and "RSID" in training_sent and "PVAL" in training_sent:
+            #         training_string = sent.text_with_ws
+            #         for ent in sent.ents:
+            #             ent_string = F"<!TRAIT:{ent.text_with_ws}!>" if ent.label_[
+            #                                                                 0] == "D" else F"<!{ent.label_}:{ent.text_with_ws}!>"
+            #             training_string = training_string.replace(ent.text_with_ws, ent_string)
+            #         with open("training_input/training_input.txt", "a+", encoding="utf-8") as f_in:
+            #             f_in.write(training_string + "\n")
 
         annotations = nlp.get_entities(doc, ["MESH", "HPO", "RSID", "PVAL"])
         used_annots = []
@@ -284,7 +285,7 @@ for pmc_id in gc_data.keys():
         pvals.append(pval.replace("e", " [*] 10"))
         pvals.append(pval.replace("e", "x10"))
         pvals.append(pval.replace("e", "[*]10"))
-        temp = pvals
+        temp = deepcopy(pvals)
         for val in temp:
             pvals.append("".join(val.rsplit("0", 1)))
         rsids.append(F"({rsid})")
@@ -292,4 +293,5 @@ for pmc_id in gc_data.keys():
 
     nlp.set_ontology_terms(mesh_terms)
     study = Experimental.load_bioc_study("BioC_Studies", F"{pmc_id}.json")
+    abbreviations = nlp.get_all_abbreviations("".join([x['text'] for x in study['documents'][0]['passages']]))
     result = process_study(nlp, study, pvals, rsids)
