@@ -386,16 +386,27 @@ class Table:
         return self.__text
 
 
-class Marker:
-    def __init__(self, rs_identifier=None, gee_p_val=None, fbat_p_val=None, misc_p_val=None, phenotype=None,
-                 internal_marker=None, weight=0):
-        self.rs_identifier = rs_identifier
-        self.gee_p_val = gee_p_val
-        self.fbat_p_val = fbat_p_val
-        self.misc_p_val = misc_p_val
+class Association:
+    def __init__(self, marker=None, significance=None, phenotype=None):
+        self.marker = marker
+        self.significance = significance
         self.phenotype = phenotype
-        self.internal_marker = internal_marker
-        self.weight = weight
+
+
+class Phenotype:
+    def __init__(self, token):
+        self.token = token
+
+
+class Marker:
+    def __init__(self, token):
+        self.token = token
+
+
+class Significance:
+    def __init__(self, token):
+        self.token = token
+
 
 
 class MeshDescriptor:

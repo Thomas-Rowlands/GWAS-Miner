@@ -1,17 +1,18 @@
 import json
 import re
-from copy import deepcopy
+import sys
 from datetime import datetime
 from os import listdir
 from os.path import isfile, join
 
 import spacy
-from spacy.matcher import PhraseMatcher, Matcher
-from spacy.tokens import Span
+from spacy.matcher import PhraseMatcher, Matcher, DependencyMatcher
+from spacy.tokens import Span, Token, Doc
 
 import Ontology
 from GWAS_Miner import BioC, OutputConverter, Experimental
 from NLP import Interpreter
+import config
 
 gc_data = {}
 headers_skipped = False
@@ -23,13 +24,38 @@ class GCInterpreter(Interpreter):
         self.lexicon = lexicon
         self.__nlp = spacy.load("en_core_sci_lg", disable=["ner"])
         self.__failed_matches = []
-        self.__nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
+        # self.__nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
         self.__basic_matcher = None
         self.__phrase_matcher = None
-        self.__dep_matcher = None
-        self.__entity_labels = ["MESH", "HPO"]
+        self.__entity_labels = ["MESH", "HPO", "PVAL"]
+        self.pval_patterns = []
+        self.rsid_patterns = []
+        self.abbrev_pattens = []
+        self.association_patterns = config.pheno_assoc_patterns
+        self.__dep_matcher = DependencyMatcher(self.__nlp.vocab, validate=True)
+        self.__add_semgrex()
         if not ontology_only:
             self.__add_matchers(lexicon)
+
+    def __add_semgrex(self):
+        self.__dep_matcher.add("PHENO_ASSOC", self.association_patterns, on_match=self.__on_dep_match)
+
+    def __on_dep_match(self, matcher, doc, id, matches):
+        for match_id, token_ids in matches:
+            pattern_name = self.__nlp.vocab[match_id].text
+            entities = [doc[x].text for x in token_ids]
+            if entities not in doc.user_data["relations"]["PHENO_ASSOC"]:
+                print(F"{pattern_name}: {' | '.join(entities)}")
+                doc.user_data["relations"]["PHENO_ASSOC"].append(entities)
+
+    def set_abbreviations(self, abbrevs):
+        result = []
+        for abbrev in abbrevs:
+            entry = self.lexicon.get_ordered_lexicons()[0].get_entry_by_term(abbrev[1])
+            if entry:
+                result.append([entry.identifier, abbrev[0]])
+
+        self.abbrev_pattens = result
 
     def set_ontology_terms(self, term_ids):
         new_matcher = PhraseMatcher(self.__nlp.vocab, attr="LOWER")
@@ -76,8 +102,13 @@ class GCInterpreter(Interpreter):
                 patterns = self.__nlp.tokenizer.pipe(patterns)
                 new_matcher.add(entry.identifier, patterns, on_match=self.__on_match)
         self.__phrase_matcher = new_matcher
-        Span.set_extension("ontology", getter=self.get_ent_ontology)
-        Span.set_extension("is_trait", getter=self.get_is_trait)
+        # Assign extension getters
+        Token.set_extension("matches_ontology", getter=self.ontology_getter)
+        Token.set_extension("is_trait", getter=self.is_trait_getter)
+        Span.set_extension("has_ontology_term", getter=self.has_ontology_getter)
+        Span.set_extension("has_trait", getter=self.has_trait_getter)
+        Doc.set_extension("has_ontology_term", getter=self.has_ontology_getter)
+        Doc.set_extension("has_trait", getter=self.has_trait_getter)
         # Add matcher patterns for parsing hyphenated and compound words.
         hyphenated_pattern = [{'POS': 'PROPN'}, {
             'IS_PUNCT': True, 'LOWER': '-'}, {'POS': 'VERB'}]
@@ -86,7 +117,7 @@ class GCInterpreter(Interpreter):
         self.__basic_matcher.add(
             "JOIN", [hyphenated_pattern, compound_pattern])
 
-    def process_corpus(self, corpus, pval_patterns, rsid_patterns):
+    def process_corpus(self, corpus):
         """[Applies tokenization, entity recognition and dependency parsing to the supplied corpus.]
 
         Args:
@@ -102,16 +133,21 @@ class GCInterpreter(Interpreter):
         #     corpus = parser(corpus)
 
         doc = self.__nlp(corpus)
+        doc.user_data["relations"] = {"PHENO_ASSOC": []}
 
         old_ents, doc.ents = doc.ents, []
-        for pattern in pval_patterns:
+        for pattern in self.pval_patterns:
             self.__regex_match(pattern, doc, "PVAL")
 
-        for pattern in rsid_patterns:
+        for pattern in self.rsid_patterns:
             self.__regex_match(pattern, doc, "RSID")
 
-        self.__basic_matcher(doc)
+        for pattern in self.abbrev_pattens:
+            self.__regex_match(pattern[1], doc, pattern[0])
+
+        # self.__basic_matcher(doc)
         self.__phrase_matcher(doc)
+
 
 
         # Ensure that rule-matched entities override data model entities when needed.
@@ -124,6 +160,9 @@ class GCInterpreter(Interpreter):
         # Ensure that multi-token entities are merged for extraction and association processing.
         for ent_label in self.__entity_labels:
             self.__merge_spans(doc, ent_label)
+
+
+        # self.__dep_matcher(doc)
 
         return doc
 
@@ -147,7 +186,7 @@ class GCInterpreter(Interpreter):
         try:
             doc.ents += (entity,)
         except:
-            print(entity.text)#self.__failed_matches.append(entity.text)
+            return #print(entity.text)  # self.__failed_matches.append(entity.text)
 
     @staticmethod
     def __regex_match(pattern, doc, label):
@@ -157,7 +196,10 @@ class GCInterpreter(Interpreter):
                 chars_to_tokens[i] = token.i
         for match in re.finditer(pattern, doc.text, flags=re.IGNORECASE):
             start, end = match.span()
-            span = doc.char_span(start, end, label=label, alignment_mode="expand")
+            if label == "PVAL":
+                span = doc.char_span(start, end, label=label, alignment_mode="expand")
+            else:
+                span = doc.char_span(start, end, label=label)
             if span is not None:
                 try:
                     doc.ents += (span,)
@@ -171,7 +213,7 @@ class GCInterpreter(Interpreter):
                     try:
                         doc.ents += (span,)
                     except Exception as e:
-                        print(e)
+                        return # print(e)
 
     @staticmethod
     def __merge_spans(doc, entity_label):
@@ -184,41 +226,38 @@ class GCInterpreter(Interpreter):
             for ent in [x for x in doc.ents if x.label_ == entity_label]:
                 retokenizer.merge(doc[ent.start:ent.end])
 
+    def get_relations(self, doc):
+        return self.__dep_matcher(doc)
 
-def process_study(nlp, study, pval_patterns, rsid_patterns):
+
+def process_study(nlp, study):
     if not study:
         return False
-    t, m, p = 0, 0, 0
+    t, m, p, r = 0, 0, 0, 0
     study_fulltext = "\n".join([x['text'] for x in study['documents'][0]['passages']])
     # abbreviations = nlp.get_all_abbreviations(study_fulltext)
+    current_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+    document_relations = []
+    current_offset = 0
+    results_present = False
     for passage in study['documents'][0]['passages']:
+        if passage["infons"]["section_type"].lower() == "results":
+            results_present = True
+            break
+    for passage in study['documents'][0]['passages']:
+        if results_present and passage["infons"]["section_type"].lower() not in ["abstract", "results"]:
+            continue
         passage_text = passage['text']
-        # if abbreviations:
-        #     for abbrev in abbreviations:
-        #         passage_text = passage_text.replace(abbrev[0], abbrev[1])
 
-        doc = nlp.process_corpus(passage_text, pval_patterns, rsid_patterns)
-        # for sent in doc.sents:
-            # training_sent = [x.label_ for x in sent.ents]
-            # if training_sent:
-            #     if [x for x in training_sent if x[0] == "D"] and "RSID" in training_sent and "PVAL" in training_sent:
-            #         training_string = sent.text_with_ws
-            #         for ent in sent.ents:
-            #             ent_string = F"<!TRAIT:{ent.text_with_ws}!>" if ent.label_[
-            #                                                                 0] == "D" else F"<!{ent.label_}:{ent.text_with_ws}!>"
-            #             training_string = training_string.replace(ent.text_with_ws, ent_string)
-            #         with open("training_input/training_input.txt", "a+", encoding="utf-8") as f_in:
-            #             f_in.write(training_string + "\n")
-
+        doc = nlp.process_corpus(passage_text)
         annotations = nlp.get_entities(doc, ["MESH", "HPO", "RSID", "PVAL"])
         used_annots = []
         if annotations:
             for annot in annotations:
                 loc = BioC.BioCLocation(offset=annot["offset"] + passage["offset"], length=annot["length"])
-                current_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
                 if annot["text"] in used_annots:
                     for old_annot in passage['annotations']:
-                        if old_annot.text == annot["text"]:
+                        if old_annot.text == annot["text"] and loc not in old_annot.locations:
                             old_annot.locations.append(loc)
                 if "RSID" not in annot["entity_type"] and "PVAL" not in annot["entity_type"]:
                     genomic_trait = BioC.BioCAnnotation(id=F"T{t}", infons={"type": "trait", "identifier": annot["id"],
@@ -244,10 +283,25 @@ def process_study(nlp, study, pval_patterns, rsid_patterns):
                     p += 1
                 used_annots.append(annot["text"])
 
-        # relations = nlp.extract_phenotypes(doc)
-        relations = None
-        if relations:
-            print(relations)
+            relations = nlp.extract_phenotypes(doc)
+
+            for relation in relations:
+                # test = doc[]
+                pheno_id = [x.id for x in passage['annotations'] if relation.phenotype.token.idx + passage["offset"] in [y.offset for y in x.locations]][0]
+                marker_id = [x.id for x in passage['annotations'] if relation.marker.token.idx + passage["offset"] in [y.offset for y in x.locations]][0]
+                significance_id = [x.id for x in passage['annotations'] if relation.significance.token.idx + passage["offset"] in [y.offset for y in x.locations]][0]
+                phenotype_node = BioC.BioCNode(refid=pheno_id, role="")
+                marker_node = BioC.BioCNode(refid=marker_id, role="")
+                significance_node = BioC.BioCNode(refid=significance_id, role="")
+                bioc_relation = BioC.BioCRelation(id=F"R{r}",
+                                                  infons={"type": "disease_assoc", "annotator": "tr142@le.ac.uk",
+                                                          "updated_at": current_datetime},
+                                                  nodes=[phenotype_node, marker_node, significance_node])
+                passage['relations'].append(bioc_relation)
+                document_relations.append(bioc_relation)
+                r += 1
+    if document_relations:
+        print(document_relations)
     OutputConverter.output_xml(json.dumps(study, default=BioC.ComplexHandler),
                                F"output/PMC{study['documents'][0]['id']}_result.xml")
     return True
@@ -271,27 +325,33 @@ with open("GC_content.tsv", "r", encoding="utf-8") as f_in:
 
 lexicon = Ontology.get_master_lexicon()
 nlp = GCInterpreter(lexicon)
-
+skipped = False
 for pmc_id in gc_data.keys():
+    # if not skipped:
+    #     skipped = True
+    #     continue
     pvals = []
     rsids = []
     mesh_terms = []
     for relation in gc_data[pmc_id]:
         rsid = relation[0]
         mesh_id = relation[2]
-        pval = F"(?:p[ =<]*[ ]?)({relation[1][0]}[\.0-9 ]*{relation[1][1:]})"
+        pval = None
+        if len(relation[1]) < 5:
+            pval = F"(?:p[ =<]*[ ]?)([{int(relation[1][0]) + 1}{relation[1][0]}{int(relation[1][0]) - 1}][\.0-9]*[ xX*]*10 ?- ?" \
+                   F"{relation[1][3]})"
+        else:
+            pval = F"(?:p[ =<]*[ ]?)([{int(relation[1][0]) + 1}{relation[1][0]}{int(relation[1][0]) - 1}][\.0-9]*[ xX*]*10 ?- ?" \
+                   F"{relation[1][3] + '?' if relation[1][3] == '0' else relation[1][3]}" \
+                   F"{relation[1][4]})"
         pvals.append(pval)
-        pvals.append(pval.replace("e", " x 10"))
-        pvals.append(pval.replace("e", " [*] 10"))
-        pvals.append(pval.replace("e", "x10"))
-        pvals.append(pval.replace("e", "[*]10"))
-        temp = deepcopy(pvals)
-        for val in temp:
-            pvals.append("".join(val.rsplit("0", 1)))
         rsids.append(F"({rsid})")
         mesh_terms.append(mesh_id)
-
-    nlp.set_ontology_terms(mesh_terms)
+    # nlp.set_ontology_terms(mesh_terms)
+    nlp.pval_patterns = pvals
+    nlp.rsid_patterns = rsids
     study = Experimental.load_bioc_study("BioC_Studies", F"{pmc_id}.json")
     abbreviations = nlp.get_all_abbreviations("".join([x['text'] for x in study['documents'][0]['passages']]))
-    result = process_study(nlp, study, pvals, rsids)
+    nlp.set_abbreviations(abbreviations)
+    result = process_study(nlp, study)
+    # sys.exit()

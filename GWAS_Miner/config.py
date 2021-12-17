@@ -14,3 +14,94 @@ regex_entity_patterns = {
     # "PTYPE": r"(\(?GEE\)?)|(\(?FBAT\)?)",
     # "Table Ref": r"(table[- ]{0,}\d{1,})"
 }
+
+pheno_assoc_patterns = [
+    [
+        {
+            "RIGHT_ID": "phenotype_anchor",
+            "RIGHT_ATTRS": {
+                "_": {
+                    "is_trait": True
+                }
+            }
+        },
+        {
+            "LEFT_ID": "phenotype_anchor",
+            "REL_OP": ".*",
+            "RIGHT_ID": "marker_subject",
+            "RIGHT_ATTRS": {"DEP": {"IN": ["dep", "nsubj","dobj", "conj", "amod", "compound", "appos", "parataxis"]}, "ENT_TYPE": "RSID"},
+        },
+        {
+            "LEFT_ID": "marker_subject",
+            "REL_OP": "$++",
+            "RIGHT_ID": "significance_subject",
+            "RIGHT_ATTRS": {"DEP": {"IN": ["dep", "nsubj","dobj", "conj", "amod", "compound", "appos"]}, "ENT_TYPE": "PVAL"},
+        }
+    ],
+    [
+        {
+            "RIGHT_ID": "phenotype_anchor",
+            "RIGHT_ATTRS": {
+                "_": {
+                    "is_trait": True
+                }
+            }
+        },
+        {
+            "LEFT_ID": "phenotype_anchor",
+            "REL_OP": ".*",
+            "RIGHT_ID": "marker_subject",
+            "RIGHT_ATTRS": {"DEP": {"IN": ["dep", "nsubj","dobj", "conj", "amod", "compound", "appos", "parataxis"]}, "ENT_TYPE": "RSID"},
+        },
+        {
+            "LEFT_ID": "marker_subject",
+            "REL_OP": "$--",
+            "RIGHT_ID": "significance_subject",
+            "RIGHT_ATTRS": {"DEP": {"IN": ["dep", "nsubj","dobj", "conj", "amod", "compound", "appos"]}, "ENT_TYPE": "PVAL"},
+        }
+    ],
+    [
+        {
+            "RIGHT_ID": "phenotype_anchor",
+            "RIGHT_ATTRS": {
+                "_": {
+                    "is_trait": True
+                }
+            }
+        },
+        {
+            "LEFT_ID": "phenotype_anchor",
+            "REL_OP": ";*",
+            "RIGHT_ID": "marker_subject",
+            "RIGHT_ATTRS": {"DEP": {"IN": ["dep", "nsubj","dobj", "conj", "amod", "compound", "appos", "parataxis"]}, "ENT_TYPE": "RSID"},
+        },
+        {
+            "LEFT_ID": "marker_subject",
+            "REL_OP": "$++",
+            "RIGHT_ID": "significance_subject",
+            "RIGHT_ATTRS": {"DEP": {"IN": ["dep", "nsubj","dobj", "conj", "amod", "compound", "appos"]}, "ENT_TYPE": "PVAL"},
+        }
+    ],
+    [
+        {
+            "RIGHT_ID": "phenotype_anchor",
+            "RIGHT_ATTRS": {
+                "_": {
+                    "is_trait": True
+                }
+            }
+        },
+        {
+            "LEFT_ID": "phenotype_anchor",
+            "REL_OP": ";*",
+            "RIGHT_ID": "marker_subject",
+            "RIGHT_ATTRS": {"DEP": {"IN": ["dep", "nsubj","dobj", "conj", "amod", "compound", "appos", "parataxis"]}, "ENT_TYPE": "RSID"},
+        },
+        {
+            "LEFT_ID": "marker_subject",
+            "REL_OP": "$--",
+            "RIGHT_ID": "significance_subject",
+            "RIGHT_ATTRS": {"DEP": {"IN": ["dep", "nsubj", "dobj", "conj", "amod", "compound", "appos"]}, "ENT_TYPE": "PVAL"},
+        }
+    ]
+]

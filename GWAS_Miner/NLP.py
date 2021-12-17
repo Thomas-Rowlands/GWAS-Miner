@@ -1,19 +1,23 @@
 import logging
 import re
+from datetime import datetime
+
+from spacy.pipeline import merge_entities
 
 import config
 import networkx as nx
 import spacy
-from DataStructures import Marker
+from DataStructures import Marker, Phenotype, Significance, Association
 from spacy import displacy
 from spacy.matcher import Matcher, PhraseMatcher, DependencyMatcher
-from spacy.tokens import Span
+from spacy.tokens import Span, Token, Doc
 
 
 class Interpreter:
     def __init__(self, lexicon, ontology_only=False):
         self.lexicon = lexicon
         self.__nlp = spacy.load("en_core_sci_lg", disable=["ner"])
+        self.__nlp.add_pipe("merge_noun_chunks")
         self.__failed_matches = []
         self.__nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
         self.__rsid_regex = {"LOWER": {"REGEX": "((?:[(]?)(rs[0-9]{1,}){1,})"}}#"(?:rs[0-9]{1,}){1}"}}
@@ -22,14 +26,10 @@ class Interpreter:
         self.__basic_matcher = None
         self.__phrase_matcher = None
         self.__dep_matcher = None
-        self.__abbreviations = []
         self.__logger = logging.getLogger("GWAS Miner")
-        self.__entity_labels = ["MESH", "HPO"]
+        self.__entity_labels = ["MESH", "HPO", "PVAL"]
         if not ontology_only:
             self.__add_matchers(lexicon)
-
-    def __set_abbreviations(self, abbrevs):
-        self.__abbreviations = abbrevs
 
     def __add_matchers(self, lexicon):
         self.__basic_matcher = Matcher(self.__nlp.vocab)
@@ -55,15 +55,21 @@ class Interpreter:
                 patterns = self.__nlp.tokenizer.pipe(patterns)
                 new_matcher.add(entry.identifier, patterns, on_match=self.__on_match)
         self.__phrase_matcher = new_matcher
-        Span.set_extension("ontology", getter=self.get_ent_ontology)
-        Span.set_extension("is_trait", getter=self.get_is_trait)
-        # Add matcher patterns for parsing hyphenated and compound words.
-        hyphenated_pattern = [{'POS': 'PROPN'}, {
-            'IS_PUNCT': True, 'LOWER': '-'}, {'POS': 'VERB'}]
-        compound_pattern = [{'POS': 'NOUN', 'DEP': 'compound'}, {
-            'POS': 'NOUN', 'DEP': 'compound'}, {'POS': 'NOUN'}]
-        self.__basic_matcher.add(
-            "JOIN", [hyphenated_pattern, compound_pattern])
+        # Declare custom extension properties
+        Token.set_extension("matches_ontology", getter=self.ontology_getter)
+        Token.set_extension("is_trait", getter=self.is_trait_getter)
+        Span.set_extension("has_ontology_term", getter=self.has_ontology_getter)
+        Span.set_extension("has_trait", getter=self.has_trait_getter)
+        Doc.set_extension("has_ontology_term", getter=self.has_ontology_getter)
+        Doc.set_extension("has_trait", getter=self.has_trait_getter)
+
+        # # Add matcher patterns for parsing hyphenated and compound words.
+        # hyphenated_pattern = [{'POS': 'PROPN'}, {
+        #     'IS_PUNCT': True, 'LOWER': '-'}, {'POS': 'VERB'}]
+        # compound_pattern = [{'POS': 'NOUN', 'DEP': 'compound'}, {
+        #     'POS': 'NOUN', 'DEP': 'compound'}, {'POS': 'NOUN'}]
+        # self.__basic_matcher.add(
+        #     "JOIN", [hyphenated_pattern, compound_pattern])
 
         # Trait - Marker - PVal Semgrex
         disease_assoc_pattern = [
@@ -104,17 +110,37 @@ class Interpreter:
     # def add_study_specific_abbreviations(self, abbrevs):
     #     self.__nlp
 
-    def get_ent_ontology(self, ent):
-        if "HP:" in ent.label_:
-            return "HPO"
-        elif ent.label_[0] == "D":
-            return "MESH"
+    def ontology_getter(self, token):
+        if token.ent_type_:
+            if "HP:" in token.ent_type_:
+                return "HPO"
+            elif token.ent_type_[0] == "D":
+                return "MESH"
+            else:
+                return False
         else:
-            return None
+            return False
 
-    def get_is_trait(self, ent):
-        if ent.label_ in ["RSID", "PVAL"]:
+    def has_ontology_getter(self, obj):
+        if any(["HP:" in token.ent_type_ or token.ent_type_[0] == "D" for token in obj if token.ent_type_]):
             return True
+        else:
+            return False
+
+    def is_trait_getter(self, token):
+        if token.ent_type_:
+            if "HP:" in token.ent_type_ or token.ent_type_[0] == "D":
+                return True
+            else:
+                return False
+        else:
+            return False
+
+    def has_trait_getter(self, obj):
+        if any(["HP:" in token.ent_type_ or token.ent_type_[0] == "D" for token in obj if token.ent_type_]):
+            return True
+        else:
+            return False
 
     def __on_match(self, matcher, doc, i, matches):
         """
@@ -214,6 +240,7 @@ class Interpreter:
         # Ensure that multi-token entities are merged for extraction and association processing.
         for ent_label in self.__entity_labels:
             self.__merge_spans(doc, ent_label)
+        doc = merge_entities(doc)
 
         return doc
 
@@ -229,7 +256,7 @@ class Interpreter:
                 retokenizer.merge(doc[ent.start:ent.end])
 
     @staticmethod
-    def __filter_sents_by_entity(sents, entity_list):
+    def __filter_sents_by_entity(sents, entity_list, property_list=None):
         """
         Remove sentence objects from a list if they do not contain all of the provided entities.
         @param sents: List of sentence objects, with nested lists for OR conditions
@@ -239,19 +266,33 @@ class Interpreter:
         output = []
         for sent in sents:
             missing_entity = False
+            missing_property = False
             ents = sent.ents
             for ent in entity_list:
                 if type(ent) == list:
                     found_match = False
                     for or_ent in ent:
-                        if or_ent in [x.label_ for x in ents] or or_ent in [x._.ontology for x in ents if x.has_extension("ontology")]:
+                        if or_ent in [x.label_ for x in ents]:
                             found_match = True
                             break
                     if not found_match:
                         missing_entity = True
                         break
-                elif ent not in [x.label_ for x in ents] and ent not in [x._.ontology for x in ents if x.has_extension("ontology")]:
+                elif ent not in [x.label_ for x in ents]:
                     missing_entity = True
+                    break
+            for property in property_list:
+                if type(property) == list:
+                    found_match = False
+                    for or_prop in property:
+                        if [x.has_extension(or_prop) for x in ents]:
+                            found_match = True
+                            break
+                    if not found_match:
+                        missing_property = True
+                        break
+                elif [x.has_extension(property) for x in ents]:
+                    missing_property = True
                     break
             if not missing_entity:
                 output.append(sent)
@@ -263,8 +304,8 @@ class Interpreter:
         used_indexes = []
         for item in ents:
             for node in nodes:
-                if F"{item.text.lower()}<id{item.start}>" == str(node):
-                    output.append((item, F"{item}<id{item.start}>"))
+                if F"{item.text}<id{item.start_char}>" == str(node):
+                    output.append((item, F"{item}<id{item.start_char}>"))
         return output
 
     @staticmethod
@@ -278,7 +319,7 @@ class Interpreter:
 
     @staticmethod
     def __expand_sentence_dependency_search(token):
-        contains_pval = False
+        contains_pheno = False
         contains_marker = False
         next_token = None
         old_token = None
@@ -295,16 +336,17 @@ class Interpreter:
                 return False, False
             old_token = next_token
             next_token = old_token.head
-        test = []
         for child in next_token.subtree:
-            test.append(child)
-            if child.ent_type_ == "PVAL":
-                contains_pval = True
+            if contains_pheno and contains_marker:
+                return contains_pheno, contains_marker
+            if child._.is_trait:
+                contains_pheno = True
             elif child.ent_type_ == "RSID":
                 contains_marker = True
-        return contains_pval, contains_marker
+        return contains_pheno, contains_marker
 
-    def allocate_contiguous_phenotypes(self, sent):
+    @staticmethod
+    def allocate_contiguous_phenotypes(sent):
         """[Identify phenotype entities bordering p-value entities]
 
         Args:
@@ -335,7 +377,8 @@ class Interpreter:
             removed_brackets += 1
         return input
 
-    def get_entities(self, doc, entity_list):
+    @staticmethod
+    def get_entities(doc, entity_list):
         result = []
         for ent in doc.ents:
             result.append({
@@ -357,11 +400,12 @@ class Interpreter:
             [dict]: [Dictionary containing extracted phenotype, marker and p-values associated together based on SDP calculation.]
         """
         phenotype_sents = Interpreter.__filter_sents_by_entity(
-            doc.sents, [["MESH", "HPO"], ["PVAL", "PVAL-G"], "RSID"])
+            doc.sents, ["PVAL", "RSID"], ["has_ontology"])
         results = self.calculate_sdp(phenotype_sents)
         return results
 
-    def calculate_sdp(self, phenotype_sents):
+    @staticmethod
+    def calculate_sdp(phenotype_sents):
         """[Calculates the shortest dependency path for each phenotype/marker/p-value combination, returning the shortest for each one.]
 
         Args:
@@ -374,18 +418,23 @@ class Interpreter:
         # Iterate through each sentence containing a phenotype named entity label
         for sent in phenotype_sents:
             edges = []
+            token_indexes = {}
             for token in sent:
-                # TODO: Re-label duplicates with some easily but uniquely identifiable id.
                 for child in token.children:
-                    token_text = F"{token.lower_}<id{token.i}>"
-                    child_text = F"{child.lower_}<id{child.i}>"
+                    # Add unique id to token strings.
+                    token_text = F"{token}<id{token.idx}>"
+                    child_text = F"{child}<id{child.idx}>"
+                    if token.idx not in token_indexes.keys():
+                        token_indexes[token.idx] = token.i
+                    if child.idx not in token_indexes.keys():
+                        token_indexes[child.idx] = child.i
                     edges.append(('{0}'.format(token_text),
                                   '{0}'.format(child_text)))
 
             graph = nx.Graph(edges)
 
             phenotypes = Interpreter.__validate_node_entities(
-                [x for x in sent.ents if "MESH" in x.label_], graph.nodes)
+                [x for x in sent.ents if x._.has_trait], graph.nodes)
             markers = Interpreter.__validate_node_entities(
                 [x for x in sent.ents if x.label_ == 'RSID'], graph.nodes)
             pvals = Interpreter.__validate_node_entities(
@@ -394,69 +443,59 @@ class Interpreter:
             phenotype_count = len(phenotypes)
             marker_count = len(markers)
             pval_count = len(pvals)
-            immediate_relations = self.allocate_contiguous_phenotypes(sent)
+            # immediate_relations = Interpreter.allocate_contiguous_phenotypes(sent)
 
-            for phenotype in phenotypes:
-                # if phenotype.lower_ == 'olfactory receptors': #DEBUGGING ONLY
-                #     Interpreter.display_structure(sent)
-                contains_marker = False
-                contains_pval = False
-                subtree_count = 0
-                for child in phenotype[0][0].subtree:
-                    if child.ent_type_ == "PVAL":
-                        contains_pval = True
-                    elif child.ent_type_ == "RSID":
-                        contains_marker = True
-                    subtree_count += 1
-
-                if not contains_marker and not contains_pval:
-                    contains_pval, contains_marker = Interpreter.__expand_sentence_dependency_search(
-                        phenotype[0][0])
-                if not contains_pval and not contains_marker:
-                    continue
-
-                # if phenotype[0].lower_ == "hematocrit":
-                #     Interpreter.display_structure(sent)
-
-                # Maximum length of dependency path for association.
-                marker_distance = 4
-                pval_distance = 4
-                rsid = None
-                pval = None
-                best_marker_distance = marker_distance + 1
-                best_pval_distance = pval_distance + 1
-                for marker in markers:  # Check shortest dependency path between each marker and each phenotype & RSID.
-                    temp_distance = nx.shortest_path_length(
-                        graph, source=phenotype[1].lower(), target=marker[1].lower())
-                    if temp_distance <= marker_distance and temp_distance < best_marker_distance:
-                        marker_distance = temp_distance
-                        rsid = nx.shortest_path(
-                            graph, source=phenotype[1].lower(), target=marker[1].lower())[-1]
-                        best_marker_distance = temp_distance
-                    else:
+            pheno_assocs = []
+            for marker in markers:
+                best_pval_distance = None
+                best_pval = None
+                for pval in pvals:
+                    if pval[1] in [y for (x, y) in pheno_assocs]:
                         continue
-                if not rsid:  # RSID must be present for an association to be made.
-                    continue
-                for pvalue in pvals:
                     temp_distance = nx.shortest_path_length(
-                        graph, source=rsid, target=pvalue[1].lower())
-                    if temp_distance <= pval_distance and temp_distance < best_pval_distance:
-                        pval_distance = temp_distance
-                        pval = nx.shortest_path(
-                            graph, source=rsid, target=pvalue[1].lower())[-1]
+                        graph, source=marker[1], target=pval[1])
+                    if not best_pval_distance or temp_distance < best_pval_distance:
+                        best_pval = nx.shortest_path(
+                            graph, source=marker[1], target=pval[1])[-1]
                         best_pval_distance = temp_distance
                     else:
                         continue
                 if not pval:
                     continue
-                result_marker = Marker(rsid[:rsid.find("<id")])
-                result_marker.phenotype = phenotype[0].lower_
-                result_marker.misc_p_val = pval[:pval.find("<id")]
-                results.append(result_marker)
-                # if phenotype[0].lower_ not in results:
-                #     results[phenotype[0].lower_] = []
-                # results[phenotype[0].lower_].append([rsid[:rsid.find("<id")]])
-                # results[phenotype[0].lower_].append([pval[:pval.find("<id")]])
+                if best_pval_distance:
+                    pheno_assocs.append([marker[1], best_pval])
+
+            for pair in pheno_assocs:
+                best_pheno_distance = None
+                best_pheno = None
+                for phenotype in phenotypes:
+                    temp_distance = nx.shortest_path_length(
+                        graph, target=phenotype[1], source=pair[0])
+                    if not best_pheno_distance or temp_distance < best_pheno_distance:
+                        best_pheno = nx.shortest_path(
+                            graph, target=phenotype[1], source=pair[0])[-1]
+                        best_pheno_distance = temp_distance
+                    else:
+                        continue
+                if not pval:
+                    continue
+                if best_pheno_distance:
+                    pair.append(best_pheno)
+            # Validate associations are triples
+            pheno_assocs = [x for x in pheno_assocs if len(x) == 3]
+            for (rsid, pval, phenotype) in pheno_assocs:
+                temp_marker = sent.doc[token_indexes[int(rsid[rsid.find("<id") + 3: rsid.find(">", rsid.find("<id") + 3)])]]
+                temp_pval = sent.doc[token_indexes[int(pval[pval.find("<id") + 3: pval.find(">", pval.find("<id") + 3)])]]
+                temp_pheno = sent.doc[token_indexes[int(phenotype[phenotype.find("<id") + 3: phenotype.find(">", phenotype.find("<id") + 3)])]]
+                result_marker = Marker(temp_marker)
+                result_significance = Significance(temp_pval)
+                result_pheno = Phenotype(temp_pheno)
+
+                results.append(Association(marker=result_marker, significance=result_significance, phenotype=result_pheno))
+            # if phenotype[0].lower_ not in results:
+            #     results[phenotype[0].lower_] = []
+            # results[phenotype[0].lower_].append([rsid[:rsid.find("<id")]])
+            # results[phenotype[0].lower_].append([pval[:pval.find("<id")]])
         return results
 
     @staticmethod
@@ -558,7 +597,7 @@ class Interpreter:
             svgs = []
             for sent in sentence_spans:
                 ent_labels = [x.label_ for x in sent.ents]
-                ent_traits = [x._.is_trait for x in sent.ents]
+                ent_traits = [x._.has_trait for x in sent.ents]
                 if "RSID" in ent_labels and "PVAL" in ent_labels and ent_traits:
                     svgs.append(displacy.render(sent, style="dep", options=options))
             return svgs
@@ -594,10 +633,10 @@ class Interpreter:
     def get_phenotype_stats(doc, master_lexicon):
         results = {}
         for ent in doc.ents:
-            if ent._.ontology == "MESH": #in ["MESH", "HPO"]:
+            if ent._.has_trait: #in ["MESH", "HPO"]:
                 entry = master_lexicon.get_lexicon_entry(lexicon_name="MESH", ident=ent.label_)
-                if not entry:
-                    print(ent)
+                # if not entry:
+                    # print(ent)
                 if entry.name() in results:
                     results[entry.name()]["Count"] += 1
                 else:
@@ -626,13 +665,13 @@ class Interpreter:
 
     @staticmethod
     def __check_single_word_abbrev_proto(fulltext, token):
-        temp = [F"(\\b[{token[0]}{token[0].lower()}][\w]+)(?:[a-z\s-]*)"]
+        temp = [F"( [{token[0]}{token[0].lower()}][\w]+)(?:[a-z\s-]*)"]
         for char in token[1:]:
             temp.append(F"([{char}{char.lower()}][\w]+)(?:[a-z\s-]*)")
         pattern = F"{''.join(temp)}(?:[ ]\({token}[^\w]*\))"
         match = re.search(pattern, fulltext)
         if not match:
-            print(token)
+            # print(token)
             return None
         result = []
         for group in match.groups():
@@ -724,25 +763,26 @@ class Interpreter:
         @param fulltext: The document containing the abbreviations and their declarations
         @return: 2D list containing abbreviations and their expanded forms.
         """
-        abbreviations = []
+        result = []
         # r"([^(-]\b[a-z]{0,}[A-Z]{2,}[a-z]{0,}\b[^)-])"
         # pattern = r"([^ \"',.(-]\b)?([a-z]{0,})([A-Z]{2,})([a-z]{0,})(\b[^;,.'\" )-]?)"
-        pattern = r"(?:[^ \"',.(-]\b)?([a-z]{0,}[A-Z]{2,}[a-z]{0,})(?:\b[^;,.'\" )-]?)"
+        pattern = r"(?:\()([a-z]{0,3}[A-Z]{2,}[a-z]{0,3})(?:\))"
         input_text = fulltext
-        for match in re.findall(pattern, input_text):
+        matches = set(re.findall(pattern, input_text))
+        for match in matches:
             target = ""
             if type(match) == str:
                 target = match
             else:
                 continue
             target = target.strip()
-            if target not in [x for [x, y] in abbreviations]:
-                # expanded = Interpreter.__check_single_word_abbrev(fulltext, target)
-                expanded = Interpreter.__check_single_word_abbrev_proto(fulltext, target)
-                if expanded:
-                    abbreviations.append([target, expanded])
+            # expanded = Interpreter.__check_single_word_abbrev(fulltext, target)
+            expanded = Interpreter.__check_single_word_abbrev_proto(fulltext, target)
+            print(F"Expanded ({target}) - {datetime.now()}")
+            if expanded:
+                result.append([target, expanded.strip()])
         # Interpreter.__logger.info(changes) #  Can error due to strange encodings used.
-        return abbreviations
+        return result
 
     @staticmethod
     def __clean_reference_remains(text):

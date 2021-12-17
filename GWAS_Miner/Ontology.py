@@ -178,11 +178,16 @@ def __retrieve_ont_lexicon(ontology_name):
             WHERE m.miner_included = false
             WITH COLLECT(m.id) AS excluded, included
             
-            MATCH (n:MESH)-[:HAS_SYNONYM*0..]->(m)
-            WHERE n.id IN included AND NOT n.id in excluded AND n.miner_included = true
-            WITH n, COLLECT(m.FSN) AS syns
+            MATCH (n:MESH)-[:HAS_SYNONYM*0..]->(syn)
+            WHERE n.id IN included AND NOT n.id in excluded AND n.miner_included = TRUE AND (syn.miner_included IS NULL OR syn.miner_included <> FALSE)
+            WITH n, COLLECT(syn.FSN) AS syns
             RETURN DISTINCT n.id, n.FSN, n.treeid, syns
             """
+            # ont_query = F"""
+            # MATCH (n:MESH)-[:HAS_SYNONYM*0..]->(m)
+            # WITH n, COLLECT(m.FSN) AS syns
+            # RETURN DISTINCT n.id, n.FSN, n.treeid, syns
+            # """
         else:
             ont_query = F"""
             MATCH (n:{ontology_name})-[:HAS_SYNONYM*0..]->(m)
