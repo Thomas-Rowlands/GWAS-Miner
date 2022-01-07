@@ -256,7 +256,7 @@ class Interpreter:
                 retokenizer.merge(doc[ent.start:ent.end])
 
     @staticmethod
-    def __filter_sents_by_entity(sents, entity_list, property_list=None):
+    def __filter_sents_by_entity(sents, entity_list, property_list=[]):
         """
         Remove sentence objects from a list if they do not contain all of the provided entities.
         @param sents: List of sentence objects, with nested lists for OR conditions
@@ -299,7 +299,7 @@ class Interpreter:
         return output
 
     @staticmethod
-    def __validate_node_entities(ents, nodes):
+    def _validate_node_entities(ents, nodes):
         output = []
         used_indexes = []
         for item in ents:
@@ -401,11 +401,26 @@ class Interpreter:
         """
         phenotype_sents = Interpreter.__filter_sents_by_entity(
             doc.sents, ["PVAL", "RSID"], ["has_ontology"])
+        uncertain_sents = Interpreter.__filter_sents_by_entity(doc.sents, ["PVAL", "RSID"])
+        results, uncertain_results = [], []
         results = self.calculate_sdp(phenotype_sents)
-        return results
+        uncertain_results = self.calculate_sdp(uncertain_sents, doc.user_data["top_phenotype"])
+        filtered_uncertain_results = []
+        if results and uncertain_results:
+            for association in results:
+                match_found = False
+                for u_association in uncertain_results:
+                    if association.marker.token.text == u_association.marker.token.text and association.significance.token.text == u_association.significance.token.text:
+                        match_found = True
+                        break
+                if not match_found:
+                    filtered_uncertain_results.append(u_association)
+        else:
+            filtered_uncertain_results = uncertain_results
+        return results, filtered_uncertain_results
 
     @staticmethod
-    def calculate_sdp(phenotype_sents):
+    def calculate_sdp(phenotype_sents, top_phenotype=None):
         """[Calculates the shortest dependency path for each phenotype/marker/p-value combination, returning the shortest for each one.]
 
         Args:
@@ -433,14 +448,14 @@ class Interpreter:
 
             graph = nx.Graph(edges)
 
-            phenotypes = Interpreter.__validate_node_entities(
-                [x for x in sent.ents if x._.has_trait], graph.nodes)
-            markers = Interpreter.__validate_node_entities(
+            phenotypes = Interpreter._validate_node_entities(
+                [x for x in sent.ents if x._.has_trait], graph.nodes) if not top_phenotype else None
+            markers = Interpreter._validate_node_entities(
                 [x for x in sent.ents if x.label_ == 'RSID'], graph.nodes)
-            pvals = Interpreter.__validate_node_entities(
+            pvals = Interpreter._validate_node_entities(
                 [x for x in sent.ents if x.label_ == 'PVAL'], graph.nodes)
 
-            phenotype_count = len(phenotypes)
+            phenotype_count = len(phenotypes) if not top_phenotype else None
             marker_count = len(markers)
             pval_count = len(pvals)
             # immediate_relations = Interpreter.allocate_contiguous_phenotypes(sent)
@@ -464,38 +479,55 @@ class Interpreter:
                     continue
                 if best_pval_distance:
                     pheno_assocs.append([marker[1], best_pval])
-
-            for pair in pheno_assocs:
-                best_pheno_distance = None
-                best_pheno = None
-                for phenotype in phenotypes:
-                    temp_distance = nx.shortest_path_length(
-                        graph, target=phenotype[1], source=pair[0])
-                    if not best_pheno_distance or temp_distance < best_pheno_distance:
-                        best_pheno = nx.shortest_path(
-                            graph, target=phenotype[1], source=pair[0])[-1]
-                        best_pheno_distance = temp_distance
-                    else:
+            if not top_phenotype:
+                for pair in pheno_assocs:
+                    best_pheno_distance = None
+                    best_pheno = None
+                    for phenotype in phenotypes:
+                        temp_distance = nx.shortest_path_length(
+                            graph, target=phenotype[1], source=pair[0])
+                        if not best_pheno_distance or temp_distance < best_pheno_distance:
+                            best_pheno = nx.shortest_path(
+                                graph, target=phenotype[1], source=pair[0])[-1]
+                            best_pheno_distance = temp_distance
+                        else:
+                            continue
+                    if not pval:
                         continue
-                if not pval:
-                    continue
-                if best_pheno_distance:
-                    pair.append(best_pheno)
-            # Validate associations are triples
-            pheno_assocs = [x for x in pheno_assocs if len(x) == 3]
-            for (rsid, pval, phenotype) in pheno_assocs:
-                temp_marker = sent.doc[token_indexes[int(rsid[rsid.find("<id") + 3: rsid.find(">", rsid.find("<id") + 3)])]]
-                temp_pval = sent.doc[token_indexes[int(pval[pval.find("<id") + 3: pval.find(">", pval.find("<id") + 3)])]]
-                temp_pheno = sent.doc[token_indexes[int(phenotype[phenotype.find("<id") + 3: phenotype.find(">", phenotype.find("<id") + 3)])]]
-                result_marker = Marker(temp_marker)
-                result_significance = Significance(temp_pval)
-                result_pheno = Phenotype(temp_pheno)
+                    if best_pheno_distance:
+                        pair.append(best_pheno)
 
-                results.append(Association(marker=result_marker, significance=result_significance, phenotype=result_pheno))
-            # if phenotype[0].lower_ not in results:
-            #     results[phenotype[0].lower_] = []
-            # results[phenotype[0].lower_].append([rsid[:rsid.find("<id")]])
-            # results[phenotype[0].lower_].append([pval[:pval.find("<id")]])
+            if not top_phenotype:
+                # Validate associations are triples
+                pheno_assocs = [x for x in pheno_assocs if len(x) == 3]
+                for (rsid, pval, phenotype) in pheno_assocs:
+                    temp_marker = sent.doc[token_indexes[int(rsid[rsid.find("<id") + 3: rsid.find(">", rsid.find("<id") + 3)])]]
+                    temp_pval = sent.doc[token_indexes[int(pval[pval.find("<id") + 3: pval.find(">", pval.find("<id") + 3)])]]
+                    temp_pheno = sent.doc[token_indexes[int(phenotype[phenotype.find("<id") + 3: phenotype.find(">", phenotype.find("<id") + 3)])]]
+                    result_marker = Marker(temp_marker)
+                    result_significance = Significance(temp_pval)
+                    result_pheno = Phenotype(temp_pheno)
+
+                    results.append(Association(marker=result_marker, significance=result_significance, phenotype=result_pheno))
+            else:
+                # Validate associations are doubles
+                pheno_assocs = [x for x in pheno_assocs if len(x) == 2]
+                for (rsid, pval) in pheno_assocs:
+                    temp_marker = sent.doc[
+                        token_indexes[int(rsid[rsid.find("<id") + 3: rsid.find(">", rsid.find("<id") + 3)])]]
+                    temp_pval = sent.doc[
+                        token_indexes[int(pval[pval.find("<id") + 3: pval.find(">", pval.find("<id") + 3)])]]
+                    result_marker = Marker(temp_marker)
+                    result_significance = Significance(temp_pval)
+                    result_pheno = None
+                    for ent in sent.doc.ents:
+                        if ent.label_ == top_phenotype["ID"]:
+                            result_pheno = Phenotype(next(x for x in ent.sent if x.ent_type_ == ent.label_))
+                            break
+
+                    if result_pheno:
+                        results.append(
+                            Association(marker=result_marker, significance=result_significance, phenotype=result_pheno))
         return results
 
     @staticmethod
@@ -665,9 +697,9 @@ class Interpreter:
 
     @staticmethod
     def __check_single_word_abbrev_proto(fulltext, token):
-        temp = [F"( [{token[0]}{token[0].lower()}][\w]+)(?:[a-z\s-]*)"]
+        temp = [F"(\\b[{token[0]}{token[0].lower()}][\w]+)(?:[a-z\s-]*)"]
         for char in token[1:]:
-            temp.append(F"([{char}{char.lower()}][\w]+)(?:[a-z\s-]*)")
+            temp.append(F"(\\b[{char}{char.lower()}][\w]+)(?:[a-z\s-]*)")
         pattern = F"{''.join(temp)}(?:[ ]\({token}[^\w]*\))"
         match = re.search(pattern, fulltext)
         if not match:
@@ -778,7 +810,7 @@ class Interpreter:
             target = target.strip()
             # expanded = Interpreter.__check_single_word_abbrev(fulltext, target)
             expanded = Interpreter.__check_single_word_abbrev_proto(fulltext, target)
-            print(F"Expanded ({target}) - {datetime.now()}")
+            # print(F"Expanded ({target}) - {datetime.now()}")
             if expanded:
                 result.append([target, expanded.strip()])
         # Interpreter.__logger.info(changes) #  Can error due to strange encodings used.
