@@ -193,7 +193,7 @@ class GCInterpreter(Interpreter):
         except Exception as Ex:
             entities_to_replace = []
             for ent in doc.ents:
-                if (start <= ent.start <= end) or (start <= ent.end <= end):
+                if (start <= ent.start < end) or (start < ent.end <= end):
                     if len(ent) <= len(entity):
                         entities_to_replace.append(ent)
             if entities_to_replace:
@@ -301,28 +301,38 @@ class GCInterpreter(Interpreter):
                         if significance and marker and phenotype:
                             relations.append([significance, marker, phenotype])
 
+                # Validate associations are triples
+                pheno_assocs = [x for x in relations if len(x) == 3]
+                for (rsid, pval, phenotype) in pheno_assocs:
+                    temp_marker = sent.doc[token_indexes[int(rsid[rsid.find("<id") + 3: rsid.find(">", rsid.find("<id") + 3)])]]
+                    temp_pval = sent.doc[token_indexes[int(pval[pval.find("<id") + 3: pval.find(">", pval.find("<id") + 3)])]]
+                    temp_pheno = sent.doc[token_indexes[int(phenotype[phenotype.find("<id") + 3: phenotype.find(">", phenotype.find("<id") + 3)])]]
+                    result_marker = Marker(temp_marker)
+                    result_significance = Significance(temp_pval)
+                    result_pheno = Phenotype(temp_pheno)
+                    results.append(Association(marker=result_marker, significance=result_significance, phenotype=result_pheno))
+            elif top_phenotype and markers and pvals:
+                for pval in pvals:
+                    for s, m, p in self.gc_relations:
+                        significance = None
+                        marker = None
+                        phenotype = top_phenotype
+                        if re.search(s, pval[0].text) and top_phenotype["ID"] == p:
+                            significance = pval[1]
+                            marker = next((x[1] for x in markers if x[0].text == m), None)
+                            phenotype = next((x for x in sent.doc.ents if x.label_ == phenotype["ID"]), None)
+                        if significance and marker and phenotype:
+                            relations.append([significance, marker, phenotype])
 
-                if not top_phenotype:
-                    # Validate associations are triples
-                    pheno_assocs = [x for x in relations if len(x) == 3]
-                    for (rsid, pval, phenotype) in pheno_assocs:
-                        temp_marker = sent.doc[token_indexes[int(rsid[rsid.find("<id") + 3: rsid.find(">", rsid.find("<id") + 3)])]]
-                        temp_pval = sent.doc[token_indexes[int(pval[pval.find("<id") + 3: pval.find(">", pval.find("<id") + 3)])]]
-                        temp_pheno = sent.doc[token_indexes[int(phenotype[phenotype.find("<id") + 3: phenotype.find(">", phenotype.find("<id") + 3)])]]
-                        result_marker = Marker(temp_marker)
-                        result_significance = Significance(temp_pval)
-                        result_pheno = Phenotype(temp_pheno)
-                        results.append(Association(marker=result_marker, significance=result_significance, phenotype=result_pheno))
-                else:
-                    pheno_assocs = [x for x in relations if len(x) == 2]
-                    for (rsid, pval, phenotype) in pheno_assocs:
-                        temp_marker = sent.doc[token_indexes[int(rsid[rsid.find("<id") + 3: rsid.find(">", rsid.find("<id") + 3)])]]
-                        temp_pval = sent.doc[token_indexes[int(pval[pval.find("<id") + 3: pval.find(">", pval.find("<id") + 3)])]]
-                        temp_pheno = sent.doc[token_indexes[int(phenotype[phenotype.find("<id") + 3: phenotype.find(">", phenotype.find("<id") + 3)])]]
-                        result_marker = Marker(temp_marker)
-                        result_significance = Significance(temp_pval)
-                        result_pheno = Phenotype(temp_pheno)
-                        results.append(Association(marker=result_marker, significance=result_significance, phenotype=result_pheno))
+                pheno_assocs = [x for x in relations if len(x) == 3]
+                for (rsid, pval, phenotype) in pheno_assocs:
+                    temp_marker = sent.doc[token_indexes[int(rsid[rsid.find("<id") + 3: rsid.find(">", rsid.find("<id") + 3)])]]
+                    temp_pval = sent.doc[token_indexes[int(pval[pval.find("<id") + 3: pval.find(">", pval.find("<id") + 3)])]]
+                    temp_pheno = sent.doc[phenotype.start:phenotype.end]
+                    result_marker = Marker(temp_marker)
+                    result_significance = Significance(temp_pval)
+                    result_pheno = Phenotype(temp_pheno)
+                    results.append(Association(marker=result_marker, significance=result_significance, phenotype=result_pheno))
         return results
 
 
@@ -398,11 +408,15 @@ def process_study(nlp, study):
                 used_annots.append(annot["text"])
 
             relations, uncertain_relations = nlp.extract_phenotypes(doc)
-
+            pheno_id = None
             for relation in relations:
                 # test = doc[]
-                pheno_id = [x.id for x in passage['annotations'] if
-                            relation.phenotype.token.idx + passage["offset"] == x.locations[0].offset][0]
+                if type(relation.phenotype.token) == Token:
+                    pheno_id = [x.id for x in passage['annotations'] if
+                                relation.phenotype.token.idx + passage["offset"] == x.locations[0].offset][0]
+                else:
+                    pheno_id = [x.id for x in passage['annotations'] if
+                                relation.phenotype.token.start_char + passage["offset"] == x.locations[0].offset][0]
                 marker_id = [x.id for x in passage['annotations'] if
                              relation.marker.token.idx + passage["offset"] == x.locations[0].offset][0]
                 significance_id = [x.id for x in passage['annotations'] if
@@ -418,8 +432,12 @@ def process_study(nlp, study):
                 document_relations.append(bioc_relation)
                 r += 1
             for relation in uncertain_relations:
-                pheno_id = [x.id for x in passage['annotations'] if
-                            relation.phenotype.token.idx + passage["offset"] == x.locations[0].offset][0]
+                if type(relation.phenotype.token) == Token:
+                    pheno_id = [x.id for x in passage['annotations'] if
+                                relation.phenotype.token.idx + passage["offset"] == x.locations[0].offset][0]
+                else:
+                    pheno_id = [x.id for x in passage['annotations'] if
+                                relation.phenotype.token.start_char + passage["offset"] == x.locations[0].offset][0]
                 marker_id = [x.id for x in passage['annotations'] if
                              relation.marker.token.idx + passage["offset"] == x.locations[0].offset][0]
                 significance_id = [x.id for x in passage['annotations'] if
@@ -463,7 +481,7 @@ lexicon = Ontology.get_master_lexicon()
 nlp = GCInterpreter(lexicon)
 failed_documents = []
 for pmc_id in gc_data.keys():
-    # if pmc_id != "PMC3891054":
+    # if pmc_id != "PMC5581217":
     #     continue
     pvals = []
     rsids = []

@@ -17,7 +17,7 @@ setuptools.setup(
        "python-dateutil>=2.8.1",
        "jsonschema>=3.2.0",
        "networkx>=2.5",
-       "spacy>=3.2.0",
+       "spacy>=3.2.1",
        "en_core_sci_lg @ https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.4.0/en_core_sci_lg-0.4.0.tar.gz",
        "svglib>=1.0.1",
        "reportlab>=3.5.49",
@@ -29,5 +29,5 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.8',
 )
