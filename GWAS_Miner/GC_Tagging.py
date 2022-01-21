@@ -274,9 +274,11 @@ class GCInterpreter(Interpreter):
                                   '{0}'.format(child_text)))
 
             graph = nx.Graph(edges)
-
+            phenotypes = [x for x in sent.ents if x._.has_trait]
+            phenotypes = [x for x in phenotypes if type(x) == Span]
             phenotypes = Interpreter._validate_node_entities(
-                [x for x in sent.ents if x._.has_trait], graph.nodes) if not top_phenotype else None
+                phenotypes, graph.nodes) if not top_phenotype else None
+
             markers = Interpreter._validate_node_entities(
                 [x for x in sent.ents if x.label_ == 'RSID'], graph.nodes)
             pvals = Interpreter._validate_node_entities(
@@ -294,7 +296,7 @@ class GCInterpreter(Interpreter):
                         significance = None
                         marker = None
                         phenotype = None
-                        if re.search(s, pval[0].text):
+                        if re.search(s, pval[0].text, flags=re.IGNORECASE):
                             significance = pval[1]
                             marker = next((x[1] for x in markers if x[0].text == m), None)
 
@@ -302,7 +304,7 @@ class GCInterpreter(Interpreter):
                             best_pheno = None
                             for phenotype in phenotypes:
                                 temp_distance = nx.shortest_path_length(
-                                    graph, target=phenotype[1], source=significance)
+                                    graph, target=phenotype[1] if type(phenotype[0]) == token else phenotype[1][:phenotype.index(" ")], source=significance)
                                 if not best_pheno_distance or temp_distance < best_pheno_distance:
                                     best_pheno = nx.shortest_path(
                                         graph, target=phenotype[1], source=significance)[-1]
@@ -505,8 +507,8 @@ lexicon = Ontology.get_master_lexicon()
 nlp = GCInterpreter(lexicon)
 failed_documents = []
 for pmc_id in gc_data.keys():
-    # if pmc_id != "PMC3818640":
-    #     continue
+    if pmc_id != "PMC3779070":
+        continue
     pvals = []
     rsids = []
     mesh_terms = []

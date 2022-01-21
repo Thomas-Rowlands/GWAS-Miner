@@ -304,9 +304,18 @@ class Interpreter:
         output = []
         used_indexes = []
         for item in ents:
-            for node in nodes:
-                if F"{item.text}<id{item.start_char}>" == str(node):
-                    output.append((item, F"{item}<id{item.start_char}>"))
+            token_count = len([x for x in item if type(x) == Token])
+            if token_count > 1:
+                split_item = [x.text + F"<id{x.idx}>" for x in item]
+                for node in nodes:
+                    for token in split_item:
+                        if token == str(node):
+                            output.append((item, F"{item}<id{item.start_char}>"))
+                            break
+            else:
+                for node in nodes:
+                    if F"{item.text}<id{item.start_char}>" == str(node):
+                        output.append((item, F"{item}<id{item.start_char}>"))
         return output
 
     @staticmethod
