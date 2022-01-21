@@ -297,20 +297,39 @@ class GCInterpreter(Interpreter):
                         if re.search(s, pval[0].text):
                             significance = pval[1]
                             marker = next((x[1] for x in markers if x[0].text == m), None)
-                            phenotype = next((x[1] for x in phenotypes if x[0].label_ == p), None)
+
+                            best_pheno_distance = None
+                            best_pheno = None
+                            for phenotype in phenotypes:
+                                temp_distance = nx.shortest_path_length(
+                                    graph, target=phenotype[1], source=significance)
+                                if not best_pheno_distance or temp_distance < best_pheno_distance:
+                                    best_pheno = nx.shortest_path(
+                                        graph, target=phenotype[1], source=significance)[-1]
+                                    best_pheno_distance = temp_distance
+                                else:
+                                    continue
+                            if not pval:
+                                continue
+                            if best_pheno_distance:
+                                phenotype = best_pheno
                         if significance and marker and phenotype:
                             relations.append([significance, marker, phenotype])
 
                 # Validate associations are triples
                 pheno_assocs = [x for x in relations if len(x) == 3]
                 for (rsid, pval, phenotype) in pheno_assocs:
-                    temp_marker = sent.doc[token_indexes[int(rsid[rsid.find("<id") + 3: rsid.find(">", rsid.find("<id") + 3)])]]
-                    temp_pval = sent.doc[token_indexes[int(pval[pval.find("<id") + 3: pval.find(">", pval.find("<id") + 3)])]]
-                    temp_pheno = sent.doc[token_indexes[int(phenotype[phenotype.find("<id") + 3: phenotype.find(">", phenotype.find("<id") + 3)])]]
+                    temp_marker = sent.doc[
+                        token_indexes[int(rsid[rsid.find("<id") + 3: rsid.find(">", rsid.find("<id") + 3)])]]
+                    temp_pval = sent.doc[
+                        token_indexes[int(pval[pval.find("<id") + 3: pval.find(">", pval.find("<id") + 3)])]]
+                    temp_pheno = sent.doc[token_indexes[
+                        int(phenotype[phenotype.find("<id") + 3: phenotype.find(">", phenotype.find("<id") + 3)])]]
                     result_marker = Marker(temp_marker)
                     result_significance = Significance(temp_pval)
                     result_pheno = Phenotype(temp_pheno)
-                    results.append(Association(marker=result_marker, significance=result_significance, phenotype=result_pheno))
+                    results.append(
+                        Association(marker=result_marker, significance=result_significance, phenotype=result_pheno))
             elif top_phenotype and markers and pvals:
                 for pval in pvals:
                     for s, m, p in self.gc_relations:
@@ -326,13 +345,16 @@ class GCInterpreter(Interpreter):
 
                 pheno_assocs = [x for x in relations if len(x) == 3]
                 for (rsid, pval, phenotype) in pheno_assocs:
-                    temp_marker = sent.doc[token_indexes[int(rsid[rsid.find("<id") + 3: rsid.find(">", rsid.find("<id") + 3)])]]
-                    temp_pval = sent.doc[token_indexes[int(pval[pval.find("<id") + 3: pval.find(">", pval.find("<id") + 3)])]]
+                    temp_marker = sent.doc[
+                        token_indexes[int(rsid[rsid.find("<id") + 3: rsid.find(">", rsid.find("<id") + 3)])]]
+                    temp_pval = sent.doc[
+                        token_indexes[int(pval[pval.find("<id") + 3: pval.find(">", pval.find("<id") + 3)])]]
                     temp_pheno = sent.doc[phenotype.start:phenotype.end]
                     result_marker = Marker(temp_marker)
                     result_significance = Significance(temp_pval)
                     result_pheno = Phenotype(temp_pheno)
-                    results.append(Association(marker=result_marker, significance=result_significance, phenotype=result_pheno))
+                    results.append(
+                        Association(marker=result_marker, significance=result_significance, phenotype=result_pheno))
         return results
 
 
@@ -362,17 +384,18 @@ def process_study(nlp, study):
     document_relations = []
     current_offset = 0
     results_present = False
-    top_phenotype = get_ubiquitous_phenotype(study_fulltext, nlp)
+
     for passage in study['documents'][0]['passages']:
         if passage["infons"]["section_type"].lower() == "results":
             results_present = True
             break
     for passage in study['documents'][0]['passages']:
-        if results_present and passage["infons"]["section_type"].lower() not in ["abstract", "results"]:
+        if results_present and passage["infons"]["section_type"].lower() not in ["abstract", "results", "caption", "discuss"]:
             continue
         passage_text = passage['text']
         # passage_text = re.sub(r"(?:\w)(\()", lambda x: x.group().replace("(", " ("), passage_text)
         doc = nlp.process_corpus(passage_text)
+        top_phenotype = get_ubiquitous_phenotype(passage_text, nlp)
         doc.user_data["top_phenotype"] = top_phenotype
         annotations = nlp.get_entities(doc, ["MESH", "HPO", "RSID", "PVAL"])
         used_annots = []
@@ -446,14 +469,15 @@ def process_study(nlp, study):
                 marker_node = BioC.BioCNode(refid=marker_id, role="")
                 significance_node = BioC.BioCNode(refid=significance_id, role="")
                 bioc_relation = BioC.BioCRelation(id=F"R{r}",
-                                                  infons={"type": "possible_disease_assoc", "annotator": "tr142@le.ac.uk",
+                                                  infons={"type": "possible_disease_assoc",
+                                                          "annotator": "tr142@le.ac.uk",
                                                           "updated_at": current_datetime},
                                                   nodes=[phenotype_node, marker_node, significance_node])
                 # passage['relations'].append(bioc_relation)
                 document_relations.append(bioc_relation)
                 r += 1
-    with open("top_phenotypes.txt", "a+", encoding="utf-8") as fin:
-        fin.write(F"{pmc_id}\t{top_phenotype['ID']}\t{top_phenotype['label']}\n")
+    # with open("top_phenotypes.txt", "a+", encoding="utf-8") as fin:
+    #     fin.write(F"{pmc_id}\t{top_phenotype['ID']}\t{top_phenotype['label']}\n")
     if document_relations:
         study['documents'][0]['relations'] = document_relations
     OutputConverter.output_xml(json.dumps(study, default=BioC.ComplexHandler),
@@ -481,7 +505,7 @@ lexicon = Ontology.get_master_lexicon()
 nlp = GCInterpreter(lexicon)
 failed_documents = []
 for pmc_id in gc_data.keys():
-    # if pmc_id != "PMC5581217":
+    # if pmc_id != "PMC3818640":
     #     continue
     pvals = []
     rsids = []
@@ -499,8 +523,8 @@ for pmc_id in gc_data.keys():
         pval_input_range = F"{pval_input_int - 1}{pval_input_int}{pval_input_int + 1}"
         power_digits = relation[1][relation[1].find('-') + 1:]
         pval = F"(?:[pP][- \(\)metavalueofcbind]" + "{0,13}" + F"[ =<of]*[ ]?)([{pval_input_range}][ \.0-9]*[ xX*]*10 ?- ?" \
-                                                          F"{power_digits[0] + '?' if power_digits[0] == '0' else power_digits[0]}" \
-                                                          F"{power_digits[1:] + ')' if len(power_digits) > 1 else ')'}"
+                                                               F"{power_digits[0] + '?' if power_digits[0] == '0' else power_digits[0]}" \
+                                                               F"{power_digits[1:] + ')' if len(power_digits) > 1 else ')'}"
         pvals.append(pval)
         rsids.append(F"({rsid})")
         mesh_terms.append(mesh_id)
@@ -517,5 +541,10 @@ for pmc_id in gc_data.keys():
     result = process_study(nlp, study)
     if not result['documents'][0]['relations']:
         failed_documents.append(pmc_id)
+test = ["PMC4129543", "PMC4238043", "PMC3818640 ", "PMC6697541 ", "PMC3761075", "PMC5737791", "PMC5395320",
+        "PMC4127128", "PMC4289640", "PMC4072456", "PMC4656791", "PMC3691078", "PMC3816124", "PMC4339483", "PMC4797637",
+        "PMC5851439", "PMC3775874", "PMC5867896", "PMC3891054", "PMC5118651", "PMC4333218", "PMC4333205", "PMC4126189",
+        "PMC4986826", "PMC4114519"]
+print([x for x in failed_documents if x not in test])
 print(failed_documents)
 # sys.exit()

@@ -52,6 +52,7 @@ class Interpreter:
                         patterns.append(Interpreter.get_plural_variation(synonym["name"]))
                         if "," in synonym["name"]:
                             patterns.append(Interpreter.remove_comma_variation(synonym["name"]))
+                patterns = patterns + [x.replace("-", "") for x in patterns]
                 patterns = self.__nlp.tokenizer.pipe(patterns)
                 new_matcher.add(entry.identifier, patterns, on_match=self.__on_match)
         self.__phrase_matcher = new_matcher
