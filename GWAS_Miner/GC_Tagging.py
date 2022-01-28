@@ -13,6 +13,7 @@ from spacy.tokens import Span, Token, Doc
 import Ontology
 from GWAS_Miner import BioC, OutputConverter, Experimental
 from GWAS_Miner.DataStructures import Marker, Significance, Phenotype, Association
+import TableExtractor
 from NLP import Interpreter
 import config
 
@@ -303,11 +304,22 @@ class GCInterpreter(Interpreter):
                             best_pheno_distance = None
                             best_pheno = None
                             for phenotype in phenotypes:
-                                temp_distance = nx.shortest_path_length(
-                                    graph, target=phenotype[1] if type(phenotype[0]) == token else phenotype[1][:phenotype.index(" ")], source=significance)
+                                temp_distance = None
+                                is_token = type(phenotype[0]) == Token
+                                if is_token:
+                                    temp_distance = nx.shortest_path_length(
+                                        graph, target=phenotype[1], source=significance)
+                                else:
+                                    temp_distance = nx.shortest_path_length(
+                                        graph, target=F"{phenotype[0][0].text}<id{phenotype[0][0].idx}>", source=significance)
+
                                 if not best_pheno_distance or temp_distance < best_pheno_distance:
-                                    best_pheno = nx.shortest_path(
-                                        graph, target=phenotype[1], source=significance)[-1]
+                                    if is_token:
+                                        best_pheno = nx.shortest_path(
+                                            graph, target=phenotype[1], source=significance)[-1]
+                                    else:
+                                        best_pheno = nx.shortest_path(
+                                            graph, target=F"{phenotype[0][0].text}<id{phenotype[0][0].idx}>", source=significance)[-1]
                                     best_pheno_distance = temp_distance
                                 else:
                                     continue
@@ -488,7 +500,7 @@ def process_study(nlp, study):
 
 
 # load bioc pmc ids
-bioc_pmcids = [x.replace(".json", "") for x in listdir("BioC_Studies") if isfile(join("BioC_Studies", x))]
+bioc_pmcids = [x.replace(".json", "").replace("_abbreviations", "") for x in listdir("BioC_Studies") if isfile(join("BioC_Studies", x))]
 
 # retrieve matching data.
 with open("GC_content.tsv", "r", encoding="utf-8") as f_in:
@@ -507,8 +519,8 @@ lexicon = Ontology.get_master_lexicon()
 nlp = GCInterpreter(lexicon)
 failed_documents = []
 for pmc_id in gc_data.keys():
-    if pmc_id != "PMC3779070":
-        continue
+    # if pmc_id != "PMC3779070":
+    #     continue
     pvals = []
     rsids = []
     mesh_terms = []
@@ -531,11 +543,12 @@ for pmc_id in gc_data.keys():
         rsids.append(F"({rsid})")
         mesh_terms.append(mesh_id)
         gc_relations.append([pval, rsid, mesh_id])
-    # nlp.set_ontology_terms(mesh_terms)
+    nlp.set_ontology_terms(mesh_terms)
     nlp.pval_patterns = pvals
     nlp.rsid_patterns = rsids
     nlp.gc_relations = gc_relations
     study = Experimental.load_bioc_study("BioC_Studies", F"{pmc_id}.json")
+    study_tables = TableExtractor.parse_tables(F"BioC_Studies/{pmc_id}_tables.json")
     fulltext = "\n".join([x['text'] for x in study['documents'][0]['passages']])
     altered_text = re.sub(r"(?:\w)(\()", lambda x: x.group().replace("(", " ("), fulltext)
     abbreviations = nlp.get_all_abbreviations(altered_text)
@@ -543,7 +556,7 @@ for pmc_id in gc_data.keys():
     result = process_study(nlp, study)
     if not result['documents'][0]['relations']:
         failed_documents.append(pmc_id)
-test = ["PMC4129543", "PMC4238043", "PMC3818640 ", "PMC6697541 ", "PMC3761075", "PMC5737791", "PMC5395320",
+test = ["PMC4129543", "PMC4238043", "PMC3818640", "PMC6697541", "PMC3761075", "PMC5737791", "PMC5395320",
         "PMC4127128", "PMC4289640", "PMC4072456", "PMC4656791", "PMC3691078", "PMC3816124", "PMC4339483", "PMC4797637",
         "PMC5851439", "PMC3775874", "PMC5867896", "PMC3891054", "PMC5118651", "PMC4333218", "PMC4333205", "PMC4126189",
         "PMC4986826", "PMC4114519"]

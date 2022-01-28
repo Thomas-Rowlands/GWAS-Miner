@@ -17,7 +17,7 @@ def validate_json_maintext(json_data):
 
 def load_bioc_study(directory, file_name):
     bioc_study = None
-    with open(F"{directory}/{file_name}", "r") as fin:
+    with open(F"{directory}/{file_name}", "r", encoding="utf-8") as fin:
         bioc_study = json.load(fin)
     return bioc_study
 
