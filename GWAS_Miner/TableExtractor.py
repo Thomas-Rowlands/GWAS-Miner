@@ -39,6 +39,8 @@ def parse_tables(file_input):
                         for cell in row:
                             data_cell = TableCell(cell['cell_id'], str(cell['cell_text']))
                             data_row.append(data_cell)
+                        if len(data_row) != len(columns):
+                            print(F"{file_input} contains potentially problematic cell counts!")
                         rows.append(data_row)
 
             table = Table(title, table_id, title_offset, content_offset, columns,

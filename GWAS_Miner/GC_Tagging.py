@@ -311,7 +311,8 @@ class GCInterpreter(Interpreter):
                                         graph, target=phenotype[1], source=significance)
                                 else:
                                     temp_distance = nx.shortest_path_length(
-                                        graph, target=F"{phenotype[0][0].text}<id{phenotype[0][0].idx}>", source=significance)
+                                        graph, target=F"{phenotype[0][0].text}<id{phenotype[0][0].idx}>",
+                                        source=significance)
 
                                 if not best_pheno_distance or temp_distance < best_pheno_distance:
                                     if is_token:
@@ -319,7 +320,8 @@ class GCInterpreter(Interpreter):
                                             graph, target=phenotype[1], source=significance)[-1]
                                     else:
                                         best_pheno = nx.shortest_path(
-                                            graph, target=F"{phenotype[0][0].text}<id{phenotype[0][0].idx}>", source=significance)[-1]
+                                            graph, target=F"{phenotype[0][0].text}<id{phenotype[0][0].idx}>",
+                                            source=significance)[-1]
                                     best_pheno_distance = temp_distance
                                 else:
                                     continue
@@ -388,6 +390,14 @@ def get_ubiquitous_phenotype(fulltext, nlp):
     return top_phenotype
 
 
+def process_tables(nlp, tables):
+    for table in tables:
+        caption_phenos = [x for x in nlp.process_corpus(table.caption_text).ents if x._.is_trait or x._.has_trait]
+        footer_phenos = [x for x in nlp.process_corpus(table.footer_text).ents if x._.is_trait or x._.has_trait]
+        phenotype_cols = [nlp.process_corpus(x.text) for x in table.column_cells]
+        print("test")
+
+
 def process_study(nlp, study):
     if not study:
         return False
@@ -404,7 +414,8 @@ def process_study(nlp, study):
             results_present = True
             break
     for passage in study['documents'][0]['passages']:
-        if results_present and passage["infons"]["section_type"].lower() not in ["abstract", "results", "caption", "discuss"]:
+        if results_present and passage["infons"]["section_type"].lower() not in ["abstract", "results", "caption",
+                                                                                 "discuss"]:
             continue
         passage_text = passage['text']
         # passage_text = re.sub(r"(?:\w)(\()", lambda x: x.group().replace("(", " ("), passage_text)
@@ -500,7 +511,8 @@ def process_study(nlp, study):
 
 
 # load bioc pmc ids
-bioc_pmcids = [x.replace(".json", "").replace("_abbreviations", "") for x in listdir("BioC_Studies") if isfile(join("BioC_Studies", x))]
+bioc_pmcids = [x.replace(".json", "").replace("_abbreviations", "") for x in listdir("BioC_Studies") if
+               isfile(join("BioC_Studies", x))]
 
 # retrieve matching data.
 with open("GC_content.tsv", "r", encoding="utf-8") as f_in:
@@ -554,6 +566,7 @@ for pmc_id in gc_data.keys():
     abbreviations = nlp.get_all_abbreviations(altered_text)
     nlp.set_abbreviations(abbreviations)
     result = process_study(nlp, study)
+    table_results = process_tables(nlp, study_tables)
     if not result['documents'][0]['relations']:
         failed_documents.append(pmc_id)
 test = ["PMC4129543", "PMC4238043", "PMC3818640", "PMC6697541", "PMC3761075", "PMC5737791", "PMC5395320",
