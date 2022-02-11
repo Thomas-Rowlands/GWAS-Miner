@@ -1,3 +1,4 @@
+import itertools
 import logging
 import re
 from datetime import datetime
@@ -7,7 +8,7 @@ from spacy.pipeline import merge_entities
 import config
 import networkx as nx
 import spacy
-from DataStructures import Marker, Phenotype, Significance, Association
+from DataStructures import Marker, Phenotype, Significance, Association, LexiconEntry
 from spacy import displacy
 from spacy.matcher import Matcher, PhraseMatcher, DependencyMatcher
 from spacy.tokens import Span, Token, Doc
@@ -16,11 +17,11 @@ from spacy.tokens import Span, Token, Doc
 class Interpreter:
     def __init__(self, lexicon, ontology_only=False):
         self.lexicon = lexicon
-        self.__nlp = spacy.load("en_core_sci_lg", disable=["ner"])
-        self.__nlp.add_pipe("merge_noun_chunks")
+        self.nlp = spacy.load("en_core_sci_lg", disable=["ner"])
+        self.nlp.add_pipe("merge_noun_chunks")
         self.__failed_matches = []
-        self.__nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
-        self.__rsid_regex = {"LOWER": {"REGEX": "((?:[(]?)(rs[0-9]{1,}){1,})"}}#"(?:rs[0-9]{1,}){1}"}}
+        self.nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
+        self.__rsid_regex = {"LOWER": {"REGEX": "((?:[(]?)(rs[0-9]{1,}){1,})"}}  # "(?:rs[0-9]{1,}){1}"}}
         self.__marker_regex = {"TEXT": {"REGEX": r"([ATCG]{1}[a-z]{1,}[0-9]{1,}[ATCG]{1}[a-z]{1,})"}}
         self.__gene_seq_regex = {"TEXT": {"REGEX": "([ ][ACTG]{3,}[ ])"}}
         self.__basic_matcher = None
@@ -32,28 +33,17 @@ class Interpreter:
             self.__add_matchers(lexicon)
 
     def __add_matchers(self, lexicon):
-        self.__basic_matcher = Matcher(self.__nlp.vocab)
+        self.__basic_matcher = Matcher(self.nlp.vocab)
         self.__basic_matcher.add('RSID', [[self.__rsid_regex]], on_match=self.__on_match)
         # self.__basic_matcher.add('marker', [[self.__marker_regex]], on_match=self.__on_match)
 
-        new_matcher = PhraseMatcher(self.__nlp.vocab, attr="LOWER")
+        new_matcher = PhraseMatcher(self.nlp.vocab, attr="LOWER")
         for lexicon in lexicon.get_ordered_lexicons():
             if lexicon.name == "HPO":
                 continue
             for entry in lexicon.get_entries():
-                patterns = [entry.name()]
-                if len(entry.name()) > 4:
-                    patterns.append(Interpreter.get_plural_variation(entry.name()))
-                if "," in entry.name():
-                    patterns.append(Interpreter.remove_comma_variation(entry.name()))
-                for synonym in entry.synonyms():
-                    if synonym["name"] not in patterns:
-                        patterns.append(synonym["name"])
-                        patterns.append(Interpreter.get_plural_variation(synonym["name"]))
-                        if "," in synonym["name"]:
-                            patterns.append(Interpreter.remove_comma_variation(synonym["name"]))
-                patterns = patterns + [x.replace("-", "") for x in patterns]
-                patterns = self.__nlp.tokenizer.pipe(patterns)
+                patterns = Interpreter.get_term_variations(entry)
+                patterns = self.nlp.tokenizer.pipe(patterns)
                 new_matcher.add(entry.identifier, patterns, on_match=self.__on_match)
         self.__phrase_matcher = new_matcher
         # Declare custom extension properties
@@ -64,7 +54,7 @@ class Interpreter:
         Doc.set_extension("has_ontology_term", getter=self.has_ontology_getter)
         Doc.set_extension("has_trait", getter=self.has_trait_getter)
 
-        # # Add matcher patterns for parsing hyphenated and compound words.
+        # Add matcher patterns for parsing hyphenated and compound words.
         # hyphenated_pattern = [{'POS': 'PROPN'}, {
         #     'IS_PUNCT': True, 'LOWER': '-'}, {'POS': 'VERB'}]
         # compound_pattern = [{'POS': 'NOUN', 'DEP': 'compound'}, {
@@ -76,17 +66,46 @@ class Interpreter:
         disease_assoc_pattern = [
 
         ]
-        # self.__dep_matcher = DependencyMatcher(self.__nlp.vocab)
+        # self.__dep_matcher = DependencyMatcher(self.nlp.vocab)
         # self.__dep_matcher.add("Disease Association", [disease_assoc_pattern])
         # for entry in lexicon.keys():
-        #     new_matcher = PhraseMatcher(self.__nlp.vocab, attr="LOWER")
+        #     new_matcher = PhraseMatcher(self.nlp.vocab, attr="LOWER")
         #     sub_list = sorted(lexicon[entry].keys(), reverse=True)
         #     for sub_entry in sub_list:
-        #         patterns = list(self.__nlp.tokenizer.pipe(
+        #         patterns = list(self.nlp.tokenizer.pipe(
         #             lexicon[entry][sub_entry])
         #         )
         #         new_matcher.add(entry, self.__on_match, *patterns)
         #     self.__phrase_matchers.append(new_matcher)
+
+    @staticmethod
+    def get_term_variations(term: LexiconEntry):
+        """
+        Calculate every plausible variation of the input term, including synonyms.
+        :param term: LexiconEntry object containing the desired term.
+        :return: List of string variations.
+        """
+        patterns = [term.name()]
+        if term.synonyms():
+            for syn in term.synonyms():
+                patterns.append(syn['name'])
+        funcs = [Interpreter.remove_comma_variation, Interpreter.get_hyphenated_variations,
+                 Interpreter.get_roman_numeral_variation]
+        new_patterns = []
+        combos = [itertools.combinations(funcs, 1), itertools.combinations(funcs, 2),
+                  itertools.combinations(funcs, 3)]
+        combos = [x for y in combos for x in y]
+        for pattern in patterns:
+            for combo in combos:
+                for func in combo:
+                    new_variant = func(pattern)
+                    if new_variant and new_variant not in new_patterns:
+                        if type(new_variant) == list:
+                            new_patterns += new_variant
+                        else:
+                            new_patterns.append(new_variant)
+        new_patterns = list(set(patterns + new_patterns))
+        return new_patterns
 
     @staticmethod
     def get_plural_variation(term: str):
@@ -94,6 +113,57 @@ class Interpreter:
             return term[:-1]
         else:
             return term + "s"
+
+    @staticmethod
+    def get_hyphenated_variations(term: str):
+        output = []
+        # Remove hyphens.
+        if "-" in term:
+            output.append(term.replace("-", " "))
+        # Add each variation of hyphenations.
+        if " " in term:
+            location = term.find(" ")
+            for i in range(term.count(" ")):
+                hyphenated = term[:location] + "-" + term[location + 1:]
+                output.append(hyphenated)
+                location = term.find(" ", location + 1)
+                # no further spaces found.
+                if location == -1:
+                    break
+        return output
+
+    @staticmethod
+    def get_roman_numeral_variation(term: str):
+        search_result = re.search(r"(\d+)", term)
+        result = None
+        replacement = ''
+        if search_result:
+            num = search_result.group(0)
+            replacement = num
+            # Adapted from solution found here
+            # https://www.w3resource.com/python-exercises/class-exercises/python-class-exercise-1.php
+            val = [
+                1000, 900, 500, 400,
+                100, 90, 50, 40,
+                10, 9, 5, 4,
+                1
+            ]
+            syb = [
+                "M", "CM", "D", "CD",
+                "C", "XC", "L", "XL",
+                "X", "IX", "V", "IV",
+                "I"
+            ]
+            roman_num = ''
+            i = 0
+            num = int(num)
+            while num > 0:
+                for _ in range(num // val[i]):
+                    roman_num += syb[i]
+                    num -= val[i]
+                i += 1
+            result = term.replace(replacement, roman_num)
+        return result
 
     @staticmethod
     def remove_comma_variation(term: str):
@@ -109,7 +179,7 @@ class Interpreter:
         self.__basic_matcher.add(label, self.__on_match, rule)
 
     # def add_study_specific_abbreviations(self, abbrevs):
-    #     self.__nlp
+    #     self.nlp
 
     def ontology_getter(self, token):
         if token.ent_type_:
@@ -129,6 +199,8 @@ class Interpreter:
             return False
 
     def is_trait_getter(self, token):
+        if type(token) != Token:
+            return False
         if token.ent_type_:
             if "HP:" in token.ent_type_ or token.ent_type_[0] == "D":
                 return True
@@ -138,6 +210,8 @@ class Interpreter:
             return False
 
     def has_trait_getter(self, obj):
+        if type(obj) != Span:
+            return False
         if any(["HP:" in token.ent_type_ or token.ent_type_[0] == "D" for token in obj if token.ent_type_]):
             return True
         else:
@@ -153,7 +227,7 @@ class Interpreter:
         """
         match_id, start, end = matches[i]
         entity = Span(doc, start, end,
-                      label=self.__nlp.vocab.strings[match_id])
+                      label=self.nlp.vocab.strings[match_id])
         # if entity.label_ in ["RSID", "PVAL"]:
         #     entity.set_extension("is_trait", default=False, force=True)
         #     entity.set_extension("ontology", default=None, force=True)
@@ -209,7 +283,7 @@ class Interpreter:
         # for parser in parsers:
         #     corpus = parser(corpus)
 
-        doc = self.__nlp(corpus)
+        doc = self.nlp(corpus)
 
         old_ents, doc.ents = doc.ents, []
 
@@ -228,7 +302,6 @@ class Interpreter:
 
         self.__basic_matcher(doc)
         self.__phrase_matcher(doc)
-
 
         # Ensure that rule-matched entities override data model entities when needed.
         if not ontology_only:
@@ -394,7 +467,7 @@ class Interpreter:
             result.append({
                 "entity_type": ent.label_,
                 "id": ent.label_[ent.label_.index(":") + 2:] if ":" in ent.label_ else ent.label_,
-                "text": ent.text, #self.trim_brackets(ent.text),
+                "text": ent.text,  # self.trim_brackets(ent.text),
                 "offset": ent.start_char,
                 "length": ent.end_char - ent.start_char
             })
@@ -511,14 +584,18 @@ class Interpreter:
                 # Validate associations are triples
                 pheno_assocs = [x for x in pheno_assocs if len(x) == 3]
                 for (rsid, pval, phenotype) in pheno_assocs:
-                    temp_marker = sent.doc[token_indexes[int(rsid[rsid.find("<id") + 3: rsid.find(">", rsid.find("<id") + 3)])]]
-                    temp_pval = sent.doc[token_indexes[int(pval[pval.find("<id") + 3: pval.find(">", pval.find("<id") + 3)])]]
-                    temp_pheno = sent.doc[token_indexes[int(phenotype[phenotype.find("<id") + 3: phenotype.find(">", phenotype.find("<id") + 3)])]]
+                    temp_marker = sent.doc[
+                        token_indexes[int(rsid[rsid.find("<id") + 3: rsid.find(">", rsid.find("<id") + 3)])]]
+                    temp_pval = sent.doc[
+                        token_indexes[int(pval[pval.find("<id") + 3: pval.find(">", pval.find("<id") + 3)])]]
+                    temp_pheno = sent.doc[token_indexes[
+                        int(phenotype[phenotype.find("<id") + 3: phenotype.find(">", phenotype.find("<id") + 3)])]]
                     result_marker = Marker(temp_marker)
                     result_significance = Significance(temp_pval)
                     result_pheno = Phenotype(temp_pheno)
 
-                    results.append(Association(marker=result_marker, significance=result_significance, phenotype=result_pheno))
+                    results.append(
+                        Association(marker=result_marker, significance=result_significance, phenotype=result_pheno))
             else:
                 # Validate associations are doubles
                 pheno_assocs = [x for x in pheno_assocs if len(x) == 2]
@@ -675,10 +752,10 @@ class Interpreter:
     def get_phenotype_stats(doc, master_lexicon):
         results = {}
         for ent in doc.ents:
-            if ent._.has_trait: #in ["MESH", "HPO"]:
+            if ent._.has_trait:  # in ["MESH", "HPO"]:
                 entry = master_lexicon.get_lexicon_entry(lexicon_name="MESH", ident=ent.label_)
                 # if not entry:
-                    # print(ent)
+                # print(ent)
                 if entry.name() in results:
                     results[entry.name()]["Count"] += 1
                 else:
@@ -719,8 +796,6 @@ class Interpreter:
         for group in match.groups():
             result.append(group)
         return " ".join(result)
-
-
 
     @staticmethod
     def __check_single_word_abbrev(fulltext, token):

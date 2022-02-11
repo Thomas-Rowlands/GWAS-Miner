@@ -166,7 +166,7 @@ class MainForm:
         """
         Display the next dependency visualisation.
         """
-        if self.dependency_index < len(self.dependency_svgs):
+        if self.dependency_index < len(self.dependency_svgs) - 1:
             self.dependency_index += 1
             self.render_dependency_svg(self.dependency_index)
 
@@ -380,7 +380,7 @@ class MainForm:
             self.form.dependency_scrollarea.verticalScrollBar().maximum())
 
     def update_dependency_index_text(self):
-        self.form.dependency_index_label.setText(F"{self.dependency_index + 1} of {len(self.dependency_svgs) + 1}")
+        self.form.dependency_index_label.setText(F"{self.dependency_index + 1} of {len(self.dependency_svgs)}")
 
     def reformat_html(self, html):
         result = html.replace("line-height: 2.5;", "line-height: 1.15;").replace("-apple-system", "calibri")

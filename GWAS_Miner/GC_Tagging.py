@@ -1,3 +1,4 @@
+import itertools
 import json
 import re
 import sys
@@ -12,7 +13,7 @@ from spacy.tokens import Span, Token, Doc
 
 import Ontology
 from GWAS_Miner import BioC, OutputConverter, Experimental
-from GWAS_Miner.DataStructures import Marker, Significance, Phenotype, Association
+from GWAS_Miner.DataStructures import Marker, Significance, Phenotype, Association, LexiconEntry
 import TableExtractor
 from NLP import Interpreter
 import config
@@ -25,22 +26,22 @@ class GCInterpreter(Interpreter):
 
     def __init__(self, lexicon, ontology_only=False):
         self.lexicon = lexicon
-        self.__nlp = spacy.load("en_core_sci_lg", disable=["ner"])
+        self.nlp = spacy.load("en_core_sci_lg", disable=["ner"])
         self.__failed_matches = []
-        # self.__nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
-        infixes = self.__nlp.Defaults.infixes + [r'(?!\w)(\()']
+        # self.nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
+        infixes = self.nlp.Defaults.infixes + [r'(?!\w)(\()']
         infix_regex = spacy.util.compile_infix_regex(infixes)
-        self.__nlp.tokenizer.infix_finditer = infix_regex.finditer
+        self.nlp.tokenizer.infix_finditer = infix_regex.finditer
         self.__basic_matcher = None
         self.__phrase_matcher = None
-        self.__abbreviation_matcher = PhraseMatcher(self.__nlp.vocab)
+        self.__abbreviation_matcher = PhraseMatcher(self.nlp.vocab)
         self.__entity_labels = ["MESH", "HPO", "PVAL"]
         self.pval_patterns = []
         self.rsid_patterns = []
         self.abbrev_pattens = []
         self.gc_relations = []
         self.association_patterns = config.pheno_assoc_patterns
-        self.__dep_matcher = DependencyMatcher(self.__nlp.vocab, validate=True)
+        self.__dep_matcher = DependencyMatcher(self.nlp.vocab, validate=True)
         self.__add_semgrex()
         if not ontology_only:
             self.__add_matchers(lexicon)
@@ -50,7 +51,7 @@ class GCInterpreter(Interpreter):
 
     def __on_dep_match(self, matcher, doc, id, matches):
         for match_id, token_ids in matches:
-            pattern_name = self.__nlp.vocab[match_id].text
+            pattern_name = self.nlp.vocab[match_id].text
             entities = [doc[x].text for x in token_ids]
             if entities not in doc.user_data["relations"]["PHENO_ASSOC"]:
                 print(F"{pattern_name}: {' | '.join(entities)}")
@@ -66,65 +67,51 @@ class GCInterpreter(Interpreter):
         self.abbrev_pattens = result
 
     def set_ontology_terms(self, term_ids):
-        new_matcher = PhraseMatcher(self.__nlp.vocab, attr="LOWER")
+        term_ids = list(set(term_ids))
+        new_matcher = PhraseMatcher(self.nlp.vocab, attr="LOWER")
         for lexicon in self.lexicon.get_ordered_lexicons():
             if lexicon.name == "HPO":
                 continue
             for term_id in term_ids:
                 entry = lexicon.get_entry_by_id(term_id)
-                patterns = [entry.name()]
-                if len(entry.name()) > 4:
-                    patterns.append(Interpreter.get_plural_variation(entry.name()))
-                if "," in entry.name():
-                    patterns.append(Interpreter.remove_comma_variation(entry.name()))
-                for synonym in entry.synonyms():
-                    if synonym["name"] not in patterns:
-                        patterns.append(synonym["name"])
-                        patterns.append(Interpreter.get_plural_variation(synonym["name"]))
-                        if "," in synonym["name"]:
-                            patterns.append(Interpreter.remove_comma_variation(synonym["name"]))
-                patterns = self.__nlp.tokenizer.pipe(patterns)
+                if not entry:
+                    print(term_id)
+                    continue
+                patterns = Interpreter.get_term_variations(entry)
+                patterns = self.nlp.tokenizer.pipe(patterns)
                 new_matcher.add(entry.identifier, patterns, on_match=self.__on_match)
         self.__phrase_matcher = new_matcher
 
     def __add_matchers(self, lexicon):
-        self.__basic_matcher = Matcher(self.__nlp.vocab)
+        self.__basic_matcher = Matcher(self.nlp.vocab)
         # self.__basic_matcher.add('marker', [[self.__marker_regex]], on_match=self.__on_match)
 
-        new_matcher = PhraseMatcher(self.__nlp.vocab, attr="LOWER")
+        new_matcher = PhraseMatcher(self.nlp.vocab, attr="LOWER")
         for lexicon in lexicon.get_ordered_lexicons():
             if lexicon.name == "HPO":
                 continue
             for entry in lexicon.get_entries():
-                patterns = [entry.name()]
-                if len(entry.name()) > 4:
-                    patterns.append(Interpreter.get_plural_variation(entry.name()))
-                if "," in entry.name():
-                    patterns.append(Interpreter.remove_comma_variation(entry.name()))
-                for synonym in entry.synonyms():
-                    if synonym["name"] not in patterns:
-                        patterns.append(synonym["name"])
-                        if synonym["name"].upper() != synonym["name"]:
-                            patterns.append(Interpreter.get_plural_variation(synonym["name"]))
-                        if "," in synonym["name"]:
-                            patterns.append(Interpreter.remove_comma_variation(synonym["name"]))
-                patterns = self.__nlp.tokenizer.pipe(patterns)
+                patterns = Interpreter.get_term_variations(entry)
+                patterns = self.nlp.tokenizer.pipe(patterns)
                 new_matcher.add(entry.identifier, patterns, on_match=self.__on_match)
         self.__phrase_matcher = new_matcher
         # Assign extension getters
         Token.set_extension("matches_ontology", getter=self.ontology_getter)
         Token.set_extension("is_trait", getter=self.is_trait_getter)
+        Token.set_extension("has_trait", getter=self.has_trait_getter)
         Span.set_extension("has_ontology_term", getter=self.has_ontology_getter)
         Span.set_extension("has_trait", getter=self.has_trait_getter)
+        Span.set_extension("is_trait", getter=self.is_trait_getter)
         Doc.set_extension("has_ontology_term", getter=self.has_ontology_getter)
         Doc.set_extension("has_trait", getter=self.has_trait_getter)
+        Doc.set_extension("is_trait", getter=self.is_trait_getter)
         # Add matcher patterns for parsing hyphenated and compound words.
-        hyphenated_pattern = [{'POS': 'PROPN'}, {
-            'IS_PUNCT': True, 'LOWER': '-'}, {'POS': 'VERB'}]
-        compound_pattern = [{'POS': 'NOUN', 'DEP': 'compound'}, {
-            'POS': 'NOUN', 'DEP': 'compound'}, {'POS': 'NOUN'}]
-        self.__basic_matcher.add(
-            "JOIN", [hyphenated_pattern, compound_pattern])
+        # hyphenated_pattern = [{'POS': 'PROPN'}, {
+        #     'IS_PUNCT': True, 'LOWER': '-'}, {'POS': 'VERB'}]
+        # compound_pattern = [{'POS': 'NOUN', 'DEP': 'compound'}, {
+        #     'POS': 'NOUN', 'DEP': 'compound'}, {'POS': 'NOUN'}]
+        # self.__basic_matcher.add(
+        #     "JOIN", [hyphenated_pattern, compound_pattern])
 
     def process_corpus(self, corpus):
         """[Applies tokenization, entity recognition and dependency parsing to the supplied corpus.]
@@ -141,7 +128,7 @@ class GCInterpreter(Interpreter):
         # for parser in parsers:
         #     corpus = parser(corpus)
 
-        doc = self.__nlp(corpus)
+        doc = self.nlp(corpus)
         doc.user_data["relations"] = {"PHENO_ASSOC": []}
 
         old_ents, doc.ents = doc.ents, []
@@ -182,7 +169,7 @@ class GCInterpreter(Interpreter):
         """
         match_id, start, end = matches[i]
         entity = Span(doc, start, end,
-                      label=self.__nlp.vocab.strings[match_id])
+                      label=self.nlp.vocab.strings[match_id])
         # if entity.label_ in ["RSID", "PVAL"]:
         #     entity.set_extension("is_trait", default=False, force=True)
         #     entity.set_extension("ontology", default=None, force=True)
@@ -390,12 +377,26 @@ def get_ubiquitous_phenotype(fulltext, nlp):
     return top_phenotype
 
 
-def process_tables(nlp, tables):
-    for table in tables:
-        caption_phenos = [x for x in nlp.process_corpus(table.caption_text).ents if x._.is_trait or x._.has_trait]
-        footer_phenos = [x for x in nlp.process_corpus(table.footer_text).ents if x._.is_trait or x._.has_trait]
-        phenotype_cols = [nlp.process_corpus(x.text) for x in table.column_cells]
-        print("test")
+def get_phenotype_columns(column_cells):
+    phenotype_columns = []
+    for i in range(len(column_cells)):
+        if column_cells[i].text:
+            col_doc = nlp.process_corpus(column_cells[i].text)
+            for ent in col_doc.ents:
+                if ent._.is_trait:
+                    phenotype_columns.append(i)
+                    break
+
+    return phenotype_columns
+
+
+def get_study_abbreviations(file_input):
+    abbrevs = None
+    with open(file_input, "r", encoding="utf-8") as fin:
+        abbrevs = json.load(fin)
+    if abbrevs:
+        abbrevs = [[x['text_short'], x['text_long_1']] for x in abbrevs['documents'][0]['passages']]
+    return abbrevs
 
 
 def process_study(nlp, study):
@@ -414,8 +415,8 @@ def process_study(nlp, study):
             results_present = True
             break
     for passage in study['documents'][0]['passages']:
-        if results_present and passage["infons"]["section_type"].lower() not in ["abstract", "results", "caption",
-                                                                                 "discuss"]:
+        if results_present and passage["infons"]["section_type"].lower() not in ["abstract", "results",
+                                                                                 "caption"]:  # footnotes need to be excluded.
             continue
         passage_text = passage['text']
         # passage_text = re.sub(r"(?:\w)(\()", lambda x: x.group().replace("(", " ("), passage_text)
@@ -555,18 +556,21 @@ for pmc_id in gc_data.keys():
         rsids.append(F"({rsid})")
         mesh_terms.append(mesh_id)
         gc_relations.append([pval, rsid, mesh_id])
-    nlp.set_ontology_terms(mesh_terms)
+    nlp.set_ontology_terms([x for x in mesh_terms if x])
     nlp.pval_patterns = pvals
     nlp.rsid_patterns = rsids
     nlp.gc_relations = gc_relations
     study = Experimental.load_bioc_study("BioC_Studies", F"{pmc_id}.json")
-    study_tables = TableExtractor.parse_tables(F"BioC_Studies/{pmc_id}_tables.json")
     fulltext = "\n".join([x['text'] for x in study['documents'][0]['passages']])
     altered_text = re.sub(r"(?:\w)(\()", lambda x: x.group().replace("(", " ("), fulltext)
     abbreviations = nlp.get_all_abbreviations(altered_text)
+    file_abbrevs = get_study_abbreviations(F"BioC_Studies/{pmc_id}_abbreviations.json")
+    if file_abbrevs:
+        abbreviations += file_abbrevs
     nlp.set_abbreviations(abbreviations)
     result = process_study(nlp, study)
-    table_results = process_tables(nlp, study_tables)
+    study_tables = TableExtractor.parse_tables(F"BioC_Studies/{pmc_id}_tables.json", nlp)
+    TableExtractor.output_tables(F"output/{pmc_id}_tables.json", study_tables)
     if not result['documents'][0]['relations']:
         failed_documents.append(pmc_id)
 test = ["PMC4129543", "PMC4238043", "PMC3818640", "PMC6697541", "PMC3761075", "PMC5737791", "PMC5395320",
