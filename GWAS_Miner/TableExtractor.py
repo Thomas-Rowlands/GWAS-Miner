@@ -41,7 +41,7 @@ def parse_tables(file_input, nlp):
             footer_offset = None
             doc['annotations'] = []
             for passage in doc['passages']:
-                if passage['infons']['section_title_1'] == 'table_title':
+                if passage['infons']['section_title_1'] == 'table_title': # TODO: Could be more titles, specify in annotations which one.
                     title = passage['text']
                     title_offset = passage['offset']
                 elif passage['infons']['section_title_1'] == 'table_caption':

@@ -92,7 +92,7 @@ class Interpreter:
             for syn in term.synonyms():
                 patterns.append(syn['name'])
         funcs = [Interpreter.remove_comma_variation, Interpreter.get_hyphenated_variations,
-                 Interpreter.get_roman_numeral_variation]
+                 Interpreter.get_roman_numeral_variation] # TODO: plurals + reverse the roman numerals too!
         new_patterns = []
         combos = [itertools.combinations(funcs, 1), itertools.combinations(funcs, 2),
                   itertools.combinations(funcs, 3)]

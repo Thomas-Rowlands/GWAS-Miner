@@ -9,7 +9,7 @@ def get_bioc_annotations(doc, used_annots, offset, t, m, p, r, table_elem_id=Non
         annotations.append({
             "entity_type": ent.label_,
             "id": ent.label_[ent.label_.index(":") + 2:] if ":" in ent.label_ else ent.label_,
-            "text": ent.text,  # self.trim_brackets(ent.text),
+            "text": ent.text,
             "offset": ent.start_char,
             "length": ent.end_char - ent.start_char,
             "table_element_id": table_elem_id,
