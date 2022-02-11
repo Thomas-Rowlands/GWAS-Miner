@@ -55,10 +55,12 @@ class Interpreter:
         Doc.set_extension("has_trait", getter=self.has_trait_getter)
 
         # Add matcher patterns for parsing hyphenated and compound words.
-        # hyphenated_pattern = [{'POS': 'PROPN'}, {
-        #     'IS_PUNCT': True, 'LOWER': '-'}, {'POS': 'VERB'}]
+        # hyphenated_pattern = [{'POS': 'NOUN'}, {'POS': 'PROPN'},
+        #    {'IS_PUNCT': True, 'LOWER': '-'},
+        #    {'POS': 'NOUN'}]
         # compound_pattern = [{'POS': 'NOUN', 'DEP': 'compound'}, {
         #     'POS': 'NOUN', 'DEP': 'compound'}, {'POS': 'NOUN'}]
+        # self.__basic_matcher.add("HYPHENATED", [hyphenated_pattern])
         # self.__basic_matcher.add(
         #     "JOIN", [hyphenated_pattern, compound_pattern])
 

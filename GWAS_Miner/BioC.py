@@ -6,27 +6,18 @@ def get_bioc_annotations(doc, used_annots, offset, t, m, p, r, table_elem_id=Non
     annotations = []
     output_annotations = []
     for ent in doc.ents:
-        if table_elem_id:
-            annotations.append({
-                "entity_type": ent.label_,
-                "id": ent.label_[ent.label_.index(":") + 2:] if ":" in ent.label_ else ent.label_,
-                "text": ent.text,  # self.trim_brackets(ent.text),
-                "offset": ent.start_char,
-                "length": ent.end_char - ent.start_char,
-                "table_element_id": table_elem_id,
-                "table_cell_id": table_cell_id
-            })
-        else:
-            annotations.append({
-                "entity_type": ent.label_,
-                "id": ent.label_[ent.label_.index(":") + 2:] if ":" in ent.label_ else ent.label_,
-                "text": ent.text,  # self.trim_brackets(ent.text),
-                "offset": ent.start_char,
-                "length": ent.end_char - ent.start_char
-            })
+        annotations.append({
+            "entity_type": ent.label_,
+            "id": ent.label_[ent.label_.index(":") + 2:] if ":" in ent.label_ else ent.label_,
+            "text": ent.text,  # self.trim_brackets(ent.text),
+            "offset": ent.start_char,
+            "length": ent.end_char - ent.start_char,
+            "table_element_id": table_elem_id,
+            "table_cell_id": table_cell_id
+        })
     if annotations:
         for annot in annotations:
-            loc = BioCLocation(offset=annot["offset"] + offset, length=annot["length"])
+            loc = BioCLocation(offset=annot["offset"] + offset, length=annot["length"], table_element=annot['table_element_id'], table_cell_id=annot['table_cell_id'])
             if annot["text"] in used_annots:
                 for old_annot in output_annotations:
                     if old_annot.text == annot["text"] and loc not in old_annot.locations:
@@ -86,10 +77,14 @@ class BioCRelation:
 class BioCLocation:
     offset = None
     length = None
+    table_element = None
+    table_cell_id = None
 
-    def __init__(self, offset=None, length=None):
+    def __init__(self, offset=None, length=None, table_element=None, table_cell_id=None):
         self.offset = offset
         self.length = length
+        self.table_element = table_element
+        self.table_cell_id = table_cell_id
 
     def jsonable(self):
         return self.__dict__

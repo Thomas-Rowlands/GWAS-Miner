@@ -126,17 +126,17 @@ class Table:
         cells_iter = [(self.column_cells, self.content_offset, "table_content"),(self.data_cells, self.content_offset, "table_content")]
         annots, used_annots = [], []
         for (doc, offset, elem) in docs_iter:
-            if doc:
+            if doc and doc.ents:
                 annots, used_annots, t, m, p, r = BioC.get_bioc_annotations(doc, used_annots, offset, t, m, p, r, elem)
         for (rows, offset, elem) in cells_iter:
             for row in rows:
                 if type(row) == TableCell:
-                    if row.doc:
+                    if row.doc and row.doc.ents:
                         annots, used_annots, t, m, p, r = BioC.get_bioc_annotations(row.doc, used_annots, offset, t, m,
                                                                                     p, r, elem, row.id)
                 else:
                     for cell in row:
-                        if cell.doc:
+                        if cell.doc and cell.doc.ents:
                             annots, used_annots, t, m, p, r = BioC.get_bioc_annotations(cell.doc, used_annots, offset,
                                                                                         t, m, p, r, elem, cell.id)
         self.annotations = annots

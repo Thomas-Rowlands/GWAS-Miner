@@ -226,7 +226,8 @@ class MainForm:
         self.form.study_file_tablewidget.setRowCount(0)
         if self.validate_directory(path):
             self.form.file_select_all_checkbox.setChecked(True)
-            for file in os.listdir(self.form.study_directory_input.text()):
+            files = sorted([x for x in os.listdir(self.form.study_directory_input.text()) if x.endswith(".json")])
+            for file in files:
                 if file.endswith(".json"):
                     # Add analysis button for the study.
                     analyse_btn = QPushButton()

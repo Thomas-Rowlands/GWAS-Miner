@@ -532,7 +532,7 @@ lexicon = Ontology.get_master_lexicon()
 nlp = GCInterpreter(lexicon)
 failed_documents = []
 for pmc_id in gc_data.keys():
-    # if pmc_id != "PMC3779070":
+    # if pmc_id != "PMC4339483":
     #     continue
     pvals = []
     rsids = []
@@ -570,7 +570,8 @@ for pmc_id in gc_data.keys():
     nlp.set_abbreviations(abbreviations)
     result = process_study(nlp, study)
     study_tables = TableExtractor.parse_tables(F"BioC_Studies/{pmc_id}_tables.json", nlp)
-    TableExtractor.output_tables(F"output/{pmc_id}_tables.json", study_tables)
+    if study_tables:
+        TableExtractor.output_tables(F"output/{pmc_id}_tables.json", study_tables)
     if not result['documents'][0]['relations']:
         failed_documents.append(pmc_id)
 test = ["PMC4129543", "PMC4238043", "PMC3818640", "PMC6697541", "PMC3761075", "PMC5737791", "PMC5395320",
