@@ -17,8 +17,11 @@ def validate_json_maintext(json_data):
 
 def load_bioc_study(directory, file_name):
     bioc_study = None
-    with open(F"{directory}/{file_name}", "r", encoding="utf-8") as fin:
-        bioc_study = json.load(fin)
+    try:
+        with open(F"{directory}/{file_name}", "r", encoding="utf-8") as fin:
+            bioc_study = json.load(fin)
+    except IOError as io:
+        print(F"Unable to locate/open file: {file_name}")
     return bioc_study
 
 

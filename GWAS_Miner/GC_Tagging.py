@@ -561,6 +561,8 @@ for pmc_id in gc_data.keys():
     nlp.rsid_patterns = rsids
     nlp.gc_relations = gc_relations
     study = Experimental.load_bioc_study("BioC_Studies", F"{pmc_id}.json")
+    if not study:
+        continue
     fulltext = "\n".join([x['text'] for x in study['documents'][0]['passages']])
     altered_text = re.sub(r"(?:\w)(\()", lambda x: x.group().replace("(", " ("), fulltext)
     abbreviations = nlp.get_all_abbreviations(altered_text)

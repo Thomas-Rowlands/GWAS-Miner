@@ -73,7 +73,7 @@ def parse_tables(file_input, nlp):
         annotated_tables = process_tables(nlp, tables)
         for table in annotated_tables:
             if table.annotations:
-                print(file_input)
+                # print(file_input)
                 for bioc_table in tables_data["documents"]:
                     if bioc_table["id"] == table.table_id:
                         for annot in table.annotations:
@@ -83,6 +83,15 @@ def parse_tables(file_input, nlp):
 
 
 class Table:
+    TYPE_MARKER_LIST = 1
+    TYPE_TRAIT_LIST = 2
+    COLUMN_TRAIT = 1
+    COLUMN_SIGNIFICANCE = 2
+    COLUMN_MARKER = 3
+    trait_strings = ["trait", "disease", "phenotype"]
+    significance_strings = ["p-value", "significance", "p value", "p"]
+    marker_strings = ["rsid", "marker", "variant", "snp"]
+
     def __init__(self, title, table_id, title_offset, content_offset, column_cells, data_cells,
                  caption_text, caption_offset, footer_text, footer_offset):
         """
@@ -102,6 +111,60 @@ class Table:
         self.footer_offset = footer_offset
         self.footer_doc = None
         self.annotations = None
+        self.table_type = None
+        self.column_types = []
+
+    def __set_table_type(self):
+        # Check column types
+        contains_marker, contains_trait, contains_pval = False, False, False
+        if self.title_doc:
+            if self.title_doc.ents and any(x for x in self.title_doc.ents if x._.is_trait):
+                contains_trait = True
+        if self.caption_doc:
+            if self.caption_doc.ents and any(x for x in self.caption_doc.ents if x._.is_trait):
+                contains_trait = True
+
+        if self.footer_doc:
+            if self.footer_doc.ents and any(x for x in self.footer_doc.ents if x._.is_trait):
+                contains_trait = True
+
+        for cell in self.column_cells:
+            if cell.doc:
+                if cell.doc.ents:
+                    entity = cell.doc.ents[0]
+                    if entity._.is_trait:
+                        self.column_types.append(Table.COLUMN_TRAIT)
+                        contains_trait = True
+                    elif entity.label_ == "RSID":
+                        self.column_types.append(Table.COLUMN_MARKER)
+                        contains_marker = True
+                    elif entity.label_ == "PVAL":
+                        self.column_types.append(Table.COLUMN_SIGNIFICANCE)
+                        contains_pval = True
+                    else:
+                        self.column_types.append(0)  # no entity found
+                else:
+                    cell_text = [cell.text.lower()] if not cell.text.find("||") else cell.text.lower().split("||")
+                    for text in cell_text:
+                        if [x for x in Table.trait_strings if x == cell_text]:
+                            self.column_types.append(Table.COLUMN_TRAIT)
+                            contains_trait = True
+                        elif [x for x in Table.marker_strings if x == cell_text]:
+                            self.column_types.append(Table.COLUMN_MARKER)
+                            contains_marker = True
+                        elif [x for x in Table.significance_strings if x == cell_text]:
+                            self.column_types.append(Table.COLUMN_SIGNIFICANCE)
+                            contains_pval = True
+                        else:
+                            self.column_types.append(0)  # no entity found
+            else:
+                self.column_types.append(0)  # blank cell
+        if contains_pval and contains_trait and contains_marker:
+            self.table_type = Table.TYPE_TRAIT_LIST
+        elif contains_pval and contains_marker:
+            self.table_type = Table.TYPE_MARKER_LIST
+        if self.table_type and self.table_type > 0:
+            print(self.table_type)
 
     def add_spacy_docs(self, nlp):
         if self.caption_text:
@@ -119,11 +182,14 @@ class Table:
             for row in self.data_cells:
                 for cell in row:
                     cell.add_spacy_docs(nlp)
+        self.__set_table_type()
 
     def assign_annotations(self, t, m, p, r, used_annots):
-        docs_iter = [(self.title_doc, self.title_offset, "table_title"), (self.caption_doc, self.caption_offset, "table_caption"),
+        docs_iter = [(self.title_doc, self.title_offset, "table_title"),
+                     (self.caption_doc, self.caption_offset, "table_caption"),
                      (self.footer_doc, self.footer_offset, "table_footer")]
-        cells_iter = [(self.column_cells, self.content_offset, "table_content"),(self.data_cells, self.content_offset, "table_content")]
+        cells_iter = [(self.column_cells, self.content_offset, "table_content"),
+                      (self.data_cells, self.content_offset, "table_content")]
         annots, used_annots = [], []
         for (doc, offset, elem) in docs_iter:
             if doc and doc.ents:
@@ -135,10 +201,18 @@ class Table:
                         annots, used_annots, t, m, p, r = BioC.get_bioc_annotations(row.doc, used_annots, offset, t, m,
                                                                                     p, r, elem, row.id)
                 else:
-                    for cell in row:
-                        if cell.doc and cell.doc.ents:
-                            annots, used_annots, t, m, p, r = BioC.get_bioc_annotations(cell.doc, used_annots, offset,
-                                                                                        t, m, p, r, elem, cell.id)
+                    for i in range(len(row)):
+                        cell = row[i]
+                        if self.column_types[i] == Table.COLUMN_TRAIT or self.column_types[i] == Table.COLUMN_MARKER:
+                            if cell.doc and cell.doc.ents:
+                                annots, used_annots, t, m, p, r = BioC.get_bioc_annotations(cell.doc, used_annots, offset,
+                                                                                            t, m, p, r, elem, cell.id)
+                        elif self.column_types[i] == Table.COLUMN_SIGNIFICANCE:
+                            if cell.doc:
+                                cell.doc.ents += cell.doc[:]
+                                annots, used_annots, t, m, p, r = BioC.get_bioc_annotations(cell.doc, used_annots, offset,
+                                                                                            t, m, p, r, elem, cell.id)
+
         self.annotations = annots
         return t, m, p, r, used_annots
 
