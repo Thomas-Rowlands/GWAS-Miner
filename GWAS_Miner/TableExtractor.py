@@ -1,4 +1,5 @@
 import json
+import re
 
 import BioC
 
@@ -85,12 +86,13 @@ def parse_tables(file_input, nlp):
 class Table:
     TYPE_MARKER_LIST = 1
     TYPE_TRAIT_LIST = 2
+    TYPE_TRAIT_AND_MARKER_LIST = 3
     COLUMN_TRAIT = 1
     COLUMN_SIGNIFICANCE = 2
     COLUMN_MARKER = 3
-    trait_strings = ["trait", "disease", "phenotype"]
-    significance_strings = ["p-value", "significance", "p value", "p"]
-    marker_strings = ["rsid", "marker", "variant", "snp"]
+    trait_strings = [r"(?:[ ]|^)(trait)(?:[^\w]|[\s]|\b)", r"(?:[ ]|^)(disease)(?:[^\w]|[\s]|\b)", r"(?:[ ]|^)(phenotype)(?:[^\w]|[\s]|\b)"]
+    significance_strings = [r"(?:[ ]|^)(significance)(?:[^\w]|[\s]|\b)", r"(?:[ ]|^)(p-?val[ue]{0,2}s?)(?:[^\w]|[\s]|\b)", r"(?:[ ]|^)(p)(?:[^\w]|[\s]|\b)"]
+    marker_strings = [r"(?:[ ]|^)(rsids?)(?:[^\w]|[\s]|\b)", r"(?:[ ]|^)(markers?)(?:[^\w]|[\s]|\b)", r"(?:[ ]|^)(variants?)(?:[^\w]|[\s]|\b)", r"(?:[ ]|^)(snps?)(?:[^\w]|[\s]|\b)"]
 
     def __init__(self, title, table_id, title_offset, content_offset, column_cells, data_cells,
                  caption_text, caption_offset, footer_text, footer_offset):
@@ -118,53 +120,69 @@ class Table:
         # Check column types
         contains_marker, contains_trait, contains_pval = False, False, False
         if self.title_doc:
-            if self.title_doc.ents and any(x for x in self.title_doc.ents if x._.is_trait):
+            if self.title_doc.ents and any(x for x in self.title_doc.ents if x._.is_trait or x._.has_trait):
                 contains_trait = True
         if self.caption_doc:
-            if self.caption_doc.ents and any(x for x in self.caption_doc.ents if x._.is_trait):
+            if self.caption_doc.ents and any(x for x in self.caption_doc.ents if x._.is_trait or x._.has_trait):
                 contains_trait = True
 
         if self.footer_doc:
-            if self.footer_doc.ents and any(x for x in self.footer_doc.ents if x._.is_trait):
+            if self.footer_doc.ents and any(x for x in self.footer_doc.ents if x._.is_trait or x._.has_trait):
                 contains_trait = True
 
-        for cell in self.column_cells:
+        for i in range(len(self.column_cells)):
+            cell = self.column_cells[i]
             if cell.doc:
                 if cell.doc.ents:
                     entity = cell.doc.ents[0]
-                    if entity._.is_trait:
-                        self.column_types.append(Table.COLUMN_TRAIT)
-                        contains_trait = True
-                    elif entity.label_ == "RSID":
-                        self.column_types.append(Table.COLUMN_MARKER)
+                    if entity.label_ == "RSID":
+                        self.column_types.insert(i, Table.COLUMN_MARKER)
                         contains_marker = True
                     elif entity.label_ == "PVAL":
-                        self.column_types.append(Table.COLUMN_SIGNIFICANCE)
+                        self.column_types.insert(i, Table.COLUMN_SIGNIFICANCE)
                         contains_pval = True
+                    elif entity._.is_trait or entity._.has_trait:
+                        self.column_types.insert(i, Table.COLUMN_TRAIT)
+                        contains_trait = True
                     else:
-                        self.column_types.append(0)  # no entity found
-                else:
-                    cell_text = [cell.text.lower()] if not cell.text.find("||") else cell.text.lower().split("||")
-                    for text in cell_text:
-                        if [x for x in Table.trait_strings if x == cell_text]:
-                            self.column_types.append(Table.COLUMN_TRAIT)
-                            contains_trait = True
-                        elif [x for x in Table.marker_strings if x == cell_text]:
-                            self.column_types.append(Table.COLUMN_MARKER)
-                            contains_marker = True
-                        elif [x for x in Table.significance_strings if x == cell_text]:
-                            self.column_types.append(Table.COLUMN_SIGNIFICANCE)
-                            contains_pval = True
+                        self.column_types.insert(i, 0)  # no entity found
+                if len(self.column_types) != i + 1:
+                    self.column_types.append(0)  # default added in case of no entities.
+                cell_text = [cell.text.lower()] if not cell.text.find("||") else cell.text.lower().split("||") #TODO: which paper has double pipe? This may be an issue
+                for text in cell_text:
+                    if [x for x in Table.trait_strings if re.search(x, text)]:
+                        if type(self.column_types[i]) == list:
+                            self.column_types[i].append(Table.COLUMN_TRAIT)
                         else:
-                            self.column_types.append(0)  # no entity found
+                            self.column_types[i] = [self.column_types[i], Table.COLUMN_TRAIT]
+                        contains_trait = True
+                    elif [x for x in Table.marker_strings if re.search(x, text)]:
+                        if type(self.column_types[i]) == list:
+                            self.column_types[i].append(Table.COLUMN_MARKER)
+                        else:
+                            self.column_types[i] = [self.column_types[i], Table.COLUMN_MARKER]
+                        contains_marker = True
+                    elif [x for x in Table.significance_strings if re.search(x, text)]:
+                        if type(self.column_types[i]) == list:
+                            self.column_types[i].append(Table.COLUMN_SIGNIFICANCE)
+                        else:
+                            self.column_types[i] = [self.column_types[i], Table.COLUMN_SIGNIFICANCE]
+                        contains_pval = True
             else:
                 self.column_types.append(0)  # blank cell
+            if type(self.column_types[i]) == list:  # Clean list values
+                desirables = [x for x in self.column_types[i] if x != 0]
+                desirables_len = len(desirables)
+                if desirables_len == 0:
+                    self.column_types[i] = 0
+                elif desirables_len == len(self.column_types[i]) - 1:
+                    self.column_types[i] = [x for x in self.column_types[i] if x != 0]
         if contains_pval and contains_trait and contains_marker:
             self.table_type = Table.TYPE_TRAIT_LIST
         elif contains_pval and contains_marker:
             self.table_type = Table.TYPE_MARKER_LIST
         if self.table_type and self.table_type > 0:
-            print(self.table_type)
+            print(F"Table type: {self.table_type}")
 
     def add_spacy_docs(self, nlp):
         if self.caption_text:
@@ -209,7 +227,7 @@ class Table:
                                                                                             t, m, p, r, elem, cell.id)
                         elif self.column_types[i] == Table.COLUMN_SIGNIFICANCE:
                             if cell.doc:
-                                cell.doc.ents += cell.doc[:]
+                                cell.doc.ents += (cell.doc[:],)
                                 annots, used_annots, t, m, p, r = BioC.get_bioc_annotations(cell.doc, used_annots, offset,
                                                                                             t, m, p, r, elem, cell.id)
 
