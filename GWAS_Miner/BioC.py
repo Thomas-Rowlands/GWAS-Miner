@@ -1,9 +1,9 @@
 from datetime import datetime
 
+
 def convert_cell_to_annotation(doc, used_annots, offset, t, m, p, r, table_elem_id=None, table_cell_id=None):
     current_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
     annotations = []
-    output_annotations = []
     for ent in doc.ents:
         annotations.append({
             "entity_type": ent.label_,
@@ -16,9 +16,10 @@ def convert_cell_to_annotation(doc, used_annots, offset, t, m, p, r, table_elem_
         })
     if annotations:
         for annot in annotations:
-            loc = BioCLocation(offset=annot["offset"] + offset, length=annot["length"], table_element=annot['table_element_id'], table_cell_id=annot['table_cell_id'])
-            if annot["text"] in used_annots:
-                for old_annot in output_annotations:
+            loc = BioCLocation(offset=annot["offset"] + offset, length=annot["length"],
+                               table_element=annot['table_element_id'], table_cell_id=annot['table_cell_id'])
+            if annot["text"] in [x.text for x in used_annots]:
+                for old_annot in used_annots:
                     if old_annot.text == annot["text"] and loc not in old_annot.locations:
                         old_annot.locations.append(loc)
             if "RSID" not in annot["entity_type"] and "PVAL" not in annot["entity_type"]:
@@ -26,7 +27,7 @@ def convert_cell_to_annotation(doc, used_annots, offset, t, m, p, r, table_elem_
                                                                    "annotator": "tr142@le.ac.uk",
                                                                    "updated_at": current_datetime},
                                                locations=[loc], text=annot["text"])
-                output_annotations.append(genomic_trait)
+                used_annots.append(genomic_trait)
                 t += 1
             elif "RSID" in annot["entity_type"]:
                 marker_identifier = BioCAnnotation(id=F"M{m}",
@@ -34,22 +35,21 @@ def convert_cell_to_annotation(doc, used_annots, offset, t, m, p, r, table_elem_
                                                            "annotator": "tr142@le.ac.uk",
                                                            "updated_at": current_datetime},
                                                    locations=[loc], text=annot["text"])
-                output_annotations.append(marker_identifier)
+                used_annots.append(marker_identifier)
                 m += 1
             elif "PVAL" in annot["entity_type"]:
                 p_value = BioCAnnotation(id=F"P{p}", infons={"type": "significance", "identifier": annot["id"],
                                                              "annotator": "tr142@le.ac.uk",
                                                              "updated_at": current_datetime},
                                          locations=[loc], text=annot["text"])
-                output_annotations.append(p_value)
+                used_annots.append(p_value)
                 p += 1
-            used_annots.append(annot['text'])
-    return output_annotations, used_annots, t, m, p, r
+    return used_annots, t, m, p, r
+
 
 def get_bioc_annotations(doc, used_annots, offset, t, m, p, r, table_elem_id=None, table_cell_id=None):
     current_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
     annotations = []
-    output_annotations = []
     for ent in doc.ents:
         annotations.append({
             "entity_type": ent.label_,
@@ -62,9 +62,10 @@ def get_bioc_annotations(doc, used_annots, offset, t, m, p, r, table_elem_id=Non
         })
     if annotations:
         for annot in annotations:
-            loc = BioCLocation(offset=annot["offset"] + offset, length=annot["length"], table_element=annot['table_element_id'], table_cell_id=annot['table_cell_id'])
-            if annot["text"] in used_annots:
-                for old_annot in output_annotations:
+            loc = BioCLocation(offset=annot["offset"] + offset, length=annot["length"],
+                               table_element=annot['table_element_id'], table_cell_id=annot['table_cell_id'])
+            if annot["text"] in [x.text for x in used_annots]:
+                for old_annot in used_annots:
                     if old_annot.text == annot["text"] and loc not in old_annot.locations:
                         old_annot.locations.append(loc)
             if "RSID" not in annot["entity_type"] and "PVAL" not in annot["entity_type"]:
@@ -72,7 +73,7 @@ def get_bioc_annotations(doc, used_annots, offset, t, m, p, r, table_elem_id=Non
                                                                    "annotator": "tr142@le.ac.uk",
                                                                    "updated_at": current_datetime},
                                                locations=[loc], text=annot["text"])
-                output_annotations.append(genomic_trait)
+                used_annots.append(genomic_trait)
                 t += 1
             elif "RSID" in annot["entity_type"]:
                 marker_identifier = BioCAnnotation(id=F"M{m}",
@@ -80,17 +81,16 @@ def get_bioc_annotations(doc, used_annots, offset, t, m, p, r, table_elem_id=Non
                                                            "annotator": "tr142@le.ac.uk",
                                                            "updated_at": current_datetime},
                                                    locations=[loc], text=annot["text"])
-                output_annotations.append(marker_identifier)
+                used_annots.append(marker_identifier)
                 m += 1
             elif "PVAL" in annot["entity_type"]:
                 p_value = BioCAnnotation(id=F"P{p}", infons={"type": "significance", "identifier": annot["id"],
                                                              "annotator": "tr142@le.ac.uk",
                                                              "updated_at": current_datetime},
                                          locations=[loc], text=annot["text"])
-                output_annotations.append(p_value)
+                used_annots.append(p_value)
                 p += 1
-            used_annots.append(annot['text'])
-    return output_annotations, used_annots, t, m, p, r
+    return used_annots, t, m, p, r
 
 
 class BioCNode:
