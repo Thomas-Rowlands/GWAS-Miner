@@ -16,7 +16,7 @@ def convert_cell_to_annotation(doc, used_annots, offset, t, m, p, r, table_elem_
         })
     if annotations:
         for annot in annotations:
-            loc = BioCLocation(offset=annot["offset"] + offset, length=annot["length"],
+            loc = BioCLocation(offset=annot["offset"], length=annot["length"],
                                table_element=annot['table_element_id'], table_cell_id=annot['table_cell_id'])
             if annot["text"] in [x.text for x in used_annots]:
                 for old_annot in used_annots:
@@ -45,6 +45,7 @@ def convert_cell_to_annotation(doc, used_annots, offset, t, m, p, r, table_elem_
                 used_annots.append(p_value)
                 p += 1
     return used_annots, t, m, p, r
+
 
 
 def get_bioc_annotations(doc, used_annots, offset, t, m, p, r, table_elem_id=None, table_cell_id=None):

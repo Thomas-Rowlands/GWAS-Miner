@@ -79,8 +79,10 @@ def parse_tables(file_input, nlp):
         print(F"No tables file found for {file_input.replace('_tables.json', '')}")
     if tables_data:
         annotated_tables = process_tables(nlp, tables)
-        if [table.annotations for table in annotated_tables]:
-            contains_annotations = True
+        for table in annotated_tables:
+            if table.annotations:
+                contains_annotations = True
+                break
         for table in annotated_tables:
             if table.annotations:
                 for bioc_table in tables_data["documents"]:
@@ -95,6 +97,7 @@ class Table:
     TYPE_MARKER_LIST = 1
     TYPE_TRAIT_LIST = 2
     TYPE_TRAIT_AND_MARKER_LIST = 3
+    TYPE_REVERSED_COLUMNS = 4
     COLUMN_TRAIT = 1
     COLUMN_SIGNIFICANCE = 2
     COLUMN_MARKER = 3

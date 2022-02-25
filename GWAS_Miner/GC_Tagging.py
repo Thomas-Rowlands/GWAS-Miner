@@ -532,8 +532,8 @@ lexicon = Ontology.get_master_lexicon()
 nlp = GCInterpreter(lexicon)
 failed_documents = []
 for pmc_id in gc_data.keys():
-    # if pmc_id != "PMC4339483":
-    #     continue
+    if pmc_id != "PMC5988935":
+        continue
     pvals = []
     rsids = []
     mesh_terms = []
@@ -569,10 +569,10 @@ for pmc_id in gc_data.keys():
     file_abbrevs = get_study_abbreviations(F"BioC_Studies/{pmc_id}_abbreviations.json")
     if file_abbrevs:
         abbreviations += file_abbrevs
-    nlp.set_abbreviations(abbreviations)
+    nlp.set_abbreviations(abbreviations)  # TODO: Check abbreviation partial entity HPC.
     result = process_study(nlp, study)
     study_tables, contains_annotations = TableExtractor.parse_tables(F"BioC_Studies/{pmc_id}_tables.json", nlp)
-    if study_tables:
+    if contains_annotations:
         TableExtractor.output_tables(F"output/{pmc_id}_tables.json", study_tables)
     if not result['documents'][0]['relations'] and not contains_annotations:
         failed_documents.append(pmc_id)
