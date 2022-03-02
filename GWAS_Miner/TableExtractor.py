@@ -5,6 +5,7 @@ import BioC
 
 table_significance_pattern = r""
 
+
 def output_tables(destination, tables):
     try:
         with open(destination, "w", encoding="utf-8") as fout:
@@ -231,8 +232,8 @@ class Table:
             for cell in row.cells:
                 if cell.doc and cell.doc.ents:
                     used_annots, t, m, p, r = BioC.convert_cell_to_annotation(cell.doc, used_annots,
-                                                                                      self.content_offset, t, m,
-                                                                                      p, r, "table_content", cell.id)
+                                                                              self.content_offset, t, m,
+                                                                              p, r, "table_content", cell.id)
         for row in self.data_rows:
             for i in range(len(row.cells)):
                 cell = row.cells[i]
@@ -241,9 +242,9 @@ class Table:
                     if Table.COLUMN_TRAIT == type or Table.COLUMN_MARKER == type:
                         if cell.doc and cell.doc.ents:
                             used_annots, t, m, p, r = BioC.convert_cell_to_annotation(cell.doc, used_annots,
-                                                                                              self.content_offset,
-                                                                                              t, m, p, r, "table_content",
-                                                                                              cell.id)
+                                                                                      self.content_offset,
+                                                                                      t, m, p, r, "table_content",
+                                                                                      cell.id)
                     elif Table.COLUMN_SIGNIFICANCE == type:
                         if cell.doc:
                             new_entity = cell.doc[:]
@@ -251,9 +252,9 @@ class Table:
                             try:
                                 cell.doc.ents += (new_entity,)
                                 used_annots, t, m, p, r = BioC.convert_cell_to_annotation(cell.doc, used_annots,
-                                                                                                  self.content_offset,
-                                                                                                  t, m, p, r, "table_content",
-                                                                                                  cell.id)
+                                                                                          self.content_offset,
+                                                                                          t, m, p, r, "table_content",
+                                                                                          cell.id)
                             except Exception as e:
                                 print(e)
                                 return t, m, p, r, used_annots

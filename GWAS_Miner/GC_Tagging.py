@@ -398,7 +398,6 @@ def get_study_abbreviations(file_input):
         abbrevs = [[x['text_short'], x['text_long_1']] for x in abbrevs['documents'][0]['passages']]
     return abbrevs
 
-
 def process_study(nlp, study):
     if not study:
         return False
