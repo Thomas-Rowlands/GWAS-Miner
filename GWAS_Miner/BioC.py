@@ -23,7 +23,7 @@ def convert_cell_to_annotation(doc, used_annots, offset, t, m, p, r, table_elem_
                     if old_annot.text == annot["text"] and loc not in old_annot.locations:
                         old_annot.locations.append(loc)
             if "RSID" not in annot["entity_type"] and "PVAL" not in annot["entity_type"]:
-                genomic_trait = BioCAnnotation(id=F"T{t}", infons={"type": "trait", "identifier": annot["id"],
+                genomic_trait = BioCAnnotation(id=F"T{t}", infons={"type": "trait", "identifier": F"MeSH:{annot['id']}",
                                                                    "annotator": "tr142@le.ac.uk",
                                                                    "updated_at": current_datetime},
                                                locations=[loc], text=annot["text"])
@@ -31,7 +31,7 @@ def convert_cell_to_annotation(doc, used_annots, offset, t, m, p, r, table_elem_
                 t += 1
             elif "RSID" in annot["entity_type"]:
                 marker_identifier = BioCAnnotation(id=F"M{m}",
-                                                   infons={"type": "genomic_marker", "identifier": annot["id"],
+                                                   infons={"type": "genetic_variant", "identifier": F"dbSNP:{annot['id']}",
                                                            "annotator": "tr142@le.ac.uk",
                                                            "updated_at": current_datetime},
                                                    locations=[loc], text=annot["text"])
@@ -70,7 +70,7 @@ def get_bioc_annotations(doc, used_annots, offset, t, m, p, r, table_elem_id=Non
                     if old_annot.text == annot["text"] and loc not in old_annot.locations:
                         old_annot.locations.append(loc)
             if "RSID" not in annot["entity_type"] and "PVAL" not in annot["entity_type"]:
-                genomic_trait = BioCAnnotation(id=F"T{t}", infons={"type": "trait", "identifier": annot["id"],
+                genomic_trait = BioCAnnotation(id=F"T{t}", infons={"type": "trait", "identifier": F"MeSH:{annot['id']}",
                                                                    "annotator": "tr142@le.ac.uk",
                                                                    "updated_at": current_datetime},
                                                locations=[loc], text=annot["text"])
@@ -78,7 +78,7 @@ def get_bioc_annotations(doc, used_annots, offset, t, m, p, r, table_elem_id=Non
                 t += 1
             elif "RSID" in annot["entity_type"]:
                 marker_identifier = BioCAnnotation(id=F"M{m}",
-                                                   infons={"type": "genomic_marker", "identifier": annot["id"],
+                                                   infons={"type": "genetic_variant", "identifier": F"dbSNP:{annot['id']}",
                                                            "annotator": "tr142@le.ac.uk",
                                                            "updated_at": current_datetime},
                                                    locations=[loc], text=annot["text"])

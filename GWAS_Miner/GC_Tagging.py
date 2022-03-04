@@ -12,7 +12,7 @@ from spacy.matcher import PhraseMatcher, Matcher, DependencyMatcher
 from spacy.tokens import Span, Token, Doc
 
 import Ontology
-from GWAS_Miner import BioC, OutputConverter, Experimental
+from GWAS_Miner import BioC, OutputConverter, Experimental, befree_annotate
 from GWAS_Miner.DataStructures import Marker, Significance, Phenotype, Association, LexiconEntry
 import TableExtractor
 from NLP import Interpreter
@@ -398,6 +398,7 @@ def get_study_abbreviations(file_input):
         abbrevs = [[x['text_short'], x['text_long_1']] for x in abbrevs['documents'][0]['passages']]
     return abbrevs
 
+
 def process_study(nlp, study):
     if not study:
         return False
@@ -432,7 +433,7 @@ def process_study(nlp, study):
                         if old_annot.text == annot["text"] and loc not in old_annot.locations:
                             old_annot.locations.append(loc)
                 if "RSID" not in annot["entity_type"] and "PVAL" not in annot["entity_type"]:
-                    genomic_trait = BioC.BioCAnnotation(id=F"T{t}", infons={"type": "trait", "identifier": annot["id"],
+                    genomic_trait = BioC.BioCAnnotation(id=F"T{t}", infons={"type": "trait", "identifier": F"MeSH:{annot['id']}",
                                                                             "annotator": "tr142@le.ac.uk",
                                                                             "updated_at": current_datetime},
                                                         locations=[loc], text=annot["text"])
@@ -440,7 +441,7 @@ def process_study(nlp, study):
                     t += 1
                 elif "RSID" in annot["entity_type"]:
                     marker_identifier = BioC.BioCAnnotation(id=F"M{m}",
-                                                            infons={"type": "genomic_marker", "identifier": annot["id"],
+                                                            infons={"type": "genetic_variant", "identifier": F"dbSNP:{annot['id']}",
                                                                     "annotator": "tr142@le.ac.uk",
                                                                     "updated_at": current_datetime},
                                                             locations=[loc], text=annot["text"])
@@ -505,6 +506,7 @@ def process_study(nlp, study):
     #     fin.write(F"{pmc_id}\t{top_phenotype['ID']}\t{top_phenotype['label']}\n")
     if document_relations:
         study['documents'][0]['relations'] = document_relations
+    study = befree_annotate.get_befree_annotations(study, t, m, p, r)
     OutputConverter.output_xml(json.dumps(study, default=BioC.ComplexHandler),
                                F"output/PMC{study['documents'][0]['id']}_result.xml")
     return study
@@ -531,7 +533,7 @@ lexicon = Ontology.get_master_lexicon()
 nlp = GCInterpreter(lexicon)
 failed_documents = []
 for pmc_id in gc_data.keys():
-    if pmc_id != "PMC5988935":
+    if pmc_id != "PMC5542853":
         continue
     pvals = []
     rsids = []
