@@ -86,6 +86,7 @@ def parse_tables(file_input, nlp):
                 break
         for table in annotated_tables:
             if table.annotations:
+                print(file_input)
                 for bioc_table in tables_data["documents"]:
                     if bioc_table["id"] == table.table_id:
                         for annot in table.annotations:

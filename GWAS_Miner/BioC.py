@@ -24,22 +24,22 @@ def convert_cell_to_annotation(doc, used_annots, offset, t, m, p, r, table_elem_
                         old_annot.locations.append(loc)
             if "RSID" not in annot["entity_type"] and "PVAL" not in annot["entity_type"]:
                 genomic_trait = BioCAnnotation(id=F"T{t}", infons={"type": "trait", "identifier": F"MeSH:{annot['id']}",
-                                                                   "annotator": "tr142@le.ac.uk",
+                                                                   "annotator": "GWASMiner@le.ac.uk",
                                                                    "updated_at": current_datetime},
                                                locations=[loc], text=annot["text"])
                 used_annots.append(genomic_trait)
                 t += 1
             elif "RSID" in annot["entity_type"]:
-                marker_identifier = BioCAnnotation(id=F"M{m}",
-                                                   infons={"type": "genetic_variant", "identifier": F"dbSNP:{annot['id']}",
-                                                           "annotator": "tr142@le.ac.uk",
+                marker_identifier = BioCAnnotation(id=F"V{m}",
+                                                   infons={"type": "genetic_variant", "identifier": F"dbSNP:{annot['text']}",
+                                                           "annotator": "GWASMiner@le.ac.uk",
                                                            "updated_at": current_datetime},
                                                    locations=[loc], text=annot["text"])
                 used_annots.append(marker_identifier)
                 m += 1
             elif "PVAL" in annot["entity_type"]:
-                p_value = BioCAnnotation(id=F"P{p}", infons={"type": "significance", "identifier": annot["id"],
-                                                             "annotator": "tr142@le.ac.uk",
+                p_value = BioCAnnotation(id=F"S{p}", infons={"type": "significance", "identifier": annot["id"],
+                                                             "annotator": "GWASMiner@le.ac.uk",
                                                              "updated_at": current_datetime},
                                          locations=[loc], text=annot["text"])
                 used_annots.append(p_value)
@@ -71,22 +71,22 @@ def get_bioc_annotations(doc, used_annots, offset, t, m, p, r, table_elem_id=Non
                         old_annot.locations.append(loc)
             if "RSID" not in annot["entity_type"] and "PVAL" not in annot["entity_type"]:
                 genomic_trait = BioCAnnotation(id=F"T{t}", infons={"type": "trait", "identifier": F"MeSH:{annot['id']}",
-                                                                   "annotator": "tr142@le.ac.uk",
+                                                                   "annotator": "GWASMiner@le.ac.uk",
                                                                    "updated_at": current_datetime},
                                                locations=[loc], text=annot["text"])
                 used_annots.append(genomic_trait)
                 t += 1
             elif "RSID" in annot["entity_type"]:
                 marker_identifier = BioCAnnotation(id=F"M{m}",
-                                                   infons={"type": "genetic_variant", "identifier": F"dbSNP:{annot['id']}",
-                                                           "annotator": "tr142@le.ac.uk",
+                                                   infons={"type": "genetic_variant", "identifier": F"dbSNP:{annot['text']}",
+                                                           "annotator": "GWASMiner@le.ac.uk",
                                                            "updated_at": current_datetime},
                                                    locations=[loc], text=annot["text"])
                 used_annots.append(marker_identifier)
                 m += 1
             elif "PVAL" in annot["entity_type"]:
-                p_value = BioCAnnotation(id=F"P{p}", infons={"type": "significance", "identifier": annot["id"],
-                                                             "annotator": "tr142@le.ac.uk",
+                p_value = BioCAnnotation(id=F"S{p}", infons={"type": "significance", "identifier": annot["id"],
+                                                             "annotator": "GWASMiner@le.ac.uk",
                                                              "updated_at": current_datetime},
                                          locations=[loc], text=annot["text"])
                 used_annots.append(p_value)

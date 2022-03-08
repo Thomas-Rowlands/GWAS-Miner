@@ -1,5 +1,7 @@
 import itertools
 import json
+import os
+import pathlib
 import re
 import sys
 from datetime import datetime
@@ -434,7 +436,7 @@ def process_study(nlp, study):
                             old_annot.locations.append(loc)
                 if "RSID" not in annot["entity_type"] and "PVAL" not in annot["entity_type"]:
                     genomic_trait = BioC.BioCAnnotation(id=F"T{t}", infons={"type": "trait", "identifier": F"MeSH:{annot['id']}",
-                                                                            "annotator": "tr142@le.ac.uk",
+                                                                            "annotator": "GWASMiner@le.ac.uk",
                                                                             "updated_at": current_datetime},
                                                         locations=[loc], text=annot["text"])
                     passage['annotations'].append(genomic_trait)
@@ -442,14 +444,14 @@ def process_study(nlp, study):
                 elif "RSID" in annot["entity_type"]:
                     marker_identifier = BioC.BioCAnnotation(id=F"M{m}",
                                                             infons={"type": "genetic_variant", "identifier": F"dbSNP:{annot['id']}",
-                                                                    "annotator": "tr142@le.ac.uk",
+                                                                    "annotator": "GWASMiner@le.ac.uk",
                                                                     "updated_at": current_datetime},
                                                             locations=[loc], text=annot["text"])
                     passage['annotations'].append(marker_identifier)
                     m += 1
                 elif "PVAL" in annot["entity_type"]:
                     p_value = BioC.BioCAnnotation(id=F"P{p}", infons={"type": "significance", "identifier": annot["id"],
-                                                                      "annotator": "tr142@le.ac.uk",
+                                                                      "annotator": "GWASMiner@le.ac.uk",
                                                                       "updated_at": current_datetime},
                                                   locations=[loc], text=annot["text"])
                     passage['annotations'].append(p_value)
@@ -474,7 +476,7 @@ def process_study(nlp, study):
                 marker_node = BioC.BioCNode(refid=marker_id, role="")
                 significance_node = BioC.BioCNode(refid=significance_id, role="")
                 bioc_relation = BioC.BioCRelation(id=F"R{r}",
-                                                  infons={"type": "disease_assoc", "annotator": "tr142@le.ac.uk",
+                                                  infons={"type": "disease_assoc", "annotator": "GWASMiner@le.ac.uk",
                                                           "updated_at": current_datetime},
                                                   nodes=[phenotype_node, marker_node, significance_node])
                 # passage['relations'].append(bioc_relation)
@@ -496,7 +498,7 @@ def process_study(nlp, study):
                 significance_node = BioC.BioCNode(refid=significance_id, role="")
                 bioc_relation = BioC.BioCRelation(id=F"R{r}",
                                                   infons={"type": "possible_disease_assoc",
-                                                          "annotator": "tr142@le.ac.uk",
+                                                          "annotator": "GWASMiner@le.ac.uk",
                                                           "updated_at": current_datetime},
                                                   nodes=[phenotype_node, marker_node, significance_node])
                 # passage['relations'].append(bioc_relation)
@@ -510,7 +512,6 @@ def process_study(nlp, study):
     OutputConverter.output_xml(json.dumps(study, default=BioC.ComplexHandler),
                                F"output/PMC{study['documents'][0]['id']}_result.xml")
     return study
-
 
 # load bioc pmc ids
 bioc_pmcids = [x.replace(".json", "").replace("_abbreviations", "") for x in listdir("BioC_Studies") if
@@ -533,8 +534,8 @@ lexicon = Ontology.get_master_lexicon()
 nlp = GCInterpreter(lexicon)
 failed_documents = []
 for pmc_id in gc_data.keys():
-    if pmc_id != "PMC5542853":
-        continue
+    # if pmc_id != "PMC5542853":
+    #     continue
     pvals = []
     rsids = []
     mesh_terms = []

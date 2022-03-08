@@ -12,8 +12,8 @@ from GWAS_Miner.BioC import BioCLocation, BioCAnnotation
 def get_befree_data(pmid):
     befree_data = {}
     headers_skipped = False
-    # retrieve befree data
-    with open("BeFree_Data.tsv", "r", encoding="utf-8") as f_in:
+    # retrieve befree variants
+    with open("vdas_version_2_mesh.tsv", "r", encoding="utf-8") as f_in:
         for line in f_in.readlines():
             if not headers_skipped:
                 headers_skipped = not headers_skipped
@@ -24,6 +24,23 @@ def get_befree_data(pmid):
             if line[0] not in befree_data.keys():
                 befree_data[line[0]] = []
             befree_data[line[0]].append({"sentence_number": line[3], "variantid": line[4], "variant_offset": line[6],
+                                         "diseaseid": line[7], "disease_text": line[8], "disease_offset": line[9],
+                                         "sentence": html.unescape(line[10].lstrip('"').rstrip('"')),
+                                         "meshid": line[11],
+                                         "mapping_source": line[13]})
+    # retrieve befree genes
+    with open("gdas_version_1_mesh.tsv", "r", encoding="utf-8") as f_in:
+        for line in f_in.readlines():
+            if not headers_skipped:
+                headers_skipped = not headers_skipped
+                continue
+            line = line.split("\t")
+            if line[0] != pmid:
+                continue
+            if line[0] not in befree_data.keys():
+                befree_data[line[0]] = []
+            befree_data[line[0]].append({"sentence_number": line[3], "ncbi_id": line[4], "gene_offset": line[6],
+                                         "gene_text": line[5],
                                          "diseaseid": line[7], "disease_text": line[8], "disease_offset": line[9],
                                          "sentence": html.unescape(line[10].lstrip('"').rstrip('"')),
                                          "meshid": line[11],
@@ -61,6 +78,13 @@ def get_bioc_annotations(annotations, used_annots, offset, t, m, p, g, r):
                                      locations=[loc], text=annot["text"])
             used_annots.append(p_value)
             p += 1
+        elif "GENE" in annot["entity_type"]:
+            gene = BioCAnnotation(id=F"P{p}", infons={"type": "gene", "identifier": F"Entrez:{annot['id']}",
+                                                         "annotator": "BeFree@example.com",
+                                                         "updated_at": current_datetime},
+                                     locations=[loc], text=annot["text"])
+            used_annots.append(gene)
+            g += 1
     return used_annots, t, m, p, g, r
 
 
@@ -89,42 +113,58 @@ def get_befree_annotations(study, t, m, p, r):
             if passage['infons']['section_type'] == "ABSTRACT":
                 text = passage["text"]
                 for entry in study_befree_data:
+                    is_gene = "ncbi_id" in entry.keys()
                     sent = sorted([(SequenceMatcher(None, x, entry['sentence']).ratio(), x) for x in text.split(". ")],
                                   key=lambda y: y[0], reverse=True)[0]
                     sent_score = sent[0]
                     sent = sent[1]
                     if not sent or sent_score < 0.6:
                         continue
-                    # weird issues with P(combined)
                     annotations = []
                     sentence_offset = text.index(sent)
-                    annotations.append({
-                        "entity_type": "DISEASE",
-                        "id": entry["meshid"],
-                        "text": entry["disease_text"],
-                        "offset": get_closest_index(sent, entry["disease_text"], int(
-                            entry["disease_offset"][:entry["disease_offset"].index("#")])) + sentence_offset,
-                        "length": len(entry["disease_text"])
-                    })
-                    annotations.append({
-                        "entity_type": "RSID",
-                        "id": entry["variantid"],
-                        "text": entry["variantid"],
-                        "offset": get_closest_index(sent, entry["variantid"], int(
-                            entry["variant_offset"][:entry["variant_offset"].index("#")])) + sentence_offset,
-                        "length": len(entry["variantid"])
-                    })
+                    try:
+                        annotations.append({
+                            "entity_type": "DISEASE",
+                            "id": entry["meshid"],
+                            "text": entry["disease_text"],
+                            "offset": get_closest_index(sent, entry["disease_text"], int(
+                                entry["disease_offset"][:entry["disease_offset"].index("#")])) + sentence_offset,
+                            "length": len(entry["disease_text"])
+                        })
+                        if not is_gene:
+                            annotations.append({
+                                "entity_type": "RSID",
+                                "id": entry["variantid"],
+                                "text": entry["variantid"],
+                                "offset": get_closest_index(sent, entry["variantid"], int(
+                                    entry["variant_offset"][:entry["variant_offset"].index("#")])) + sentence_offset,
+                                "length": len(entry["variantid"])
+                            })
+                        else:
+                            annotations.append({
+                                "entity_type": "GENE",
+                                "id": entry["ncbi_id"],
+                                "text": entry["gene_text"],
+                                "offset": get_closest_index(sent, entry["gene_text"], int(
+                                    entry["gene_offset"][:entry["gene_offset"].index("#")])) + sentence_offset,
+                                "length": len(entry["gene_text"])
+                            })
+                    except TypeError as te:
+                        print(F"PMID: {pmid} - entity missing from sentence.")
+                        continue
                     disease_node_id = t
                     marker_node_id = m
+                    gene_node_id = g
                     used_annots, t, m, p, g, r = get_bioc_annotations(annotations, used_annots, passage["offset"], t, m, p,
                                                                       g, r)
                     phenotype_node = BioC.BioCNode(refid=F"T{disease_node_id}", role="")
                     marker_node = BioC.BioCNode(refid=F"M{marker_node_id}", role="")
+                    gene_node = BioC.BioCNode(refid=F"G{gene_node_id}", role="")
                     bioc_relation = BioC.BioCRelation(id=F"R{r}",
                                                       infons={"type": "BeFree_Association",
                                                               "annotator": "tr142@le.ac.uk",
                                                               "updated_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")},
-                                                      nodes=[phenotype_node, marker_node])
+                                                      nodes=[phenotype_node, marker_node] if not is_gene else [phenotype_node, gene_node])
                     r += 1
                     relations.append(bioc_relation)
                 for annot in used_annots:
