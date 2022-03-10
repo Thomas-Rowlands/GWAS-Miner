@@ -86,12 +86,15 @@ def parse_tables(file_input, nlp):
                 break
         for table in annotated_tables:
             if table.annotations:
-                print(file_input)
                 for bioc_table in tables_data["documents"]:
                     if bioc_table["id"] == table.table_id:
                         for annot in table.annotations:
                             bioc_table['annotations'].append(annot)
                         break
+    if contains_annotations:
+        print(F"Table(s) have annotation(s) in: {file_input}")
+    else:
+        print(F"No table annotations found in: {file_input}")
     return tables_data, contains_annotations
 
 
@@ -141,7 +144,6 @@ class Table:
         if self.caption_doc:
             if self.caption_doc.ents and any(x for x in self.caption_doc.ents if x._.is_trait or x._.has_trait):
                 contains_trait = True
-
         if self.footer_doc:
             if self.footer_doc.ents and any(x for x in self.footer_doc.ents if x._.is_trait or x._.has_trait):
                 contains_trait = True
@@ -163,8 +165,6 @@ class Table:
                             contains_trait = True
                         else:
                             self.column_types.insert(i, 0)  # no entity found
-                    if len(self.column_types) != i + 1:
-                        self.column_types.append(0)  # default added in case of no entities.
                     cell_text = [cell.text.lower()] if not cell.text.find("||") else cell.text.lower().split(
                         "||")
                     for text in cell_text:
@@ -186,6 +186,8 @@ class Table:
                             else:
                                 self.column_types[i] = [self.column_types[i], Table.COLUMN_SIGNIFICANCE]
                             contains_pval = True
+                    if len(self.column_types) != i + 1:
+                        self.column_types.append(0)  # default added in case of no entities.
                 else:
                     self.column_types.append(0)  # blank cell
                 if isinstance(self.column_types[i], list):  # Clean list values
