@@ -64,14 +64,15 @@ def parse_tables(file_input, nlp):
                         column_cell = TableCell(col['cell_id'], str(col['cell_text']))
                         col_row.cells.append(column_cell)
                     columns.append(col_row)
-                    for row in passage['data_section'][0]['data_rows']:
-                        data_row = TableRow()
-                        for cell in row:
-                            data_cell = TableCell(cell['cell_id'], str(cell['cell_text']))
-                            data_row.cells.append(data_cell)
-                        if len(data_row.cells) != len(columns[0].cells):
-                            print(F"{file_input} contains potentially problematic cell counts!")
-                        rows.append(data_row)
+                    for section in passage['data_section']:
+                        for row in section['data_rows']:
+                            data_row = TableRow()
+                            for cell in row:
+                                data_cell = TableCell(cell['cell_id'], str(cell['cell_text']))
+                                data_row.cells.append(data_cell)
+                            if len(data_row.cells) != len(columns[0].cells):
+                                print(F"{file_input} contains potentially problematic cell counts!")
+                            rows.append(data_row)
 
             table = Table(title, table_id, title_offset, content_offset, columns,
                           rows, caption, caption_offset, footer, footer_offset)
@@ -91,9 +92,11 @@ def parse_tables(file_input, nlp):
                         for annot in table.annotations:
                             bioc_table['annotations'].append(annot)
                         break
-    if contains_annotations:
-        print(F"Table(s) have annotation(s) in: {file_input}")
-    else:
+    # if contains_annotations:
+        # print(F"Table(s) have annotation(s) in: {file_input}")
+    # else:
+    #     print(F"No table annotations found in: {file_input}")
+    if not contains_annotations:
         print(F"No table annotations found in: {file_input}")
     return tables_data, contains_annotations
 
@@ -163,10 +166,10 @@ class Table:
                         elif entity._.is_trait or entity._.has_trait:
                             self.column_types.insert(i, Table.COLUMN_TRAIT)
                             contains_trait = True
-                        else:
-                            self.column_types.insert(i, 0)  # no entity found
-                    cell_text = [cell.text.lower()] if not cell.text.find("||") else cell.text.lower().split(
-                        "||")
+                    if len(self.column_types) != i + 1:
+                        self.column_types.insert(i, 0)  # no entity found
+                    cell_text = [cell.text.lower()] if not cell.text.find("|") else cell.text.lower().split(
+                        "|")
                     for text in cell_text:
                         if [x for x in Table.trait_strings if re.search(x, text)]:
                             if isinstance(self.column_types[i], list):
@@ -180,7 +183,8 @@ class Table:
                             else:
                                 self.column_types[i] = [self.column_types[i], Table.COLUMN_MARKER]
                             contains_marker = True
-                        elif [x for x in Table.significance_strings if re.search(x, text)]:
+                        elif [x for x in Table.significance_strings if re.search(x, text)] \
+                                or text.lower().strip() == "p":
                             if isinstance(self.column_types[i], list):
                                 self.column_types[i].append(Table.COLUMN_SIGNIFICANCE)
                             else:

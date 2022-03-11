@@ -65,6 +65,13 @@ class GCInterpreter(Interpreter):
             entry = self.lexicon.get_ordered_lexicons()[0].get_entry_by_term(abbrev[1])
             if entry:
                 result.append([entry.identifier, abbrev[0]])
+            else:
+                variations = Interpreter.get_term_variations(abbrev[1])
+                for variant in variations:
+                    entry = self.lexicon.get_ordered_lexicons()[0].get_entry_by_term(variant)
+                    if entry:
+                        result.append([entry.identifier, abbrev[0]])
+                        break
 
         self.abbrev_pattens = result
 
@@ -107,13 +114,6 @@ class GCInterpreter(Interpreter):
         Doc.set_extension("has_ontology_term", getter=self.has_ontology_getter)
         Doc.set_extension("has_trait", getter=self.has_trait_getter)
         Doc.set_extension("is_trait", getter=self.is_trait_getter)
-        # Add matcher patterns for parsing hyphenated and compound words.
-        # hyphenated_pattern = [{'POS': 'PROPN'}, {
-        #     'IS_PUNCT': True, 'LOWER': '-'}, {'POS': 'VERB'}]
-        # compound_pattern = [{'POS': 'NOUN', 'DEP': 'compound'}, {
-        #     'POS': 'NOUN', 'DEP': 'compound'}, {'POS': 'NOUN'}]
-        # self.__basic_matcher.add(
-        #     "JOIN", [hyphenated_pattern, compound_pattern])
 
     def process_corpus(self, corpus):
         """[Applies tokenization, entity recognition and dependency parsing to the supplied corpus.]
@@ -125,10 +125,6 @@ class GCInterpreter(Interpreter):
         Returns:
             [SpaCy doc object]: [Parsed SpaCy doc object containing the processed input text with entities, tokens and dependencies.]
         """
-        # Clean corpus with NLPre parsers
-        # parsers = [dedash(), titlecaps(), separate_reference(), unidecoder()]
-        # for parser in parsers:
-        #     corpus = parser(corpus)
 
         doc = self.nlp(corpus)
         doc.user_data["relations"] = {"PHENO_ASSOC": []}
@@ -172,12 +168,6 @@ class GCInterpreter(Interpreter):
         match_id, start, end = matches[i]
         entity = Span(doc, start, end,
                       label=self.nlp.vocab.strings[match_id])
-        # if entity.label_ in ["RSID", "PVAL"]:
-        #     entity.set_extension("is_trait", default=False, force=True)
-        #     entity.set_extension("ontology", default=None, force=True)
-        # else:
-        #     entity.set_extension("ontology", getter=self.get_ent_ontology, force=True)
-        #     entity.set_extension("is_trait", default=True, force=True)
         try:
             doc.ents += (entity,)
         except Exception as Ex:
@@ -534,8 +524,8 @@ lexicon = Ontology.get_master_lexicon()
 nlp = GCInterpreter(lexicon)
 failed_documents = []
 for pmc_id in gc_data.keys():
-    if pmc_id != "PMC4140093":
-        continue
+    # if pmc_id != "PMC4333205":
+    #     continue
     pvals = []
     rsids = []
     mesh_terms = []

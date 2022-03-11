@@ -54,32 +54,6 @@ class Interpreter:
         Doc.set_extension("has_ontology_term", getter=self.has_ontology_getter)
         Doc.set_extension("has_trait", getter=self.has_trait_getter)
 
-        # Add matcher patterns for parsing hyphenated and compound words.
-        # hyphenated_pattern = [{'POS': 'NOUN'}, {'POS': 'PROPN'},
-        #    {'IS_PUNCT': True, 'LOWER': '-'},
-        #    {'POS': 'NOUN'}]
-        # compound_pattern = [{'POS': 'NOUN', 'DEP': 'compound'}, {
-        #     'POS': 'NOUN', 'DEP': 'compound'}, {'POS': 'NOUN'}]
-        # self.__basic_matcher.add("HYPHENATED", [hyphenated_pattern])
-        # self.__basic_matcher.add(
-        #     "JOIN", [hyphenated_pattern, compound_pattern])
-
-        # Trait - Marker - PVal Semgrex
-        disease_assoc_pattern = [
-
-        ]
-        # self.__dep_matcher = DependencyMatcher(self.nlp.vocab)
-        # self.__dep_matcher.add("Disease Association", [disease_assoc_pattern])
-        # for entry in lexicon.keys():
-        #     new_matcher = PhraseMatcher(self.nlp.vocab, attr="LOWER")
-        #     sub_list = sorted(lexicon[entry].keys(), reverse=True)
-        #     for sub_entry in sub_list:
-        #         patterns = list(self.nlp.tokenizer.pipe(
-        #             lexicon[entry][sub_entry])
-        #         )
-        #         new_matcher.add(entry, self.__on_match, *patterns)
-        #     self.__phrase_matchers.append(new_matcher)
-
     @staticmethod
     def get_term_variations(term: LexiconEntry):
         """
@@ -87,10 +61,14 @@ class Interpreter:
         :param term: LexiconEntry object containing the desired term.
         :return: List of string variations.
         """
-        patterns = [term.name()]
-        if term.synonyms():
-            for syn in term.synonyms():
-                patterns.append(syn['name'])
+        patterns = None
+        if type(term) == str:
+            patterns = [term]
+        else:
+            patterns = [term.name()]
+            if term.synonyms():
+                for syn in term.synonyms():
+                    patterns.append(syn['name'])
         funcs = [Interpreter.remove_comma_variation, Interpreter.get_hyphenated_variations,
                  Interpreter.get_roman_numeral_variation, Interpreter.get_plural_variation] # TODO: plurals + reverse the roman numerals too!
         new_patterns = []
