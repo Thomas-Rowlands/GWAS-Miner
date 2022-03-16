@@ -139,7 +139,7 @@ class Table:
         self.annotations = None
         self.table_type = None
         self.column_types = []
-        self.data_sections = []
+        self.data_sections = data_sections
 
     def __set_table_type(self):
         # Check column types
@@ -173,7 +173,7 @@ class Table:
                         self.column_types.insert(i, 0)  # no entity found
                     cell_text = [cell.text.lower()] if not cell.text.find("|") else cell.text.lower().split(
                         "|")
-                    for text in cell_text:
+                    for text in [x for x in cell_text if x]:
                         if [x for x in Table.trait_strings if re.search(x, text)]:
                             if isinstance(self.column_types[i], list):
                                 self.column_types[i].append(Table.COLUMN_TRAIT)
@@ -224,7 +224,7 @@ class Table:
                     cell.add_spacy_docs(nlp)
         if self.data_sections:
             for section in self.data_sections:
-                for row in section:
+                for row in section.rows:
                     for cell in row.cells:
                         cell.add_spacy_docs(nlp)
         self.__set_table_type()
@@ -246,12 +246,12 @@ class Table:
                                                                               self.content_offset, t, m,
                                                                               p, r, "table_content", cell.id)
         for section in self.data_sections:
-            for row in section:
+            for row in section.rows:
                 for i in range(len(row.cells)):
                     cell = row.cells[i]
                     column_types = [self.column_types[i]] if isinstance(self.column_types[i], int) \
                         else self.column_types[i]
-                    for type in column_types:
+                    for type in set(column_types):
                         if Table.COLUMN_TRAIT == type or Table.COLUMN_MARKER == type:
                             if cell.doc and cell.doc.ents:
                                 used_annots, t, m, p, r = BioC.convert_cell_to_annotation(cell.doc, used_annots,

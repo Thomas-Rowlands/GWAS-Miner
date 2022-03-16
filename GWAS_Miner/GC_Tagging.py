@@ -524,7 +524,7 @@ lexicon = Ontology.get_master_lexicon()
 nlp = GCInterpreter(lexicon)
 failed_documents = []
 for pmc_id in gc_data.keys():
-    # if pmc_id != "PMC4140093":
+    # if pmc_id != "PMC5867896":
     #     continue
     pvals = []
     rsids = []
