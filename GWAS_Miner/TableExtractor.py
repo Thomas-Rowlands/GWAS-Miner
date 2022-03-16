@@ -41,7 +41,7 @@ def parse_tables(file_input, nlp):
             caption_offset = None
             content_offset = None
             columns = []
-            rows = []
+            table_sections = []
             footer = None
             footer_offset = None
             doc['annotations'] = []
@@ -65,17 +65,20 @@ def parse_tables(file_input, nlp):
                         col_row.cells.append(column_cell)
                     columns.append(col_row)
                     for section in passage['data_section']:
+                        table_section = TableSection()
                         for row in section['data_rows']:
                             data_row = TableRow()
                             for cell in row:
                                 data_cell = TableCell(cell['cell_id'], str(cell['cell_text']))
                                 data_row.cells.append(data_cell)
-                            if len(data_row.cells) != len(columns[0].cells):
+                            if abs(len(data_row.cells) - len(columns[0].cells)) > 1:
                                 print(F"{file_input} contains potentially problematic cell counts!")
-                            rows.append(data_row)
+                            table_section.rows.append(data_row)
+                        table_sections.append(table_section)
+
 
             table = Table(title, table_id, title_offset, content_offset, columns,
-                          rows, caption, caption_offset, footer, footer_offset)
+                          table_sections, caption, caption_offset, footer, footer_offset)
             tables.append(table)
     except IOError as ie:
         print(F"No tables file found for {file_input.replace('_tables.json', '')}")
@@ -93,7 +96,7 @@ def parse_tables(file_input, nlp):
                             bioc_table['annotations'].append(annot)
                         break
     # if contains_annotations:
-        # print(F"Table(s) have annotation(s) in: {file_input}")
+    # print(F"Table(s) have annotation(s) in: {file_input}")
     # else:
     #     print(F"No table annotations found in: {file_input}")
     if not contains_annotations:
@@ -116,7 +119,7 @@ class Table:
     marker_strings = [r"(?:[ ]|^)(rsids?)(?:[^\w]|[\s]|\b)", r"(?:[ ]|^)(markers?)(?:[^\w]|[\s]|\b)",
                       r"(?:[ ]|^)(variants?)(?:[^\w]|[\s]|\b)", r"(?:[ ]|^)(snps?)(?:[^\w]|[\s]|\b)"]
 
-    def __init__(self, title, table_id, title_offset, content_offset, column_cells, data_cells,
+    def __init__(self, title, table_id, title_offset, content_offset, column_cells, data_sections,
                  caption_text, caption_offset, footer_text, footer_offset):
         """
         Table object from parsed JSON input.
@@ -127,7 +130,6 @@ class Table:
         self.title_doc = None
         self.content_offset = content_offset
         self.column_rows = column_cells
-        self.data_rows = data_cells
         self.caption_text = caption_text
         self.caption_offset = caption_offset
         self.caption_doc = None
@@ -137,6 +139,7 @@ class Table:
         self.annotations = None
         self.table_type = None
         self.column_types = []
+        self.data_sections = []
 
     def __set_table_type(self):
         # Check column types
@@ -219,17 +222,18 @@ class Table:
             for row in self.column_rows:
                 for cell in row.cells:
                     cell.add_spacy_docs(nlp)
-        if self.data_rows:
-            for row in self.data_rows:
-                for cell in row.cells:
-                    cell.add_spacy_docs(nlp)
+        if self.data_sections:
+            for section in self.data_sections:
+                for row in section:
+                    for cell in row.cells:
+                        cell.add_spacy_docs(nlp)
         self.__set_table_type()
 
     def assign_annotations(self, t, m, p, r, used_annots):
         docs_iter = [(self.title_doc, self.title_offset, "table_title"),
                      (self.caption_doc, self.caption_offset, "table_caption"),
                      (self.footer_doc, self.footer_offset, "table_footer")]
-        data_cells_iter = [(self.data_rows, self.content_offset, "table_content")]
+        data_cells_iter = [(self.data_sections, self.content_offset, "table_content")]
         column_cells_iter = [(self.column_rows, self.content_offset, "table_content")]
         used_annots = []
         for (doc, offset, elem) in docs_iter:
@@ -241,30 +245,33 @@ class Table:
                     used_annots, t, m, p, r = BioC.convert_cell_to_annotation(cell.doc, used_annots,
                                                                               self.content_offset, t, m,
                                                                               p, r, "table_content", cell.id)
-        for row in self.data_rows:
-            for i in range(len(row.cells)):
-                cell = row.cells[i]
-                column_types = [self.column_types[i]] if isinstance(self.column_types[i], int) else self.column_types[i]
-                for type in column_types:
-                    if Table.COLUMN_TRAIT == type or Table.COLUMN_MARKER == type:
-                        if cell.doc and cell.doc.ents:
-                            used_annots, t, m, p, r = BioC.convert_cell_to_annotation(cell.doc, used_annots,
-                                                                                      self.content_offset,
-                                                                                      t, m, p, r, "table_content",
-                                                                                      cell.id)
-                    elif Table.COLUMN_SIGNIFICANCE == type:
-                        if cell.doc:
-                            new_entity = cell.doc[:]
-                            new_entity.label_ = "PVAL"
-                            try:
-                                cell.doc.ents += (new_entity,)
+        for section in self.data_sections:
+            for row in section:
+                for i in range(len(row.cells)):
+                    cell = row.cells[i]
+                    column_types = [self.column_types[i]] if isinstance(self.column_types[i], int) \
+                        else self.column_types[i]
+                    for type in column_types:
+                        if Table.COLUMN_TRAIT == type or Table.COLUMN_MARKER == type:
+                            if cell.doc and cell.doc.ents:
                                 used_annots, t, m, p, r = BioC.convert_cell_to_annotation(cell.doc, used_annots,
                                                                                           self.content_offset,
                                                                                           t, m, p, r, "table_content",
                                                                                           cell.id)
-                            except Exception as e:
-                                print(e)
-                                return t, m, p, r, used_annots
+                        elif Table.COLUMN_SIGNIFICANCE == type:
+                            if cell.doc:
+                                new_entity = cell.doc[:]
+                                new_entity.label_ = "PVAL"
+                                try:
+                                    cell.doc.ents += (new_entity,)
+                                    used_annots, t, m, p, r = BioC.convert_cell_to_annotation(cell.doc, used_annots,
+                                                                                              self.content_offset,
+                                                                                              t, m, p, r,
+                                                                                              "table_content",
+                                                                                              cell.id)
+                                except Exception as e:
+                                    print(e)
+                                    return t, m, p, r, used_annots
 
         self.annotations = used_annots
         return t, m, p, r, used_annots
@@ -275,6 +282,16 @@ class Table:
         del output_dict['footer_doc']
         del output_dict['caption_doc']
         return output_dict
+
+
+class TableSection:
+    def __init__(self, rows=None):
+        if rows is None:
+            rows = []
+        self.rows = rows
+
+    def jsonable(self):
+        return self.__dict__
 
 
 class TableRow:
