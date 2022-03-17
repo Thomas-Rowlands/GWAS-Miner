@@ -65,7 +65,7 @@ def parse_tables(file_input, nlp):
                         col_row.cells.append(column_cell)
                     columns.append(col_row)
                     for section in passage['data_section']:
-                        table_section = TableSection()
+                        table_section = TableSection(title=section['table_section_title_1'])
                         for row in section['data_rows']:
                             data_row = TableRow()
                             for cell in row:
@@ -147,12 +147,19 @@ class Table:
         if self.title_doc:
             if self.title_doc.ents and any(x for x in self.title_doc.ents if x._.is_trait or x._.has_trait):
                 contains_trait = True
-        if self.caption_doc:
+        if self.caption_doc and not contains_trait:
             if self.caption_doc.ents and any(x for x in self.caption_doc.ents if x._.is_trait or x._.has_trait):
                 contains_trait = True
-        if self.footer_doc:
+        if self.footer_doc and not contains_trait:
             if self.footer_doc.ents and any(x for x in self.footer_doc.ents if x._.is_trait or x._.has_trait):
                 contains_trait = True
+
+        for section in self.data_sections:
+            if section.doc and (not contains_trait or not contains_marker):
+                if section.doc.ents and any(x for x in section.doc.ents if x._.is_trait or x._.has_trait):
+                    contains_trait = True
+                if section.doc.ents and any(x for x in section.doc.ents if x.label_ == "RSID"):
+                    contains_marker = True
 
         for row in self.column_rows:
             for i in range(len(row.cells)):
@@ -224,6 +231,7 @@ class Table:
                     cell.add_spacy_docs(nlp)
         if self.data_sections:
             for section in self.data_sections:
+                section.add_spacy_docs(nlp)
                 for row in section.rows:
                     for cell in row.cells:
                         cell.add_spacy_docs(nlp)
@@ -285,13 +293,21 @@ class Table:
 
 
 class TableSection:
-    def __init__(self, rows=None):
+    def __init__(self, rows=None, title=None):
         if rows is None:
             rows = []
         self.rows = rows
+        self.title = title
+        self.doc = None
+
+    def add_spacy_docs(self, nlp):
+        if self.title:
+            self.doc = nlp.process_corpus(self.title)
 
     def jsonable(self):
-        return self.__dict__
+        output_dict = self.__dict__
+        del output_dict['doc']
+        return output_dict
 
 
 class TableRow:
