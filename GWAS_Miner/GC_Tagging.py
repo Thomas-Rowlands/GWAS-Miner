@@ -91,6 +91,7 @@ class GCInterpreter(Interpreter):
                 new_matcher.add(entry.identifier, patterns, on_match=self.__on_match)
         self.__phrase_matcher = new_matcher
 
+
     def __add_matchers(self, lexicon):
         self.__basic_matcher = Matcher(self.nlp.vocab)
         # self.__basic_matcher.add('marker', [[self.__marker_regex]], on_match=self.__on_match)

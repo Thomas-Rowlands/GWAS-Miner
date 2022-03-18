@@ -1,6 +1,6 @@
 import json
 import re
-
+from exceptions import TableTypeError
 import BioC
 
 table_significance_pattern = r""
@@ -76,7 +76,6 @@ def parse_tables(file_input, nlp):
                             table_section.rows.append(data_row)
                         table_sections.append(table_section)
 
-
             table = Table(title, table_id, title_offset, content_offset, columns,
                           table_sections, caption, caption_offset, footer, footer_offset)
             tables.append(table)
@@ -105,13 +104,19 @@ def parse_tables(file_input, nlp):
 
 
 class Table:
+    # Table contains a list of variants and significances for a single trait
     TYPE_MARKER_LIST = 1
+    # Table contains a list of traits and significances for a single variant
     TYPE_TRAIT_LIST = 2
+    # Table contains a list of traits as well as markers and significances
     TYPE_TRAIT_AND_MARKER_LIST = 3
+    # Table columns are on the left rather than the top.
     TYPE_REVERSED_COLUMNS = 4
+
     COLUMN_TRAIT = 1
     COLUMN_SIGNIFICANCE = 2
     COLUMN_MARKER = 3
+
     trait_strings = [r"(?:[ ]|^)(trait)(?:[^\w]|[\s]|\b)", r"(?:[ ]|^)(disease)(?:[^\w]|[\s]|\b)",
                      r"(?:[ ]|^)(phenotype)(?:[^\w]|[\s]|\b)"]
     significance_strings = [r"(?:[ ]|^)(significance)(?:[^\w]|[\s]|\b)",
@@ -236,51 +241,141 @@ class Table:
                     for cell in row.cells:
                         cell.add_spacy_docs(nlp)
         self.__set_table_type()
+        self.__get_gc_annotations()
+
+    def __get_gc_row_relations(self, row, col_types, t, m, p, r):
+
+
+
+
+    def __get_cell_annotation(self, cell, col_type, t, m, p):
+        annotation = None
+        if self.COLUMN_TRAIT == col_type:
+            if cell.doc and cell.doc.ents:
+                annotation = BioC.convert_cell_to_annotation(cell.doc, t,
+                                                             "table_content",
+                                                             cell.id)
+                t += 1
+
+        elif self.COLUMN_MARKER == col_type:
+            if cell.doc and cell.doc.ents:
+                annotation = BioC.convert_cell_to_annotation(cell.doc, m,
+                                                             "table_content",
+                                                             cell.id)
+                m += 1
+        elif self.COLUMN_SIGNIFICANCE == col_type:
+            if cell.doc:
+                new_entity = cell.doc[:]
+                new_entity.label_ = "PVAL"
+                try:
+                    cell.doc.ents += (new_entity,)
+                    annotation = BioC.convert_cell_to_annotation(cell.doc, p,
+                                                                 "table_content",
+                                                                 cell.id)
+                    p += 1
+                except Exception as e:
+                    print(e)
+                    return annotation, t, m, p
+        return annotation, t, m, p
+
+    def __get_row_annotations(self, row, col_types, t, m, p, r):
+        row_annotations = []
+        for i in range(len(row.cells)):
+            cell = row.cells[i]
+            column_types = [col_types[i]] if isinstance(col_types[i], int) \
+                else col_types[i]
+            for col_type in set(column_types):
+                annotation, t, m, p = Table.__get_cell_annotation(cell, col_type, t, m, p)
+                row_annotations.append(annotation)
+        row_relations, r = Table.__get_row_relations(row_annotations, r)
+        return row_annotations, row_relations, t, m, p, r
+
+    def __get_row_relations(self, row_annotations, r):
+        row_relations = []
+        row_annotations_dict = {
+            "traits": [x for x in row_annotations if x.infons['type'] == "trait"],
+            "pvals": [x for x in row_annotations if x.infons['type'] == "significance"],
+            "variants": [x for x in row_annotations if x.infons['type'] == "genetic_variant"]
+        }
+
+        if self.table_type == self.TYPE_TRAIT_LIST:
+            row_relations = self.__get_trait_list_row_relations(row_annotations_dict, r)
+        elif self.table_type == self.TYPE_MARKER_LIST:
+            row_relations = self.__get_marker_list_row_relations(row_annotations_dict, r)
+        elif self.table_type == self.TYPE_TRAIT_AND_MARKER_LIST:
+            row_relations = self.__get_trait_marker_list_row_relations(row_annotations_dict, r)
+
+        return row_relations, r
+
+    def __get_trait_list_row_relations(self, row_annotations_dict, r):
+        row_relations = []
+        trait_count, pval_count, variant_count = self.__get_row_annotation_counts(row_annotations_dict)
+
+        return row_relations, r
+
+    def __get_marker_list_row_relations(self, row_annotations_dict, r):
+        row_relations = []
+        trait_count, pval_count, variant_count = self.__get_row_annotation_counts(row_annotations_dict)
+        if trait_count > 1 or pval_count > 1 or variant_count > 1:
+            raise TableTypeError(self)
+        trait_annot = row_annotations_dict['traits'][0]
+        variant_annot = row_annotations_dict['variants'][0]
+        pval_annot = row_annotations_dict['pvals'][0]
+        row_relations.append(
+            BioC.BioCRelation()
+        )
+        return row_relations, r
+
+    def __get_trait_marker_list_row_relations(self, row_annotations_dict, r):
+        row_relations = []
+        trait_count, pval_count, variant_count = self.__get_row_annotation_counts(row_annotations_dict)
+        return row_relations, r
+
+    @staticmethod
+    def __get_row_annotation_counts(row_annotations_dict):
+        trait_count, pval_count, variant_count = len(row_annotations_dict['traits']), len(
+            row_annotations_dict['pvals']), len(row_annotations_dict['variants'])
+        return trait_count, pval_count, variant_count
+
+    def assign_gc_annotations(self, t, m, p, r, used_annots, gc_relations):
+        docs_iter = [(self.title_doc, self.title_offset, "table_title"),
+                     (self.caption_doc, self.caption_offset, "table_caption"),
+                     (self.footer_doc, self.footer_offset, "table_footer")]
+        used_annots = []
+        for (doc, offset, elem) in docs_iter:
+            if doc and doc.ents:
+                used_annots, t, m, p, r = BioC.get_bioc_annotations(doc, used_annots, offset, t, m, p, r, elem)
+
+        for row in self.column_rows:
+            row_annotations, row_relations, t, m, p, r = self.__get_gc_row_annotations(row, self.column_types, t, m, p, r)
+            used_annots += row_annotations
+
+        for section in self.data_sections:
+            for row in section.rows:
+                row_annotations, row_relations, t, m, p, r = self.__get_gc_row_annotations(row, self.column_types, t, m,
+                                                                                        p, r)
+                used_annots += row_annotations
+        self.annotations = used_annots
+        return t, m, p, r, used_annots
 
     def assign_annotations(self, t, m, p, r, used_annots):
         docs_iter = [(self.title_doc, self.title_offset, "table_title"),
                      (self.caption_doc, self.caption_offset, "table_caption"),
                      (self.footer_doc, self.footer_offset, "table_footer")]
-        data_cells_iter = [(self.data_sections, self.content_offset, "table_content")]
-        column_cells_iter = [(self.column_rows, self.content_offset, "table_content")]
         used_annots = []
         for (doc, offset, elem) in docs_iter:
             if doc and doc.ents:
                 used_annots, t, m, p, r = BioC.get_bioc_annotations(doc, used_annots, offset, t, m, p, r, elem)
+
         for row in self.column_rows:
-            for cell in row.cells:
-                if cell.doc and cell.doc.ents:
-                    used_annots, t, m, p, r = BioC.convert_cell_to_annotation(cell.doc, used_annots,
-                                                                              self.content_offset, t, m,
-                                                                              p, r, "table_content", cell.id)
+            row_annotations, row_relations, t, m, p, r = self.__get_row_annotations(row, self.column_types, t, m, p, r)
+            used_annots += row_annotations
+
         for section in self.data_sections:
             for row in section.rows:
-                for i in range(len(row.cells)):
-                    cell = row.cells[i]
-                    column_types = [self.column_types[i]] if isinstance(self.column_types[i], int) \
-                        else self.column_types[i]
-                    for type in set(column_types):
-                        if Table.COLUMN_TRAIT == type or Table.COLUMN_MARKER == type:
-                            if cell.doc and cell.doc.ents:
-                                used_annots, t, m, p, r = BioC.convert_cell_to_annotation(cell.doc, used_annots,
-                                                                                          self.content_offset,
-                                                                                          t, m, p, r, "table_content",
-                                                                                          cell.id)
-                        elif Table.COLUMN_SIGNIFICANCE == type:
-                            if cell.doc:
-                                new_entity = cell.doc[:]
-                                new_entity.label_ = "PVAL"
-                                try:
-                                    cell.doc.ents += (new_entity,)
-                                    used_annots, t, m, p, r = BioC.convert_cell_to_annotation(cell.doc, used_annots,
-                                                                                              self.content_offset,
-                                                                                              t, m, p, r,
-                                                                                              "table_content",
-                                                                                              cell.id)
-                                except Exception as e:
-                                    print(e)
-                                    return t, m, p, r, used_annots
-
+                row_annotations, row_relations, t, m, p, r = self.__get_row_annotations(row, self.column_types, t, m,
+                                                                                        p, r)
+                used_annots += row_annotations
         self.annotations = used_annots
         return t, m, p, r, used_annots
 

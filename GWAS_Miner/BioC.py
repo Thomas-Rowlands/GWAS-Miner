@@ -1,47 +1,41 @@
 from datetime import datetime
 
 
-def convert_cell_to_annotation(doc, used_annots, offset, t, m, p, r, table_elem_id=None, table_cell_id=None):
+def convert_cell_to_annotation(doc, i, table_elem_id=None, table_cell_id=None):
     current_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-    annotations = []
-    for ent in doc.ents:
-        annotations.append({
-            "entity_type": ent.label_,
-            "id": ent.label_[ent.label_.index(":") + 2:] if ":" in ent.label_ else ent.label_,
-            "text": ent.text,
-            "offset": ent.start_char,
-            "length": ent.end_char - ent.start_char,
-            "table_element_id": table_elem_id,
-            "table_cell_id": table_cell_id
-        })
-    if annotations:
-        for annot in annotations:
-            loc = BioCLocation(offset=annot["offset"], length=annot["length"],
-                               table_element=annot['table_element_id'], table_cell_id=annot['table_cell_id'])
-            if "RSID" not in annot["entity_type"] and "PVAL" not in annot["entity_type"]:
-                genomic_trait = BioCAnnotation(id=F"T{t}", infons={"type": "trait", "identifier": F"MeSH:{annot['id']}",
-                                                                   "annotator": "GWASMiner@le.ac.uk",
-                                                                   "updated_at": current_datetime},
-                                               locations=[loc], text=annot["text"])
-                used_annots.append(genomic_trait)
-                t += 1
-            elif "RSID" in annot["entity_type"]:
-                marker_identifier = BioCAnnotation(id=F"V{m}",
-                                                   infons={"type": "genetic_variant",
-                                                           "identifier": F"dbSNP:{annot['text']}",
+    ent = doc.ents[0]
+    annot = {
+        "entity_type": ent.label_,
+        "id": ent.label_[ent.label_.index(":") + 2:] if ":" in ent.label_ else ent.label_,
+        "text": ent.text,
+        "offset": ent.start_char,
+        "length": ent.end_char - ent.start_char,
+        "table_element_id": table_elem_id,
+        "table_cell_id": table_cell_id
+    }
+    loc = BioCLocation(offset=annot["offset"], length=annot["length"],
+                       table_element=annot['table_element_id'], table_cell_id=annot['table_cell_id'])
+    if "RSID" not in annot["entity_type"] and "PVAL" not in annot["entity_type"]:
+        genomic_trait = BioCAnnotation(id=F"T{i}", infons={"type": "trait", "identifier": F"MeSH:{annot['id']}",
                                                            "annotator": "GWASMiner@le.ac.uk",
                                                            "updated_at": current_datetime},
-                                                   locations=[loc], text=annot["text"])
-                used_annots.append(marker_identifier)
-                m += 1
-            elif "PVAL" in annot["entity_type"]:
-                p_value = BioCAnnotation(id=F"S{p}", infons={"type": "significance", "identifier": annot["id"],
-                                                             "annotator": "GWASMiner@le.ac.uk",
-                                                             "updated_at": current_datetime},
-                                         locations=[loc], text=annot["text"])
-                used_annots.append(p_value)
-                p += 1
-    return used_annots, t, m, p, r
+                                       locations=[loc], text=annot["text"])
+        return genomic_trait
+    elif "RSID" in annot["entity_type"]:
+        marker_identifier = BioCAnnotation(id=F"V{i}",
+                                           infons={"type": "genetic_variant",
+                                                   "identifier": F"dbSNP:{annot['text']}",
+                                                   "annotator": "GWASMiner@le.ac.uk",
+                                                   "updated_at": current_datetime},
+                                           locations=[loc], text=annot["text"])
+        return marker_identifier
+    elif "PVAL" in annot["entity_type"]:
+        p_value = BioCAnnotation(id=F"S{i}", infons={"type": "significance", "identifier": annot["id"],
+                                                     "annotator": "GWASMiner@le.ac.uk",
+                                                     "updated_at": current_datetime},
+                                 locations=[loc], text=annot["text"])
+        return p_value
+    return None
 
 
 def get_bioc_annotations(doc, used_annots, offset, t, m, p, r, table_elem_id=None, table_cell_id=None):
@@ -111,7 +105,7 @@ class BioCRelation:
 
     def jsonable(self):
         return self.__dict__
-
+yea that guide is shit if he told you to
 
 class BioCLocation:
     offset = None
