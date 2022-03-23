@@ -1,5 +1,7 @@
 import json
 import re
+from datetime import datetime
+
 from exceptions import TableTypeError
 import BioC
 
@@ -17,13 +19,48 @@ def output_tables(destination, tables):
 
 
 def process_tables(nlp, tables):
-    t, m, p, r = 0, 0, 0, 0
-    used_annots = []
     for table in tables:
-        table.add_spacy_docs(nlp)
-        if table.table_type:
-            t, m, p, r, used_annots = table.assign_annotations(t, m, p, r, used_annots)
-    return tables
+        nlp = table.add_spacy_docs(nlp)
+        table.annotations = nlp.annotations
+        table.relations = nlp.relations
+        nlp.annotations = []
+        nlp.relations = []
+        # if table.table_type:
+            # t, m, p, r, used_annots = table.assign_annotations(t, m, p, r, used_annots)
+    return tables, nlp
+
+
+def get_cell_entity_annotation(nlp, ent, table_element, cell_id):
+    current_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+    offset = ent.start_char
+    length = ent.end_char - ent.start_char
+    loc = BioC.BioCLocation(offset=offset, length=length, table_cell_id=cell_id, table_element=table_element)
+    entity_type = None
+    entity_identifier = None
+    if ent.label_ == "RSID":
+        entity_type = "genetic_variant"
+        entity_identifier = F"dbSNP:{ent.text}"
+    elif ent.label_ == "PVAL":
+        entity_type = "significance"
+        entity_identifier = "PVAL"
+    else:
+        entity_type = "trait"
+        entity_identifier = F"MeSH:{ent.label_}"
+    entity_id = None
+    if entity_type == "trait":
+        entity_id = F"T{nlp.t}"
+        nlp.t += 1
+    elif entity_type == "genetic_variant":
+        entity_id = F"V{nlp.v}"
+        nlp.v += 1
+    else:
+        entity_id = F"S{nlp.s}"
+        nlp.s += 1
+    annotation = BioC.BioCAnnotation(id=entity_id, infons={"type": entity_type, "identifier": entity_identifier,
+                                                         "annotator": "GWASMiner@le.ac.uk",
+                                                         "updated_at": current_datetime},
+                                     locations=[loc], text=ent.text)
+    return annotation, nlp
 
 
 def parse_tables(file_input, nlp):
@@ -82,24 +119,25 @@ def parse_tables(file_input, nlp):
     except IOError as ie:
         print(F"No tables file found for {file_input.replace('_tables.json', '')}")
     if tables_data:
-        annotated_tables = process_tables(nlp, tables)
+        annotated_tables, nlp = process_tables(nlp, tables)
         for table in annotated_tables:
             if table.annotations:
                 contains_annotations = True
-                break
-        for table in annotated_tables:
-            if table.annotations:
                 for bioc_table in tables_data["documents"]:
+                    for passage in bioc_table["passages"]:
+                        passage["relations"] = []
                     if bioc_table["id"] == table.table_id:
-                        for annot in table.annotations:
-                            bioc_table['annotations'].append(annot)
+                        bioc_table["annotations"] = table.annotations
+                        bioc_table["relations"] = table.relations
                         break
-    # if contains_annotations:
-    # print(F"Table(s) have annotation(s) in: {file_input}")
+
+
+    if contains_annotations:
+        print(F"Table(s) have annotation(s) in: {file_input}")
     # else:
     #     print(F"No table annotations found in: {file_input}")
-    if not contains_annotations:
-        print(F"No table annotations found in: {file_input}")
+    # if not contains_annotations:
+    #     print(F"No table annotations found in: {file_input}")
     return tables_data, contains_annotations
 
 
@@ -141,30 +179,55 @@ class Table:
         self.footer_text = footer_text
         self.footer_offset = footer_offset
         self.footer_doc = None
-        self.annotations = None
+        self.annotations = []
+        self.relations = []
         self.table_type = None
+        self.has_super_rows = False
         self.column_types = []
         self.data_sections = data_sections
+        self.caption_ents = []
+        self.section_title_ents = []
+        self.footer_ents = []
+        self.title_ents = []
+        self.contains_trait = False
+        self.contains_marker = False
+        self.contains_significance = False
+        self.section_ents = []
 
     def __set_table_type(self):
         # Check column types
         contains_marker, contains_trait, contains_pval = False, False, False
         if self.title_doc:
             if self.title_doc.ents and any(x for x in self.title_doc.ents if x._.is_trait or x._.has_trait):
-                contains_trait = True
-        if self.caption_doc and not contains_trait:
-            if self.caption_doc.ents and any(x for x in self.caption_doc.ents if x._.is_trait or x._.has_trait):
-                contains_trait = True
+                self.contains_trait = True
+                self.title_ents.append(self.COLUMN_TRAIT)
+
+        if self.caption_doc:
+            if self.caption_doc.ents:
+                if any(x for x in self.caption_doc.ents if x._.is_trait or x._.has_trait):
+                    self.contains_trait = True
+                    self.caption_ents.append(self.COLUMN_TRAIT)
+                if any(x for x in self.caption_doc.ents if x.label_ == "RSID"):
+                    self.contains_marker = True
+                    self.caption_ents.append(self.COLUMN_MARKER)
+
         if self.footer_doc and not contains_trait:
             if self.footer_doc.ents and any(x for x in self.footer_doc.ents if x._.is_trait or x._.has_trait):
-                contains_trait = True
+                self.contains_trait = True
+                self.footer_ents.append(self.COLUMN_TRAIT)
 
-        for section in self.data_sections:
-            if section.doc and (not contains_trait or not contains_marker):
-                if section.doc.ents and any(x for x in section.doc.ents if x._.is_trait or x._.has_trait):
-                    contains_trait = True
-                if section.doc.ents and any(x for x in section.doc.ents if x.label_ == "RSID"):
-                    contains_marker = True
+        for i in range(len(self.data_sections)):
+            section = self.data_sections[i]
+            self.section_ents.append([])
+            if section.doc:
+                self.has_super_rows = True
+                if not contains_trait or not contains_marker:
+                    if section.doc.ents and any(x for x in section.doc.ents if x._.is_trait or x._.has_trait):
+                        self.contains_trait = True
+                        self.section_ents[i].append(self.COLUMN_TRAIT)
+                    if section.doc.ents and any(x for x in section.doc.ents if x.label_ == "RSID"):
+                        self.contains_marker = True
+                        self.section_ents[i].append(self.COLUMN_MARKER)
 
         for row in self.column_rows:
             for i in range(len(row.cells)):
@@ -174,13 +237,13 @@ class Table:
                         entity = cell.doc.ents[0]
                         if entity.label_ == "RSID":
                             self.column_types.insert(i, Table.COLUMN_MARKER)
-                            contains_marker = True
+                            self.contains_marker = True
                         elif entity.label_ == "PVAL":
                             self.column_types.insert(i, Table.COLUMN_SIGNIFICANCE)
-                            contains_pval = True
+                            self.contains_significance = True
                         elif entity._.is_trait or entity._.has_trait:
                             self.column_types.insert(i, Table.COLUMN_TRAIT)
-                            contains_trait = True
+                            self.contains_trait = True
                     if len(self.column_types) != i + 1:
                         self.column_types.insert(i, 0)  # no entity found
                     cell_text = [cell.text.lower()] if not cell.text.find("|") else cell.text.lower().split(
@@ -197,14 +260,14 @@ class Table:
                                 self.column_types[i].append(Table.COLUMN_MARKER)
                             else:
                                 self.column_types[i] = [self.column_types[i], Table.COLUMN_MARKER]
-                            contains_marker = True
+                            self.contains_marker = True
                         elif [x for x in Table.significance_strings if re.search(x, text)] \
                                 or text.lower().strip() == "p":
                             if isinstance(self.column_types[i], list):
                                 self.column_types[i].append(Table.COLUMN_SIGNIFICANCE)
                             else:
                                 self.column_types[i] = [self.column_types[i], Table.COLUMN_SIGNIFICANCE]
-                            contains_pval = True
+                            self.contains_significance = True
                     if len(self.column_types) != i + 1:
                         self.column_types.append(0)  # default added in case of no entities.
                 else:
@@ -216,9 +279,9 @@ class Table:
                         self.column_types[i] = 0
                     else:
                         self.column_types[i] = [x for x in self.column_types[i] if x != 0]
-        if contains_pval and contains_trait and contains_marker:
+        if self.contains_significance and self.contains_trait and self.contains_marker:
             self.table_type = Table.TYPE_TRAIT_LIST
-        elif contains_pval and contains_marker:
+        elif self.contains_significance and self.contains_marker:
             self.table_type = Table.TYPE_MARKER_LIST
 
     def add_spacy_docs(self, nlp):
@@ -241,11 +304,63 @@ class Table:
                     for cell in row.cells:
                         cell.add_spacy_docs(nlp)
         self.__set_table_type()
-        self.__get_gc_annotations()
+        if self.table_type:
+            return self.__get_gc_annotations(nlp)
+        else:
+            return nlp
 
-    def __get_gc_row_relations(self, row, col_types, t, m, p, r):
-
-
+    def __get_gc_annotations(self, nlp):
+        current_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+        annotations = []
+        relations = []
+        section_num = 1
+        for section in self.data_sections:
+            contains_trait, contains_variant, contains_significance = False, False, False
+            for row in section.rows:
+                row_annotations = []
+                for cell in row.cells:
+                    if cell.doc and cell.doc.ents:
+                        entity = cell.doc.ents[0]
+                        if entity.label_ == "PVAL":
+                            contains_significance = True
+                        elif entity.label_ == "RSID":
+                            contains_variant = True
+                        else:
+                            contains_trait = True
+                        annotation, nlp = get_cell_entity_annotation(nlp, entity, "table_content", cell.id)
+                        row_annotations.append(annotation)
+                if not contains_trait:
+                    if self.COLUMN_TRAIT in self.section_ents[section_num - 1]:
+                        entity = section.doc.ents[0]
+                        annotation, nlp = get_cell_entity_annotation(nlp, entity, F"table_section_title_{section_num}", None)
+                        row_annotations.append(annotation)
+                        contains_trait = True
+                    elif self.COLUMN_TRAIT in self.caption_ents:
+                        entity = None
+                        if "HCV" in self.caption_doc.text:
+                            idx = self.caption_doc.text_with_ws.index("HCV")
+                            entity = self.caption_doc.char_span(idx, idx + 3, "D019698")
+                        else:
+                            entity = self.caption_doc.ents[0]
+                        annotation, nlp = get_cell_entity_annotation(nlp, entity, "table_caption", None)
+                        row_annotations.append(annotation)
+                        contains_trait = True
+                    elif self.COLUMN_TRAIT in self.footer_ents:
+                        entity = self.footer_doc.ents[0]
+                        annotation, nlp = get_cell_entity_annotation(nlp, entity, "table_footer", None)
+                        row_annotations.append(annotation)
+                        contains_trait = True
+                if len(row_annotations) == 3:
+                    annotations += row_annotations
+                    relations.append(BioC.BioCRelation(id=F"R{nlp.r}",
+                                                       infons={"type": "disease_assoc",
+                                                               "annotator": "GWASMiner@le.ac.uk",
+                                                          "updated_at": current_datetime},
+                                                       nodes=[BioC.BioCNode(refid=x.id, role="") for x in row_annotations]))
+            section_num += 1
+        nlp.annotations += annotations
+        nlp.relations += relations
+        return nlp
 
 
     def __get_cell_annotation(self, cell, col_type, t, m, p):
@@ -347,13 +462,14 @@ class Table:
                 used_annots, t, m, p, r = BioC.get_bioc_annotations(doc, used_annots, offset, t, m, p, r, elem)
 
         for row in self.column_rows:
-            row_annotations, row_relations, t, m, p, r = self.__get_gc_row_annotations(row, self.column_types, t, m, p, r)
+            row_annotations, row_relations, t, m, p, r = self.__get_gc_row_annotations(row, self.column_types, t, m, p,
+                                                                                       r)
             used_annots += row_annotations
 
         for section in self.data_sections:
             for row in section.rows:
                 row_annotations, row_relations, t, m, p, r = self.__get_gc_row_annotations(row, self.column_types, t, m,
-                                                                                        p, r)
+                                                                                           p, r)
                 used_annots += row_annotations
         self.annotations = used_annots
         return t, m, p, r, used_annots
@@ -392,7 +508,7 @@ class TableSection:
         if rows is None:
             rows = []
         self.rows = rows
-        self.title = title
+        self.title = str(title)
         self.doc = None
 
     def add_spacy_docs(self, nlp):

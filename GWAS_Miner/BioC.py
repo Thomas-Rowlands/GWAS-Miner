@@ -105,7 +105,7 @@ class BioCRelation:
 
     def jsonable(self):
         return self.__dict__
-yea that guide is shit if he told you to
+
 
 class BioCLocation:
     offset = None

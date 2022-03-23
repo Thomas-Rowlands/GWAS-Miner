@@ -477,7 +477,7 @@ class Interpreter:
                         match_found = True
                         break
                 if not match_found:
-                    filtered_uncertain_results.append(u_association)
+                    filtered_uncertain_results += uncertain_results
         else:
             filtered_uncertain_results = uncertain_results
         return results, filtered_uncertain_results

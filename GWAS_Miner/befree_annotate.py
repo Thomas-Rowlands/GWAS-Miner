@@ -48,44 +48,40 @@ def get_befree_data(pmid):
     return befree_data
 
 
-def get_bioc_annotations(annotations, used_annots, offset, t, m, p, g, r):
+def get_bioc_annotations(annotations, offset, nlp):
     current_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
     for annot in annotations:
         loc = BioCLocation(offset=annot["offset"] + offset, length=annot["length"])
-        if annot["text"] in [x.text for x in used_annots]:
-            for old_annot in used_annots:
-                if old_annot.text == annot["text"] and loc not in old_annot.locations:
-                    old_annot.locations.append(loc)
         if "RSID" not in annot["entity_type"] and "PVAL" not in annot["entity_type"]:
-            genomic_trait = BioCAnnotation(id=F"T{t}", infons={"type": "trait", "identifier": F"MeSH:{annot['id']}",
+            genomic_trait = BioCAnnotation(id=F"T{nlp.t}", infons={"type": "trait", "identifier": F"MeSH:{annot['id']}",
                                                                "annotator": "BeFree@example.com",
                                                                "updated_at": current_datetime},
                                            locations=[loc], text=annot["text"])
-            used_annots.append(genomic_trait)
-            t += 1
+            nlp.annotations.append(genomic_trait)
+            nlp.t += 1
         elif "RSID" in annot["entity_type"]:
-            marker_identifier = BioCAnnotation(id=F"M{m}",
+            marker_identifier = BioCAnnotation(id=F"V{nlp.v}",
                                                infons={"type": "genetic_variant", "identifier": F"dbSNP:{annot['id']}",
                                                        "annotator": "BeFree@example.com",
                                                        "updated_at": current_datetime},
                                                locations=[loc], text=annot["text"])
-            used_annots.append(marker_identifier)
-            m += 1
+            nlp.annotations.append(marker_identifier)
+            nlp.v += 1
         elif "PVAL" in annot["entity_type"]:
-            p_value = BioCAnnotation(id=F"P{p}", infons={"type": "significance", "identifier": annot["id"],
+            p_value = BioCAnnotation(id=F"P{nlp.p}", infons={"type": "significance", "identifier": annot["id"],
                                                          "annotator": "BeFree@example.com",
                                                          "updated_at": current_datetime},
                                      locations=[loc], text=annot["text"])
-            used_annots.append(p_value)
-            p += 1
+            nlp.annotations.append(p_value)
+            nlp.p += 1
         elif "GENE" in annot["entity_type"]:
             gene = BioCAnnotation(id=F"P{p}", infons={"type": "gene", "identifier": F"Entrez:{annot['id']}",
                                                          "annotator": "BeFree@example.com",
                                                          "updated_at": current_datetime},
                                      locations=[loc], text=annot["text"])
-            used_annots.append(gene)
-            g += 1
-    return used_annots, t, m, p, g, r
+            nlp.annotations.append(gene)
+            nlp.g += 1
+    return nlp
 
 
 def get_closest_index(text, search, target):
@@ -101,7 +97,7 @@ def get_closest_index(text, search, target):
     return closest_index
 
 
-def get_befree_annotations(study, t, m, p, r):
+def get_befree_annotations(study, nlp):
     pmid = study["documents"][0]["passages"][0]["infons"]["article-id_pmid"]
     befree_data = get_befree_data(pmid)
     if pmid in befree_data.keys():
@@ -152,20 +148,19 @@ def get_befree_annotations(study, t, m, p, r):
                     except TypeError as te:
                         print(F"PMID: {pmid} - entity missing from sentence.")
                         continue
-                    disease_node_id = t
-                    marker_node_id = m
-                    gene_node_id = g
-                    used_annots, t, m, p, g, r = get_bioc_annotations(annotations, used_annots, passage["offset"], t, m, p,
-                                                                      g, r)
+                    disease_node_id = nlp.t
+                    marker_node_id = nlp.v
+                    gene_node_id = nlp.g
+                    nlp = get_bioc_annotations(annotations, passage["offset"], nlp)
                     phenotype_node = BioC.BioCNode(refid=F"T{disease_node_id}", role="")
                     marker_node = BioC.BioCNode(refid=F"M{marker_node_id}", role="")
                     gene_node = BioC.BioCNode(refid=F"G{gene_node_id}", role="")
-                    bioc_relation = BioC.BioCRelation(id=F"R{r}",
+                    bioc_relation = BioC.BioCRelation(id=F"R{nlp.r}",
                                                       infons={"type": "BeFree_Association",
                                                               "annotator": "tr142@le.ac.uk",
                                                               "updated_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")},
                                                       nodes=[phenotype_node, marker_node] if not is_gene else [phenotype_node, gene_node])
-                    r += 1
+                    nlp.r += 1
                     relations.append(bioc_relation)
                 for annot in used_annots:
                     passage['annotations'].append(annot)

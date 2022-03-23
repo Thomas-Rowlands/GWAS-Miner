@@ -42,11 +42,30 @@ class GCInterpreter(Interpreter):
         self.rsid_patterns = []
         self.abbrev_pattens = []
         self.gc_relations = []
+        self.t = 0
+        self.v = 0
+        self.s = 0
+        self.g = 0
+        self.r = 0
+        self.annotations = []
+        self.relations = []
         self.association_patterns = config.pheno_assoc_patterns
         self.__dep_matcher = DependencyMatcher(self.nlp.vocab, validate=True)
         self.__add_semgrex()
         if not ontology_only:
             self.__add_matchers(lexicon)
+
+    def reset_annotation_identifiers(self):
+        self.t = 0
+        self.v = 0
+        self.s = 0
+        self.g = 0
+        self.r = 0
+
+    def clear_saved_study_data(self):
+        self.annotations = []
+        self.relations = []
+        self.reset_annotation_identifiers()
 
     def __add_semgrex(self):
         self.__dep_matcher.add("PHENO_ASSOC", self.association_patterns, on_match=self.__on_dep_match)
@@ -90,7 +109,6 @@ class GCInterpreter(Interpreter):
                 patterns = self.nlp.tokenizer.pipe(patterns)
                 new_matcher.add(entry.identifier, patterns, on_match=self.__on_match)
         self.__phrase_matcher = new_matcher
-
 
     def __add_matchers(self, lexicon):
         self.__basic_matcher = Matcher(self.nlp.vocab)
@@ -182,8 +200,7 @@ class GCInterpreter(Interpreter):
                 doc.ents += (entity,)
             return  # print(entity.text)  # self.__failed_matches.append(entity.text)
 
-    @staticmethod
-    def __regex_match(pattern, doc, label, ignore_case=True):
+    def __regex_match(self, pattern, doc, label, ignore_case=True):
         chars_to_tokens = {}
         for token in doc:
             for i in range(token.idx, token.idx + len(token.text)):
@@ -395,7 +412,6 @@ def get_study_abbreviations(file_input):
 def process_study(nlp, study):
     if not study:
         return False
-    t, m, p, r = 0, 0, 0, 0
     study_fulltext = "\n".join([x['text'] for x in study['documents'][0]['passages']])
     # abbreviations = nlp.get_all_abbreviations(study_fulltext)
     current_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -426,27 +442,30 @@ def process_study(nlp, study):
                         if old_annot.text == annot["text"] and loc not in old_annot.locations:
                             old_annot.locations.append(loc)
                 if "RSID" not in annot["entity_type"] and "PVAL" not in annot["entity_type"]:
-                    genomic_trait = BioC.BioCAnnotation(id=F"T{t}", infons={"type": "trait", "identifier": F"MeSH:{annot['id']}",
-                                                                            "annotator": "GWASMiner@le.ac.uk",
-                                                                            "updated_at": current_datetime},
+                    genomic_trait = BioC.BioCAnnotation(id=F"T{nlp.t}",
+                                                        infons={"type": "trait", "identifier": F"MeSH:{annot['id']}",
+                                                                "annotator": "GWASMiner@le.ac.uk",
+                                                                "updated_at": current_datetime},
                                                         locations=[loc], text=annot["text"])
                     passage['annotations'].append(genomic_trait)
-                    t += 1
+                    nlp.t += 1
                 elif "RSID" in annot["entity_type"]:
-                    marker_identifier = BioC.BioCAnnotation(id=F"M{m}",
-                                                            infons={"type": "genetic_variant", "identifier": F"dbSNP:{annot['id']}",
+                    marker_identifier = BioC.BioCAnnotation(id=F"V{nlp.v}",
+                                                            infons={"type": "genetic_variant",
+                                                                    "identifier": F"dbSNP:{annot['id']}",
                                                                     "annotator": "GWASMiner@le.ac.uk",
                                                                     "updated_at": current_datetime},
                                                             locations=[loc], text=annot["text"])
                     passage['annotations'].append(marker_identifier)
-                    m += 1
+                    nlp.v += 1
                 elif "PVAL" in annot["entity_type"]:
-                    p_value = BioC.BioCAnnotation(id=F"P{p}", infons={"type": "significance", "identifier": annot["id"],
-                                                                      "annotator": "GWASMiner@le.ac.uk",
-                                                                      "updated_at": current_datetime},
+                    p_value = BioC.BioCAnnotation(id=F"S{nlp.s}",
+                                                  infons={"type": "significance", "identifier": annot["id"],
+                                                          "annotator": "GWASMiner@le.ac.uk",
+                                                          "updated_at": current_datetime},
                                                   locations=[loc], text=annot["text"])
                     passage['annotations'].append(p_value)
-                    p += 1
+                    nlp.s += 1
                 used_annots.append(annot["text"])
 
             relations, uncertain_relations = nlp.extract_phenotypes(doc)
@@ -466,13 +485,13 @@ def process_study(nlp, study):
                 phenotype_node = BioC.BioCNode(refid=pheno_id, role="")
                 marker_node = BioC.BioCNode(refid=marker_id, role="")
                 significance_node = BioC.BioCNode(refid=significance_id, role="")
-                bioc_relation = BioC.BioCRelation(id=F"R{r}",
+                bioc_relation = BioC.BioCRelation(id=F"R{nlp.r}",
                                                   infons={"type": "disease_assoc", "annotator": "GWASMiner@le.ac.uk",
                                                           "updated_at": current_datetime},
                                                   nodes=[phenotype_node, marker_node, significance_node])
                 # passage['relations'].append(bioc_relation)
                 document_relations.append(bioc_relation)
-                r += 1
+                nlp.r += 1
             for relation in uncertain_relations:
                 if type(relation.phenotype.token) == Token:
                     pheno_id = [x.id for x in passage['annotations'] if
@@ -487,22 +506,23 @@ def process_study(nlp, study):
                 phenotype_node = BioC.BioCNode(refid=pheno_id, role="")
                 marker_node = BioC.BioCNode(refid=marker_id, role="")
                 significance_node = BioC.BioCNode(refid=significance_id, role="")
-                bioc_relation = BioC.BioCRelation(id=F"R{r}",
+                bioc_relation = BioC.BioCRelation(id=F"R{nlp.r}",
                                                   infons={"type": "possible_disease_assoc",
                                                           "annotator": "GWASMiner@le.ac.uk",
                                                           "updated_at": current_datetime},
                                                   nodes=[phenotype_node, marker_node, significance_node])
                 # passage['relations'].append(bioc_relation)
                 document_relations.append(bioc_relation)
-                r += 1
+                nlp.r += 1
     # with open("top_phenotypes.txt", "a+", encoding="utf-8") as fin:
     #     fin.write(F"{pmc_id}\t{top_phenotype['ID']}\t{top_phenotype['label']}\n")
     if document_relations:
         study['documents'][0]['relations'] = document_relations
-    study = befree_annotate.get_befree_annotations(study, t, m, p, r)
+    study = befree_annotate.get_befree_annotations(study, nlp)
     OutputConverter.output_xml(json.dumps(study, default=BioC.ComplexHandler),
                                F"output/PMC{study['documents'][0]['id']}_result.xml")
     return study
+
 
 # load bioc pmc ids
 bioc_pmcids = [x.replace(".json", "").replace("_abbreviations", "") for x in listdir("BioC_Studies") if
@@ -525,12 +545,13 @@ lexicon = Ontology.get_master_lexicon()
 nlp = GCInterpreter(lexicon)
 failed_documents = []
 for pmc_id in gc_data.keys():
-    if pmc_id != "PMC3664837":
+    if pmc_id != "PMC3638215":
         continue
     pvals = []
     rsids = []
     mesh_terms = []
     gc_relations = []
+    nlp.reset_annotation_identifiers()
     for relation in gc_data[pmc_id]:
         rsid = relation[0]
         mesh_id = relation[2]
@@ -542,11 +563,19 @@ for pmc_id in gc_data.keys():
             pval_input_int = int(relation[1][:relation[1].lower().find("e")])
         pval_input_range = F"{pval_input_int - 1}{pval_input_int}{pval_input_int + 1}"
         power_digits = relation[1][relation[1].find('-') + 1:]
-        pval = F"(?:[pP][- \(\)metavalueofcbind]" + "{0,13}" + F"[ =<of]*[ ]?)([{pval_input_range}][ \.0-9]*[ xX*]*10 ?- ?" \
+        pval = F"(?:[pP][- \(\)metavalueofcbind]" + "{0,13}" + F"[ =<of]*[ ]?)([{pval_input_range}][ \.0-9]*[ xX*×]*10 ?[-−] ?" \
                                                                F"{power_digits[0] + '?' if power_digits[0] == '0' else power_digits[0]}" \
                                                                F"{power_digits[1:] + ')' if len(power_digits) > 1 else ')'}"
         pvals.append(pval)
-        rsids.append(F"({rsid})")
+        table_pval = F"([{pval_input_range}][ \.0-9]*[ xX*×]*10 ?(<sup>)?[-−] ?" \
+                     F"{power_digits[0] + '?' if power_digits[0] == '0' else power_digits[0]}" \
+                     F"{power_digits[1:] + '(</sup>)?)' if len(power_digits) > 1 else '(</sup>)?)'}"
+        pvals.append(table_pval)
+        table_pval = F"([{pval_input_range}][ \.0-9]*E ?(<sup>)?[-−] ?" \
+                     F"{power_digits[0] + '?' if power_digits[0] == '0' else power_digits[0]}" \
+                     F"{power_digits[1:] + '(</sup>)?)' if len(power_digits) > 1 else '(</sup>)?)'}"
+        pvals.append(table_pval)
+        rsids.append(F"({rsid})(?:\[[a-zA-Z0-9]\])?")
         mesh_terms.append(mesh_id)
         gc_relations.append([pval, rsid, mesh_id])
     nlp.set_ontology_terms([x for x in mesh_terms if x])
@@ -564,6 +593,7 @@ for pmc_id in gc_data.keys():
         abbreviations += file_abbrevs
     nlp.set_abbreviations(abbreviations)  # TODO: Check abbreviation partial entity HPC.
     result = process_study(nlp, study)
+    nlp.clear_saved_study_data()
     study_tables, contains_annotations = TableExtractor.parse_tables(F"BioC_Studies/{pmc_id}_tables.json", nlp)
     if contains_annotations:
         TableExtractor.output_tables(F"output/{pmc_id}_tables.json", study_tables)
