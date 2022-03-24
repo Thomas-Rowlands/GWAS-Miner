@@ -1,4 +1,5 @@
 import itertools
+import json
 import logging
 import re
 from datetime import datetime
@@ -53,6 +54,34 @@ class Interpreter:
         self.association_patterns = config.pheno_assoc_patterns
         if not ontology_only:
             self.__add_matchers(lexicon)
+
+    def reset_annotation_identifiers(self):
+        self.t = 0
+        self.v = 0
+        self.s = 0
+        self.g = 0
+        self.r = 0
+
+    def clear_saved_study_data(self):
+        self.annotations = []
+        self.relations = []
+        self.reset_annotation_identifiers()
+
+    def set_abbreviations(self, abbrevs):
+        result = []
+        for abbrev in abbrevs:
+            entry = self.lexicon.get_ordered_lexicons()[0].get_entry_by_term(abbrev[1])
+            if entry:
+                result.append([entry.identifier, abbrev[0]])
+            else:
+                variations = Interpreter.get_term_variations(abbrev[1])
+                for variant in variations:
+                    entry = self.lexicon.get_ordered_lexicons()[0].get_entry_by_term(variant)
+                    if entry:
+                        result.append([entry.identifier, abbrev[0]])
+                        break
+
+        self.abbrev_pattens = result
 
     def __add_matchers(self, lexicon):
         self.__basic_matcher = Matcher(self.nlp.vocab)
@@ -221,6 +250,30 @@ class Interpreter:
         else:
             return False
 
+    @staticmethod
+    def get_ubiquitous_phenotype(fulltext, nlp):
+        doc = nlp.process_corpus(fulltext, )
+        top_phenotypes = nlp.get_phenotype_stats(doc, nlp.lexicon)
+        top_phenotype = None
+        for pheno in top_phenotypes:
+            if not top_phenotype:
+                top_phenotype = top_phenotypes[pheno]
+                top_phenotype["label"] = pheno
+                top_phenotype["ID"] = top_phenotypes[pheno]["ID"]
+            elif top_phenotype["Count"] < top_phenotypes[pheno]["Count"]:
+                top_phenotype = top_phenotypes[pheno]
+                top_phenotype["label"] = pheno
+                top_phenotype["ID"] = top_phenotypes[pheno]["ID"]
+        return top_phenotype
+
+    @staticmethod
+    def get_study_abbreviations(file_input):
+        with open(file_input, "r", encoding="utf-8") as fin:
+            abbrevs = json.load(fin)
+        if abbrevs:
+            abbrevs = [[x['text_short'], x['text_long_1']] for x in abbrevs['documents'][0]['passages']]
+        return abbrevs
+
     def __on_match(self, matcher, doc, i, matches):
         """
         (Event handler) Add matched entity to document entity list if no overlap is caused.
@@ -232,27 +285,31 @@ class Interpreter:
         match_id, start, end = matches[i]
         entity = Span(doc, start, end,
                       label=self.nlp.vocab.strings[match_id])
-        # if entity.label_ in ["RSID", "PVAL"]:
-        #     entity.set_extension("is_trait", default=False, force=True)
-        #     entity.set_extension("ontology", default=None, force=True)
-        # else:
-        #     entity.set_extension("ontology", getter=self.get_ent_ontology, force=True)
-        #     entity.set_extension("is_trait", default=True, force=True)
         try:
             doc.ents += (entity,)
-        except:
-            self.__logger.log(level=0, msg=entity.text)
-            # print(entity.text)#self.__failed_matches.append(entity.text)
+        except Exception:
+            entities_to_replace = []
+            for ent in doc.ents:
+                if (start <= ent.start < end) or (start < ent.end <= end):
+                    if len(ent) <= len(entity):
+                        entities_to_replace.append(ent)
+            if entities_to_replace:
+                doc.ents = [x for x in doc.ents if x not in entities_to_replace]
+                doc.ents += (entity,)
+            return
 
     @staticmethod
-    def __regex_match(pattern, doc, label):
+    def _regex_match(pattern, doc, label, ignore_case=True):
         chars_to_tokens = {}
         for token in doc:
             for i in range(token.idx, token.idx + len(token.text)):
                 chars_to_tokens[i] = token.i
-        for match in re.finditer(pattern, doc.text, flags=re.IGNORECASE):
-            start, end = match.span(1)
-            span = None
+        if ignore_case:
+            matches = re.finditer(pattern, doc.text, flags=re.IGNORECASE)
+        else:
+            matches = re.finditer(pattern, doc.text)
+        for match in matches:
+            start, end = match.span()
             if label == "PVAL":
                 span = doc.char_span(start, end, label=label, alignment_mode="expand")
             else:
@@ -261,7 +318,7 @@ class Interpreter:
                 try:
                     doc.ents += (span,)
                 except:
-                    test = None
+                    continue
             else:
                 start_token = chars_to_tokens.get(start)
                 end_token = chars_to_tokens.get(end)
@@ -269,8 +326,8 @@ class Interpreter:
                     span = doc[start_token:end_token + 1]
                     try:
                         doc.ents += (span,)
-                    except Exception as e:
-                        print(e)
+                    except Exception:
+                        return  # print(e)
 
     def process_corpus(self, corpus, ontology_only=False):
         """[Applies tokenization, entity recognition and dependency parsing to the supplied corpus.]

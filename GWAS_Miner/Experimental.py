@@ -2,7 +2,6 @@ import json
 import logging
 
 from DataStructures import Study
-from BioC import *
 
 logger = logging.getLogger("GWAS Miner")
 
@@ -20,14 +19,12 @@ def load_bioc_study(directory, file_name):
     try:
         with open(F"{directory}/{file_name}", "r", encoding="utf-8") as fin:
             bioc_study = json.load(fin)
-    except IOError as io:
+    except IOError:
         print(F"Unable to locate/open file: {file_name}")
     return bioc_study
 
 
 def load_study(directory, file_name):
-    study = None
-    json_text_data = None
     json_table_data = None
     pmc_id = None
     try:
@@ -45,7 +42,7 @@ def load_study(directory, file_name):
         try:
             with open(F"{directory}/{file_name.replace('._maintext', '')}", 'r', encoding="utf-8") as file:
                 json_table_data = json.load(file)
-        except FileNotFoundError as fnfe:
+        except FileNotFoundError:
             logger.error(F"Tables file was not found for PMCID: {pmc_id}, continuing without tables.")
             if not validate_json_maintext(json_text_data):
                 return None
@@ -62,7 +59,7 @@ def load_study(directory, file_name):
     if not validate_json_maintext(json_text_data) or not json_table_data:
         logger.error(F"Study text or table text missing: {file_name}")
         return None
-    study = Study(json_text_data, json_table_data)
+    study = Study(json_text_data)
     study.pmid = pmc_id
 
     return study

@@ -23,34 +23,6 @@ class GCInterpreter(Interpreter):
         super().__init__(lexicon, ontology_only)
         self.gc_relations = []
 
-    def reset_annotation_identifiers(self):
-        self.t = 0
-        self.v = 0
-        self.s = 0
-        self.g = 0
-        self.r = 0
-
-    def clear_saved_study_data(self):
-        self.annotations = []
-        self.relations = []
-        self.reset_annotation_identifiers()
-
-    def set_abbreviations(self, abbrevs):
-        result = []
-        for abbrev in abbrevs:
-            entry = self.lexicon.get_ordered_lexicons()[0].get_entry_by_term(abbrev[1])
-            if entry:
-                result.append([entry.identifier, abbrev[0]])
-            else:
-                variations = Interpreter.get_term_variations(abbrev[1])
-                for variant in variations:
-                    entry = self.lexicon.get_ordered_lexicons()[0].get_entry_by_term(variant)
-                    if entry:
-                        result.append([entry.identifier, abbrev[0]])
-                        break
-
-        self.abbrev_pattens = result
-
     def set_ontology_terms(self, term_ids):
         term_ids = list(set(term_ids))
         new_matcher = PhraseMatcher(self.nlp.vocab, attr="LOWER")
@@ -64,7 +36,7 @@ class GCInterpreter(Interpreter):
                     continue
                 patterns = Interpreter.get_term_variations(entry)
                 patterns = self.nlp.tokenizer.pipe(patterns)
-                new_matcher.add(entry.identifier, patterns, on_match=self.__on_match)
+                new_matcher.add(entry.identifier, patterns, on_match=self._Interpreter__on_match)
         self.__phrase_matcher = new_matcher
 
     def process_corpus(self, corpus, **kwargs):
@@ -82,13 +54,13 @@ class GCInterpreter(Interpreter):
 
         old_ents, doc.ents = doc.ents, []
         for pattern in self.pval_patterns:
-            self.__regex_match(pattern, doc, "PVAL")
+            Interpreter._regex_match(pattern, doc, "PVAL")
 
         for pattern in self.rsid_patterns:
-            self.__regex_match(pattern, doc, "RSID")
+            Interpreter._regex_match(pattern, doc, "RSID")
 
         for pattern in self.abbrev_pattens:
-            self.__regex_match(pattern[1], doc, pattern[0], ignore_case=False)
+            Interpreter._regex_match(pattern[1], doc, pattern[0], ignore_case=False)
 
         # self.__basic_matcher(doc)
         self.__phrase_matcher(doc)
@@ -102,79 +74,9 @@ class GCInterpreter(Interpreter):
 
         # Ensure that multi-token entities are merged for extraction and association processing.
         for ent_label in self._Interpreter__entity_labels:
-            self.__merge_spans(doc, ent_label)
-
-        # self.__dep_matcher(doc)
+            self._Interpreter__merge_spans(doc, ent_label)
 
         return doc
-
-    def __on_match(self, matcher, doc, i, matches):
-        """
-        (Event handler) Add matched entity to document entity list if no overlap is caused.
-        @param matcher: Matcher object which fired the event
-        @param doc: nlp doc object
-        @param i: index of the current match
-        @param matches: list of matches found by the matcher object
-        """
-        match_id, start, end = matches[i]
-        entity = Span(doc, start, end,
-                      label=self.nlp.vocab.strings[match_id])
-        try:
-            doc.ents += (entity,)
-        except Exception:
-            entities_to_replace = []
-            for ent in doc.ents:
-                if (start <= ent.start < end) or (start < ent.end <= end):
-                    if len(ent) <= len(entity):
-                        entities_to_replace.append(ent)
-            if entities_to_replace:
-                doc.ents = [x for x in doc.ents if x not in entities_to_replace]
-                doc.ents += (entity,)
-            return  # print(entity.text)  # self.__failed_matches.append(entity.text)
-
-    def __regex_match(self, pattern, doc, label, ignore_case=True):
-        chars_to_tokens = {}
-        for token in doc:
-            for i in range(token.idx, token.idx + len(token.text)):
-                chars_to_tokens[i] = token.i
-        if ignore_case:
-            matches = re.finditer(pattern, doc.text, flags=re.IGNORECASE)
-        else:
-            matches = re.finditer(pattern, doc.text)
-        for match in matches:
-            start, end = match.span()
-            if label == "PVAL":
-                span = doc.char_span(start, end, label=label, alignment_mode="expand")
-            else:
-                span = doc.char_span(start, end, label=label)
-            if span is not None:
-                try:
-                    doc.ents += (span,)
-                except:
-                    continue
-            else:
-                start_token = chars_to_tokens.get(start)
-                end_token = chars_to_tokens.get(end)
-                if start_token is not None and end_token is not None:
-                    span = doc[start_token:end_token + 1]
-                    try:
-                        doc.ents += (span,)
-                    except Exception:
-                        return  # print(e)
-
-    @staticmethod
-    def __merge_spans(doc, entity_label):
-        """
-        Merge document spans that are part of the same entity.
-        @param doc: Processed document
-        @param entity_label: Label of entities to merge.
-        """
-        with doc.retokenize() as retokenizer:
-            for ent in [x for x in doc.ents if x.label_ == entity_label]:
-                retokenizer.merge(doc[ent.start:ent.end])
-
-    def get_relations(self, doc):
-        return self.__dep_matcher(doc)
 
     def calculate_sdp(self, phenotype_sents, top_phenotype=None):
         """[Calculates the shortest dependency path for each phenotype/marker/p-value combination,
@@ -298,30 +200,26 @@ class GCInterpreter(Interpreter):
                         Association(marker=result_marker, significance=result_significance, phenotype=result_pheno))
         return results
 
-
-def get_ubiquitous_phenotype(fulltext, nlp):
-    doc = nlp.process_corpus(fulltext, )
-    top_phenotypes = nlp.get_phenotype_stats(doc, nlp.lexicon)
-    top_phenotype = None
-    for pheno in top_phenotypes:
-        if not top_phenotype:
-            top_phenotype = top_phenotypes[pheno]
-            top_phenotype["label"] = pheno
-            top_phenotype["ID"] = top_phenotypes[pheno]["ID"]
-        elif top_phenotype["Count"] < top_phenotypes[pheno]["Count"]:
-            top_phenotype = top_phenotypes[pheno]
-            top_phenotype["label"] = pheno
-            top_phenotype["ID"] = top_phenotypes[pheno]["ID"]
-    return top_phenotype
-
-
-def get_study_abbreviations(file_input):
-    with open(file_input, "r", encoding="utf-8") as fin:
-        abbrevs = json.load(fin)
-    if abbrevs:
-        abbrevs = [[x['text_short'], x['text_long_1']] for x in abbrevs['documents'][0]['passages']]
-    return abbrevs
-
+def get_relation(relation, passage, nlp):
+    current_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+    if type(relation.phenotype.token) == Token:
+        pheno_id = [x.id for x in passage['annotations'] if
+                    relation.phenotype.token.idx + passage["offset"] == x.locations[0].offset][0]
+    else:
+        pheno_id = [x.id for x in passage['annotations'] if
+                    relation.phenotype.token.start_char + passage["offset"] == x.locations[0].offset][0]
+    marker_id = [x.id for x in passage['annotations'] if
+                 relation.marker.token.idx + passage["offset"] == x.locations[0].offset][0]
+    significance_id = [x.id for x in passage['annotations'] if
+                       relation.significance.token.idx + passage["offset"] == x.locations[0].offset][0]
+    phenotype_node = BioC.BioCNode(refid=pheno_id, role="")
+    marker_node = BioC.BioCNode(refid=marker_id, role="")
+    significance_node = BioC.BioCNode(refid=significance_id, role="")
+    bioc_relation = BioC.BioCRelation(id=F"R{nlp.r}",
+                                      infons={"type": "disease_assoc", "annotator": "GWASMiner@le.ac.uk",
+                                              "updated_at": current_datetime},
+                                      nodes=[phenotype_node, marker_node, significance_node])
+    return bioc_relation, nlp
 
 def process_study(nlp, study):
     if not study:
@@ -342,7 +240,7 @@ def process_study(nlp, study):
         passage_text = passage['text']
         # passage_text = re.sub(r"(?:\w)(\()", lambda x: x.group().replace("(", " ("), passage_text)
         doc = nlp.process_corpus(passage_text)
-        top_phenotype = get_ubiquitous_phenotype(passage_text, nlp)
+        top_phenotype = nlp.get_ubiquitous_phenotype(passage_text, nlp)
         doc.user_data["top_phenotype"] = top_phenotype
         annotations = nlp.get_entities(doc, ["MESH", "HPO", "RSID", "PVAL"])
         used_annots = []
@@ -382,51 +280,13 @@ def process_study(nlp, study):
 
             relations, uncertain_relations = nlp.extract_phenotypes(doc)
             for relation in relations:
-                # test = doc[]
-                if type(relation.phenotype.token) == Token:
-                    pheno_id = [x.id for x in passage['annotations'] if
-                                relation.phenotype.token.idx + passage["offset"] == x.locations[0].offset][0]
-                else:
-                    pheno_id = [x.id for x in passage['annotations'] if
-                                relation.phenotype.token.start_char + passage["offset"] == x.locations[0].offset][0]
-                marker_id = [x.id for x in passage['annotations'] if
-                             relation.marker.token.idx + passage["offset"] == x.locations[0].offset][0]
-                significance_id = [x.id for x in passage['annotations'] if
-                                   relation.significance.token.idx + passage["offset"] == x.locations[0].offset][0]
-                phenotype_node = BioC.BioCNode(refid=pheno_id, role="")
-                marker_node = BioC.BioCNode(refid=marker_id, role="")
-                significance_node = BioC.BioCNode(refid=significance_id, role="")
-                bioc_relation = BioC.BioCRelation(id=F"R{nlp.r}",
-                                                  infons={"type": "disease_assoc", "annotator": "GWASMiner@le.ac.uk",
-                                                          "updated_at": current_datetime},
-                                                  nodes=[phenotype_node, marker_node, significance_node])
-                # passage['relations'].append(bioc_relation)
+                bioc_relation, nlp = get_relation(relation, passage, nlp)
                 document_relations.append(bioc_relation)
                 nlp.r += 1
             for relation in uncertain_relations:
-                if type(relation.phenotype.token) == Token:
-                    pheno_id = [x.id for x in passage['annotations'] if
-                                relation.phenotype.token.idx + passage["offset"] == x.locations[0].offset][0]
-                else:
-                    pheno_id = [x.id for x in passage['annotations'] if
-                                relation.phenotype.token.start_char + passage["offset"] == x.locations[0].offset][0]
-                marker_id = [x.id for x in passage['annotations'] if
-                             relation.marker.token.idx + passage["offset"] == x.locations[0].offset][0]
-                significance_id = [x.id for x in passage['annotations'] if
-                                   relation.significance.token.idx + passage["offset"] == x.locations[0].offset][0]
-                phenotype_node = BioC.BioCNode(refid=pheno_id, role="")
-                marker_node = BioC.BioCNode(refid=marker_id, role="")
-                significance_node = BioC.BioCNode(refid=significance_id, role="")
-                bioc_relation = BioC.BioCRelation(id=F"R{nlp.r}",
-                                                  infons={"type": "possible_disease_assoc",
-                                                          "annotator": "GWASMiner@le.ac.uk",
-                                                          "updated_at": current_datetime},
-                                                  nodes=[phenotype_node, marker_node, significance_node])
-                # passage['relations'].append(bioc_relation)
+                bioc_relation, nlp = get_relation(relation, passage, nlp)
                 document_relations.append(bioc_relation)
                 nlp.r += 1
-    # with open("top_phenotypes.txt", "a+", encoding="utf-8") as fin:
-    #     fin.write(F"{pmc_id}\t{top_phenotype['ID']}\t{top_phenotype['label']}\n")
     if document_relations:
         study['documents'][0]['relations'] = document_relations
     study = befree_annotate.get_befree_annotations(study, nlp)
@@ -500,7 +360,7 @@ def main():
         fulltext = "\n".join([x['text'] for x in study['documents'][0]['passages']])
         altered_text = re.sub(r"(?:\w)(\()", lambda x: x.group().replace("(", " ("), fulltext)
         abbreviations = nlp.get_all_abbreviations(altered_text)
-        file_abbrevs = get_study_abbreviations(F"BioC_Studies/{pmc_id}_abbreviations.json")
+        file_abbrevs = nlp.get_study_abbreviations(F"BioC_Studies/{pmc_id}_abbreviations.json")
         if file_abbrevs:
             abbreviations += file_abbrevs
         nlp.set_abbreviations(abbreviations)  # TODO: Check abbreviation partial entity HPC.

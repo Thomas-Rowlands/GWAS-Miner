@@ -86,13 +86,6 @@ def parse_tables(file_input, nlp):
                         bioc_table["annotations"] = table.annotations
                         bioc_table["relations"] = table.relations
                         break
-
-    if contains_annotations:
-        print(F"Table(s) have annotation(s) in: {file_input}")
-    # else:
-    #     print(F"No table annotations found in: {file_input}")
-    # if not contains_annotations:
-    #     print(F"No table annotations found in: {file_input}")
     return tables_data, contains_annotations
 
 

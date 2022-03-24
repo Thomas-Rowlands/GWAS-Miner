@@ -12,7 +12,7 @@ def convert_to_list(num):
 
 
 class Study:
-    def __init__(self, study_json, study_tables_json):
+    def __init__(self, study_json):
         self.title = None
         self.authors = None
         self.__markers = []
@@ -26,7 +26,6 @@ class Study:
         self.original = None
         self.__add_core_sections()
         self.__populate_study(study_json)
-        self.__load_tables(study_tables_json)
 
     def __populate_study(self, study_json):
         """
@@ -53,22 +52,6 @@ class Study:
         self.sections.append(StudySection("Acknowledgements", weighting=1))
         self.sections.append(StudySection("Misc", weighting=5))
 
-    def __load_tables(self, study_tables_json):
-        """
-        Parses the results tables from the accompanying JSON file.
-        """
-        for table in study_tables_json["tables"]:
-            new_table = Table(table)
-            self.__tables.append(new_table)
-            text = new_table.get_text()
-            if text:
-                self.__table_text += text
-            else:
-                self.__tables = None
-                return None
-
-    def get_tables(self):
-        return self.__tables
 
     def get_fulltext(self):
         """
