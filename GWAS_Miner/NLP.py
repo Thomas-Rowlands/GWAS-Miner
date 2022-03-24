@@ -29,12 +29,33 @@ class Interpreter:
         self.__dep_matcher = None
         self.__logger = logging.getLogger("GWAS Miner")
         self.__entity_labels = ["MESH", "HPO", "PVAL"]
+        self.lexicon = lexicon
+        self.nlp = spacy.load("en_core_sci_lg", disable=["ner"])
+        self.__failed_matches = []
+        # self.nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
+        infixes = self.nlp.Defaults.infixes + [r'(?!\w)(\()']
+        infix_regex = spacy.util.compile_infix_regex(infixes)
+        self.nlp.tokenizer.infix_finditer = infix_regex.finditer
+        self.__basic_matcher = None
+        self.__phrase_matcher = None
+        self.__abbreviation_matcher = PhraseMatcher(self.nlp.vocab, attr="ORTH")
+        self.__entity_labels = ["MESH", "HPO", "PVAL"]
+        self.pval_patterns = []
+        self.rsid_patterns = []
+        self.abbrev_pattens = []
+        self.t = 0
+        self.v = 0
+        self.s = 0
+        self.g = 0
+        self.r = 0
+        self.annotations = []
+        self.relations = []
+        self.association_patterns = config.pheno_assoc_patterns
         if not ontology_only:
             self.__add_matchers(lexicon)
 
     def __add_matchers(self, lexicon):
         self.__basic_matcher = Matcher(self.nlp.vocab)
-        self.__basic_matcher.add('RSID', [[self.__rsid_regex]], on_match=self.__on_match)
         # self.__basic_matcher.add('marker', [[self.__marker_regex]], on_match=self.__on_match)
 
         new_matcher = PhraseMatcher(self.nlp.vocab, attr="LOWER")
@@ -46,13 +67,16 @@ class Interpreter:
                 patterns = self.nlp.tokenizer.pipe(patterns)
                 new_matcher.add(entry.identifier, patterns, on_match=self.__on_match)
         self.__phrase_matcher = new_matcher
-        # Declare custom extension properties
+        # Assign extension getters
         Token.set_extension("matches_ontology", getter=self.ontology_getter)
         Token.set_extension("is_trait", getter=self.is_trait_getter)
+        Token.set_extension("has_trait", getter=self.has_trait_getter)
         Span.set_extension("has_ontology_term", getter=self.has_ontology_getter)
         Span.set_extension("has_trait", getter=self.has_trait_getter)
+        Span.set_extension("is_trait", getter=self.is_trait_getter)
         Doc.set_extension("has_ontology_term", getter=self.has_ontology_getter)
         Doc.set_extension("has_trait", getter=self.has_trait_getter)
+        Doc.set_extension("is_trait", getter=self.is_trait_getter)
 
     @staticmethod
     def get_term_variations(term: LexiconEntry):

@@ -2,7 +2,7 @@ import json
 import re
 from datetime import datetime
 
-from exceptions import TableTypeError
+from Exceptions import TableTypeError
 import BioC
 
 table_significance_pattern = r""
@@ -26,7 +26,7 @@ def process_tables(nlp, tables):
         nlp.annotations = []
         nlp.relations = []
         # if table.table_type:
-            # t, m, p, r, used_annots = table.assign_annotations(t, m, p, r, used_annots)
+        # t, m, p, r, used_annots = table.assign_annotations(t, m, p, r, used_annots)
     return tables, nlp
 
 
@@ -49,16 +49,13 @@ def get_cell_entity_annotation(nlp, ent, table_element, cell_id):
     entity_id = None
     if entity_type == "trait":
         entity_id = F"T{nlp.t}"
-        nlp.t += 1
     elif entity_type == "genetic_variant":
         entity_id = F"V{nlp.v}"
-        nlp.v += 1
     else:
         entity_id = F"S{nlp.s}"
-        nlp.s += 1
     annotation = BioC.BioCAnnotation(id=entity_id, infons={"type": entity_type, "identifier": entity_identifier,
-                                                         "annotator": "GWASMiner@le.ac.uk",
-                                                         "updated_at": current_datetime},
+                                                           "annotator": "GWASMiner@le.ac.uk",
+                                                           "updated_at": current_datetime},
                                      locations=[loc], text=ent.text)
     return annotation, nlp
 
@@ -130,7 +127,6 @@ def parse_tables(file_input, nlp):
                         bioc_table["annotations"] = table.annotations
                         bioc_table["relations"] = table.relations
                         break
-
 
     if contains_annotations:
         print(F"Table(s) have annotation(s) in: {file_input}")
@@ -286,13 +282,13 @@ class Table:
 
     def add_spacy_docs(self, nlp):
         if self.caption_text:
-            self.caption_doc = nlp.process_corpus(self.caption_text)
+            self.caption_doc = nlp.process_corpus(self.caption_text, )
         if self.footer_text:
-            self.footer_doc = nlp.process_corpus(self.footer_text)
+            self.footer_doc = nlp.process_corpus(self.footer_text, )
         if self.title:
             if isinstance(self.title, list):
                 self.title = self.title[0]
-            self.title_doc = nlp.process_corpus(self.title)
+            self.title_doc = nlp.process_corpus(self.title, )
         if self.column_rows:
             for row in self.column_rows:
                 for cell in row.cells:
@@ -304,61 +300,7 @@ class Table:
                     for cell in row.cells:
                         cell.add_spacy_docs(nlp)
         self.__set_table_type()
-        if self.table_type:
-            return self.__get_gc_annotations(nlp)
-        else:
-            return nlp
-
-    def __get_gc_annotations(self, nlp):
-        current_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-        annotations = []
-        relations = []
-        section_num = 1
-        for section in self.data_sections:
-            contains_trait, contains_variant, contains_significance = False, False, False
-            for row in section.rows:
-                row_annotations = []
-                for cell in row.cells:
-                    if cell.doc and cell.doc.ents:
-                        entity = cell.doc.ents[0]
-                        if entity.label_ == "PVAL":
-                            contains_significance = True
-                        elif entity.label_ == "RSID":
-                            contains_variant = True
-                        else:
-                            contains_trait = True
-                        annotation, nlp = get_cell_entity_annotation(nlp, entity, "table_content", cell.id)
-                        row_annotations.append(annotation)
-                if not contains_trait:
-                    if self.COLUMN_TRAIT in self.section_ents[section_num - 1]:
-                        entity = [x for x in section.doc.ents if x._.is_trait or x._.has_trait][0]
-                        annotation, nlp = get_cell_entity_annotation(nlp, entity, F"table_section_title_{section_num}", None)
-                        row_annotations.append(annotation)
-                        contains_trait = True
-                    elif self.COLUMN_TRAIT in self.caption_ents:
-                        entity = None
-                        entity = [x for x in self.caption_doc.ents if x._.is_trait or x._.has_trait][0]
-                        annotation, nlp = get_cell_entity_annotation(nlp, entity, "table_caption", None)
-                        row_annotations.append(annotation)
-                        contains_trait = True
-                    elif self.COLUMN_TRAIT in self.footer_ents:
-                        entity = [x for x in self.footer_doc.ents if x._.is_trait or x._.has_trait][0]
-                        annotation, nlp = get_cell_entity_annotation(nlp, entity, "table_footer", None)
-                        row_annotations.append(annotation)
-                        contains_trait = True
-                if len(row_annotations) == 3:
-                    annotations += row_annotations
-                    relations.append(BioC.BioCRelation(id=F"R{nlp.r}",
-                                                       infons={"type": "disease_assoc",
-                                                               "annotator": "GWASMiner@le.ac.uk",
-                                                          "updated_at": current_datetime},
-                                                       nodes=[BioC.BioCNode(refid=x.id, role="") for x in row_annotations]))
-                    nlp.r += 1
-            section_num += 1
-        nlp.annotations += annotations
-        nlp.relations += relations
         return nlp
-
 
     def __get_cell_annotation(self, cell, col_type, t, m, p):
         annotation = None
@@ -510,7 +452,7 @@ class TableSection:
 
     def add_spacy_docs(self, nlp):
         if self.title:
-            self.doc = nlp.process_corpus(self.title)
+            self.doc = nlp.process_corpus(self.title, )
 
     def jsonable(self):
         output_dict = self.__dict__
@@ -536,7 +478,7 @@ class TableCell:
 
     def add_spacy_docs(self, nlp):
         if self.text:
-            self.doc = nlp.process_corpus(self.text)
+            self.doc = nlp.process_corpus(self.text, )
 
     def jsonable(self):
         output_dict = self.__dict__

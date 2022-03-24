@@ -1,24 +1,17 @@
-import itertools
 import json
-import os
-import pathlib
 import re
-import sys
 from datetime import datetime
 from os import listdir
 from os.path import isfile, join
 
 import networkx as nx
-import spacy
-from spacy.matcher import PhraseMatcher, Matcher, DependencyMatcher
-from spacy.tokens import Span, Token, Doc
+from spacy.matcher import PhraseMatcher
+from spacy.tokens import Span, Token
 
 import Ontology
-from GWAS_Miner import BioC, OutputConverter, Experimental, befree_annotate
-from GWAS_Miner.DataStructures import Marker, Significance, Phenotype, Association, LexiconEntry
-import TableExtractor
+from GWAS_Miner import BioC, OutputConverter, Experimental, befree_annotate, GCTableExtractor, TableExtractor
+from GWAS_Miner.DataStructures import Marker, Significance, Phenotype, Association
 from NLP import Interpreter
-import config
 
 gc_data = {}
 headers_skipped = False
@@ -27,33 +20,8 @@ headers_skipped = False
 class GCInterpreter(Interpreter):
 
     def __init__(self, lexicon, ontology_only=False):
-        self.lexicon = lexicon
-        self.nlp = spacy.load("en_core_sci_lg", disable=["ner"])
-        self.__failed_matches = []
-        # self.nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
-        infixes = self.nlp.Defaults.infixes + [r'(?!\w)(\()']
-        infix_regex = spacy.util.compile_infix_regex(infixes)
-        self.nlp.tokenizer.infix_finditer = infix_regex.finditer
-        self.__basic_matcher = None
-        self.__phrase_matcher = None
-        self.__abbreviation_matcher = PhraseMatcher(self.nlp.vocab)
-        self.__entity_labels = ["MESH", "HPO", "PVAL"]
-        self.pval_patterns = []
-        self.rsid_patterns = []
-        self.abbrev_pattens = []
+        super().__init__(lexicon, ontology_only)
         self.gc_relations = []
-        self.t = 0
-        self.v = 0
-        self.s = 0
-        self.g = 0
-        self.r = 0
-        self.annotations = []
-        self.relations = []
-        self.association_patterns = config.pheno_assoc_patterns
-        self.__dep_matcher = DependencyMatcher(self.nlp.vocab, validate=True)
-        self.__add_semgrex()
-        if not ontology_only:
-            self.__add_matchers(lexicon)
 
     def reset_annotation_identifiers(self):
         self.t = 0
@@ -66,17 +34,6 @@ class GCInterpreter(Interpreter):
         self.annotations = []
         self.relations = []
         self.reset_annotation_identifiers()
-
-    def __add_semgrex(self):
-        self.__dep_matcher.add("PHENO_ASSOC", self.association_patterns, on_match=self.__on_dep_match)
-
-    def __on_dep_match(self, matcher, doc, id, matches):
-        for match_id, token_ids in matches:
-            pattern_name = self.nlp.vocab[match_id].text
-            entities = [doc[x].text for x in token_ids]
-            if entities not in doc.user_data["relations"]["PHENO_ASSOC"]:
-                print(F"{pattern_name}: {' | '.join(entities)}")
-                doc.user_data["relations"]["PHENO_ASSOC"].append(entities)
 
     def set_abbreviations(self, abbrevs):
         result = []
@@ -110,39 +67,14 @@ class GCInterpreter(Interpreter):
                 new_matcher.add(entry.identifier, patterns, on_match=self.__on_match)
         self.__phrase_matcher = new_matcher
 
-    def __add_matchers(self, lexicon):
-        self.__basic_matcher = Matcher(self.nlp.vocab)
-        # self.__basic_matcher.add('marker', [[self.__marker_regex]], on_match=self.__on_match)
-
-        new_matcher = PhraseMatcher(self.nlp.vocab, attr="LOWER")
-        for lexicon in lexicon.get_ordered_lexicons():
-            if lexicon.name == "HPO":
-                continue
-            for entry in lexicon.get_entries():
-                patterns = Interpreter.get_term_variations(entry)
-                patterns = self.nlp.tokenizer.pipe(patterns)
-                new_matcher.add(entry.identifier, patterns, on_match=self.__on_match)
-        self.__phrase_matcher = new_matcher
-        # Assign extension getters
-        Token.set_extension("matches_ontology", getter=self.ontology_getter)
-        Token.set_extension("is_trait", getter=self.is_trait_getter)
-        Token.set_extension("has_trait", getter=self.has_trait_getter)
-        Span.set_extension("has_ontology_term", getter=self.has_ontology_getter)
-        Span.set_extension("has_trait", getter=self.has_trait_getter)
-        Span.set_extension("is_trait", getter=self.is_trait_getter)
-        Doc.set_extension("has_ontology_term", getter=self.has_ontology_getter)
-        Doc.set_extension("has_trait", getter=self.has_trait_getter)
-        Doc.set_extension("is_trait", getter=self.is_trait_getter)
-
-    def process_corpus(self, corpus):
+    def process_corpus(self, corpus, **kwargs):
         """[Applies tokenization, entity recognition and dependency parsing to the supplied corpus.]
 
         Args:
             corpus ([string]): [corpus text for information extraction]
-            ontology_only (bool, optional): [Only apply ontology term matching to the supplied corpus]. Defaults to False.
 
-        Returns:
-            [SpaCy doc object]: [Parsed SpaCy doc object containing the processed input text with entities, tokens and dependencies.]
+        Returns: [SpaCy doc object]: [Parsed SpaCy doc object containing the processed input text with entities,
+        tokens and dependencies.]
         """
 
         doc = self.nlp(corpus)
@@ -169,7 +101,7 @@ class GCInterpreter(Interpreter):
                 continue
 
         # Ensure that multi-token entities are merged for extraction and association processing.
-        for ent_label in self.__entity_labels:
+        for ent_label in self._Interpreter__entity_labels:
             self.__merge_spans(doc, ent_label)
 
         # self.__dep_matcher(doc)
@@ -189,7 +121,7 @@ class GCInterpreter(Interpreter):
                       label=self.nlp.vocab.strings[match_id])
         try:
             doc.ents += (entity,)
-        except Exception as Ex:
+        except Exception:
             entities_to_replace = []
             for ent in doc.ents:
                 if (start <= ent.start < end) or (start < ent.end <= end):
@@ -205,12 +137,11 @@ class GCInterpreter(Interpreter):
         for token in doc:
             for i in range(token.idx, token.idx + len(token.text)):
                 chars_to_tokens[i] = token.i
-        test = None
         if ignore_case:
-            test = re.finditer(pattern, doc.text, flags=re.IGNORECASE)
+            matches = re.finditer(pattern, doc.text, flags=re.IGNORECASE)
         else:
-            test = re.finditer(pattern, doc.text)
-        for match in test:
+            matches = re.finditer(pattern, doc.text)
+        for match in matches:
             start, end = match.span()
             if label == "PVAL":
                 span = doc.char_span(start, end, label=label, alignment_mode="expand")
@@ -220,7 +151,7 @@ class GCInterpreter(Interpreter):
                 try:
                     doc.ents += (span,)
                 except:
-                    test = None
+                    continue
             else:
                 start_token = chars_to_tokens.get(start)
                 end_token = chars_to_tokens.get(end)
@@ -228,7 +159,7 @@ class GCInterpreter(Interpreter):
                     span = doc[start_token:end_token + 1]
                     try:
                         doc.ents += (span,)
-                    except Exception as e:
+                    except Exception:
                         return  # print(e)
 
     @staticmethod
@@ -246,13 +177,15 @@ class GCInterpreter(Interpreter):
         return self.__dep_matcher(doc)
 
     def calculate_sdp(self, phenotype_sents, top_phenotype=None):
-        """[Calculates the shortest dependency path for each phenotype/marker/p-value combination, returning the shortest for each one.]
+        """[Calculates the shortest dependency path for each phenotype/marker/p-value combination,
+        returning the shortest for each one.]
 
         Args:
             phenotype_sents ([list]): [List of SpaCy sent objects containing phenotype entities.]
-
+            top_phenotype (LexiconEntry): Most occurring phenotype within a study.
         Returns:
-            [dict]: [Dictionary containing extracted phenotype, marker and p-values associated together based on SDP calculation.]
+            [dict]: [Dictionary containing extracted phenotype, marker and p-values
+            associated based on SDP calculation.]
         """
         results = []
         # Iterate through each sentence containing a phenotype named entity label
@@ -282,10 +215,6 @@ class GCInterpreter(Interpreter):
             pvals = Interpreter._validate_node_entities(
                 [x for x in sent.ents if x.label_ == 'PVAL'], graph.nodes)
 
-            phenotype_count = len(phenotypes) if not top_phenotype else None
-            marker_count = len(markers)
-            pval_count = len(pvals)
-
             relations = []
 
             if phenotypes and markers and pvals:
@@ -301,7 +230,6 @@ class GCInterpreter(Interpreter):
                             best_pheno_distance = None
                             best_pheno = None
                             for phenotype in phenotypes:
-                                temp_distance = None
                                 is_token = type(phenotype[0]) == Token
                                 if is_token:
                                     temp_distance = nx.shortest_path_length(
@@ -372,7 +300,7 @@ class GCInterpreter(Interpreter):
 
 
 def get_ubiquitous_phenotype(fulltext, nlp):
-    doc = nlp.process_corpus(fulltext)
+    doc = nlp.process_corpus(fulltext, )
     top_phenotypes = nlp.get_phenotype_stats(doc, nlp.lexicon)
     top_phenotype = None
     for pheno in top_phenotypes:
@@ -387,21 +315,7 @@ def get_ubiquitous_phenotype(fulltext, nlp):
     return top_phenotype
 
 
-def get_phenotype_columns(column_cells):
-    phenotype_columns = []
-    for i in range(len(column_cells)):
-        if column_cells[i].text:
-            col_doc = nlp.process_corpus(column_cells[i].text)
-            for ent in col_doc.ents:
-                if ent._.is_trait:
-                    phenotype_columns.append(i)
-                    break
-
-    return phenotype_columns
-
-
 def get_study_abbreviations(file_input):
-    abbrevs = None
     with open(file_input, "r", encoding="utf-8") as fin:
         abbrevs = json.load(fin)
     if abbrevs:
@@ -412,11 +326,8 @@ def get_study_abbreviations(file_input):
 def process_study(nlp, study):
     if not study:
         return False
-    study_fulltext = "\n".join([x['text'] for x in study['documents'][0]['passages']])
-    # abbreviations = nlp.get_all_abbreviations(study_fulltext)
     current_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
     document_relations = []
-    current_offset = 0
     results_present = False
 
     for passage in study['documents'][0]['passages']:
@@ -424,8 +335,9 @@ def process_study(nlp, study):
             results_present = True
             break
     for passage in study['documents'][0]['passages']:
+        # footnotes need to be excluded.
         if results_present and passage["infons"]["section_type"].lower() not in ["abstract", "results",
-                                                                                 "caption"]:  # footnotes need to be excluded.
+                                                                                 "caption"]:
             continue
         passage_text = passage['text']
         # passage_text = re.sub(r"(?:\w)(\()", lambda x: x.group().replace("(", " ("), passage_text)
@@ -469,7 +381,6 @@ def process_study(nlp, study):
                 used_annots.append(annot["text"])
 
             relations, uncertain_relations = nlp.extract_phenotypes(doc)
-            pheno_id = None
             for relation in relations:
                 # test = doc[]
                 if type(relation.phenotype.token) == Token:
@@ -524,85 +435,92 @@ def process_study(nlp, study):
     return study
 
 
-# load bioc pmc ids
-bioc_pmcids = [x.replace(".json", "").replace("_abbreviations", "") for x in listdir("BioC_Studies") if
-               isfile(join("BioC_Studies", x))]
+def main():
+    # load bioc pmc ids
+    bioc_pmcids = [x.replace(".json", "").replace("_abbreviations", "") for x in listdir("BioC_Studies") if
+                   isfile(join("BioC_Studies", x))]
 
-# retrieve matching data.
-with open("GC_content.tsv", "r", encoding="utf-8") as f_in:
-    for line in f_in.readlines():
-        if not headers_skipped:
-            headers_skipped = not headers_skipped
-            continue
-        line = line.split("\t")
-        if line[0] not in bioc_pmcids:
-            continue
-        if line[0] not in gc_data.keys():
-            gc_data[line[0]] = []
-        gc_data[line[0]].append([line[5], line[6], line[8]])
+    # retrieve matching data.
+    with open("GC_content.tsv", "r", encoding="utf-8") as f_in:
+        global headers_skipped
+        for line in f_in.readlines():
+            if not headers_skipped:
+                headers_skipped = not headers_skipped
+                continue
+            line = line.split("\t")
+            if line[0] not in bioc_pmcids:
+                continue
+            if line[0] not in gc_data.keys():
+                gc_data[line[0]] = []
+            gc_data[line[0]].append([line[5], line[6], line[8]])
 
-lexicon = Ontology.get_master_lexicon()
-nlp = GCInterpreter(lexicon)
-failed_documents = []
-for pmc_id in gc_data.keys():
-    # if pmc_id != "PMC3638215":
-    #     continue
-    pvals = []
-    rsids = []
-    mesh_terms = []
-    gc_relations = []
-    nlp.reset_annotation_identifiers()
-    for relation in gc_data[pmc_id]:
-        rsid = relation[0]
-        mesh_id = relation[2]
-        pval_input_range = ""
-        pval_input_int = 0
-        if "." in relation[1]:
-            pval_input_int = int(relation[1][:relation[1].find(".")])
-        else:
-            pval_input_int = int(relation[1][:relation[1].lower().find("e")])
-        pval_input_range = F"{pval_input_int - 1}{pval_input_int}{pval_input_int + 1}"
-        power_digits = relation[1][relation[1].find('-') + 1:]
-        pval = F"(?:[pP][- \(\)metavalueofcbind]" + "{0,13}" + F"[ =<of]*[ ]?)([{pval_input_range}][ \.0-9]*[ xX*×]*10 ?[-−] ?" \
-                                                               F"{power_digits[0] + '?' if power_digits[0] == '0' else power_digits[0]}" \
-                                                               F"{power_digits[1:] + ')' if len(power_digits) > 1 else ')'}"
-        pvals.append(pval)
-        table_pval = F"([{pval_input_range}][ \.0-9]*[ xX*×]*10 ?(<sup>)?[-−] ?" \
+    lexicon = Ontology.get_master_lexicon()
+    nlp = GCInterpreter(lexicon)
+    failed_documents = []
+    for pmc_id in gc_data.keys():
+        # if pmc_id != "PMC4294952":
+        #     continue
+        pvals = []
+        rsids = []
+        mesh_terms = []
+        gc_relations = []
+        nlp.reset_annotation_identifiers()
+        for relation in gc_data[pmc_id]:
+            rsid = relation[0]
+            mesh_id = relation[2]
+            if "." in relation[1]:
+                pval_input_int = int(relation[1][:relation[1].find(".")])
+            else:
+                pval_input_int = int(relation[1][:relation[1].lower().find("e")])
+            pval_input_range = F"{pval_input_int - 1}{pval_input_int}{pval_input_int + 1}"
+            power_digits = relation[1][relation[1].find('-') + 1:]
+            pval = F"(?:[pP][- \(\)metavalueofcbind]" + "{0,13}" \
+                   + F"[ =<of]*[ ]?)([{pval_input_range}][ \.0-9]*[ xX*×]*10 ?[-−] ?" \
                      F"{power_digits[0] + '?' if power_digits[0] == '0' else power_digits[0]}" \
-                     F"{power_digits[1:] + '(</sup>)?)' if len(power_digits) > 1 else '(</sup>)?)'}"
-        pvals.append(table_pval)
-        table_pval = F"([{pval_input_range}][ \.0-9]*E ?(<sup>)?[-−] ?" \
-                     F"{power_digits[0] + '?' if power_digits[0] == '0' else power_digits[0]}" \
-                     F"{power_digits[1:] + '(</sup>)?)' if len(power_digits) > 1 else '(</sup>)?)'}"
-        pvals.append(table_pval)
-        rsids.append(F"({rsid})(?:\[[a-zA-Z0-9]\])?")
-        mesh_terms.append(mesh_id)
-        gc_relations.append([pval, rsid, mesh_id])
-    nlp.set_ontology_terms([x for x in mesh_terms if x])
-    nlp.pval_patterns = pvals
-    nlp.rsid_patterns = rsids
-    nlp.gc_relations = gc_relations
-    study = Experimental.load_bioc_study("BioC_Studies", F"{pmc_id}.json")
-    if not study:
-        continue
-    fulltext = "\n".join([x['text'] for x in study['documents'][0]['passages']])
-    altered_text = re.sub(r"(?:\w)(\()", lambda x: x.group().replace("(", " ("), fulltext)
-    abbreviations = nlp.get_all_abbreviations(altered_text)
-    file_abbrevs = get_study_abbreviations(F"BioC_Studies/{pmc_id}_abbreviations.json")
-    if file_abbrevs:
-        abbreviations += file_abbrevs
-    nlp.set_abbreviations(abbreviations)  # TODO: Check abbreviation partial entity HPC.
-    result = process_study(nlp, study)
-    nlp.clear_saved_study_data()
-    study_tables, contains_annotations = TableExtractor.parse_tables(F"BioC_Studies/{pmc_id}_tables.json", nlp)
-    if contains_annotations:
-        TableExtractor.output_tables(F"output/{pmc_id}_tables.json", study_tables)
-    if not result['documents'][0]['relations'] and not contains_annotations:
-        failed_documents.append(pmc_id)
-test = ["PMC4129543", "PMC4238043", "PMC3818640", "PMC6697541", "PMC3761075", "PMC5737791", "PMC5395320",
-        "PMC4127128", "PMC4289640", "PMC4072456", "PMC4656791", "PMC3691078", "PMC3816124", "PMC4339483", "PMC4797637",
-        "PMC5851439", "PMC3775874", "PMC5867896", "PMC3891054", "PMC5118651", "PMC4333218", "PMC4333205", "PMC4126189",
-        "PMC4986826", "PMC4114519"]
-print([x for x in failed_documents if x not in test])
-print(failed_documents)
-# sys.exit()
+                     F"{power_digits[1:] + ')' if len(power_digits) > 1 else ')'} "
+            pvals.append(pval)
+            table_pval = F"([{pval_input_range}][ \.0-9]*[ xX*×]*10 ?(<sup>)?[-−] ?" \
+                         F"{power_digits[0] + '?' if power_digits[0] == '0' else power_digits[0]}" \
+                         F"{power_digits[1:] + '(</sup>)?)' if len(power_digits) > 1 else '(</sup>)?)'}"
+            pvals.append(table_pval)
+            table_pval = F"([{pval_input_range}][ \.0-9]*E ?(<sup>)?[-−] ?" \
+                         F"{power_digits[0] + '?' if power_digits[0] == '0' else power_digits[0]}" \
+                         F"{power_digits[1:] + '(</sup>)?)' if len(power_digits) > 1 else '(</sup>)?)'}"
+            pvals.append(table_pval)
+            rsids.append(F"({rsid})(?:\[[a-zA-Z0-9]\])?")
+            mesh_terms.append(mesh_id)
+            gc_relations.append([pval, rsid, mesh_id])
+        nlp.set_ontology_terms([x for x in mesh_terms if x])
+        nlp.pval_patterns = pvals
+        nlp.rsid_patterns = rsids
+        nlp.gc_relations = gc_relations
+        study = Experimental.load_bioc_study("BioC_Studies", F"{pmc_id}.json")
+        if not study:
+            continue
+        fulltext = "\n".join([x['text'] for x in study['documents'][0]['passages']])
+        altered_text = re.sub(r"(?:\w)(\()", lambda x: x.group().replace("(", " ("), fulltext)
+        abbreviations = nlp.get_all_abbreviations(altered_text)
+        file_abbrevs = get_study_abbreviations(F"BioC_Studies/{pmc_id}_abbreviations.json")
+        if file_abbrevs:
+            abbreviations += file_abbrevs
+        nlp.set_abbreviations(abbreviations)  # TODO: Check abbreviation partial entity HPC.
+        result = process_study(nlp, study)
+        nlp.clear_saved_study_data()
+        study_tables, contains_annotations = GCTableExtractor.parse_tables(F"BioC_Studies/{pmc_id}_tables.json", nlp)
+        if contains_annotations:
+            TableExtractor.output_tables(F"output/{pmc_id}_tables.json", study_tables)
+        if not result['documents'][0]['relations'] and not contains_annotations:
+            failed_documents.append(pmc_id)
+    test = ["PMC4129543", "PMC4238043", "PMC3818640", "PMC6697541", "PMC3761075", "PMC5737791", "PMC5395320",
+            "PMC4127128", "PMC4289640", "PMC4072456", "PMC4656791", "PMC3691078", "PMC3816124", "PMC4339483",
+            "PMC4797637",
+            "PMC5851439", "PMC3775874", "PMC5867896", "PMC3891054", "PMC5118651", "PMC4333218", "PMC4333205",
+            "PMC4126189",
+            "PMC4986826", "PMC4114519"]
+    print([x for x in failed_documents if x not in test])
+    print(failed_documents)
+    # sys.exit()
+
+
+if __name__ == '__main__':
+    main()
