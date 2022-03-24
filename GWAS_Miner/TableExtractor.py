@@ -331,22 +331,18 @@ class Table:
                         row_annotations.append(annotation)
                 if not contains_trait:
                     if self.COLUMN_TRAIT in self.section_ents[section_num - 1]:
-                        entity = section.doc.ents[0]
+                        entity = [x for x in section.doc.ents if x._.is_trait or x._.has_trait][0]
                         annotation, nlp = get_cell_entity_annotation(nlp, entity, F"table_section_title_{section_num}", None)
                         row_annotations.append(annotation)
                         contains_trait = True
                     elif self.COLUMN_TRAIT in self.caption_ents:
                         entity = None
-                        if "HCV" in self.caption_doc.text:
-                            idx = self.caption_doc.text_with_ws.index("HCV")
-                            entity = self.caption_doc.char_span(idx, idx + 3, "D019698")
-                        else:
-                            entity = self.caption_doc.ents[0]
+                        entity = [x for x in self.caption_doc.ents if x._.is_trait or x._.has_trait][0]
                         annotation, nlp = get_cell_entity_annotation(nlp, entity, "table_caption", None)
                         row_annotations.append(annotation)
                         contains_trait = True
                     elif self.COLUMN_TRAIT in self.footer_ents:
-                        entity = self.footer_doc.ents[0]
+                        entity = [x for x in self.footer_doc.ents if x._.is_trait or x._.has_trait][0]
                         annotation, nlp = get_cell_entity_annotation(nlp, entity, "table_footer", None)
                         row_annotations.append(annotation)
                         contains_trait = True
@@ -357,6 +353,7 @@ class Table:
                                                                "annotator": "GWASMiner@le.ac.uk",
                                                           "updated_at": current_datetime},
                                                        nodes=[BioC.BioCNode(refid=x.id, role="") for x in row_annotations]))
+                    nlp.r += 1
             section_num += 1
         nlp.annotations += annotations
         nlp.relations += relations
