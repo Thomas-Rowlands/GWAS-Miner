@@ -30,9 +30,9 @@ def process_tables(nlp, tables):
     return tables, nlp
 
 
-def get_cell_entity_annotation(nlp, ent, table_element, cell_id):
+def get_cell_entity_annotation(nlp, ent, table_element, cell_id, element_offset=0):
     current_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-    offset = ent.start_char
+    offset = ent.start_char + element_offset
     length = ent.end_char - ent.start_char
     loc = BioC.BioCLocation(offset=offset, length=length, table_cell_id=cell_id, table_element=table_element)
     entity_type = None
@@ -189,6 +189,7 @@ class Table:
         self.contains_marker = False
         self.contains_significance = False
         self.section_ents = []
+        self.passages = []
 
     def __set_table_type(self):
         # Check column types
@@ -442,12 +443,26 @@ class Table:
         return output_dict
 
 
+class TablePassage:
+    def __init__(self, title):
+        self.title = title
+        self.sections = []
+        self.annotations = []
+        self.relations = []
+
+    def jsonable(self):
+        output_dict = self.__dict__
+        del output_dict['title']
+        return output_dict
+
+
 class TableSection:
-    def __init__(self, rows=None, title=None):
+    def __init__(self, rows=None, title=None, title_offset=None):
         if rows is None:
             rows = []
         self.rows = rows
         self.title = str(title)
+        self.title_offset = title_offset
         self.doc = None
 
     def add_spacy_docs(self, nlp):

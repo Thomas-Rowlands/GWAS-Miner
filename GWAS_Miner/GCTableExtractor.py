@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 
 import BioC
-from TableExtractor import Table, get_cell_entity_annotation, TableRow, TableSection, TableCell
+from TableExtractor import Table, get_cell_entity_annotation, TableRow, TableSection, TableCell, TablePassage
 
 table_significance_pattern = r""
 
@@ -39,6 +39,7 @@ def parse_tables(file_input, nlp):
             footer_offset = None
             doc['annotations'] = []
             for passage in doc['passages']:
+                table_passage = TablePassage(passage['infons']['section_title_1'])
                 if "section_title_2" in passage['infons'].keys():
                     print(F"Second table title found in: {file_input}")
                 if passage['infons']['section_title_1'] == 'table_title':
@@ -58,7 +59,11 @@ def parse_tables(file_input, nlp):
                         col_row.cells.append(column_cell)
                     columns.append(col_row)
                     for section in passage['data_section']:
-                        table_section = TableSection(title=section['table_section_title_1'])
+                        if 'table_section_title_1' in section.keys():
+                            return None, False
+                        section_title = section['text'] if 'text' in section.keys() else None
+                        title_offset = section['offset'] if section_title else None
+                        table_section = TableSection(title=section_title, title_offset=title_offset)
                         for row in section['data_rows']:
                             data_row = TableRow()
                             for cell in row:
@@ -68,7 +73,7 @@ def parse_tables(file_input, nlp):
                                 print(F"{file_input} contains potentially problematic cell counts!")
                             table_section.rows.append(data_row)
                         table_sections.append(table_section)
-
+                table_passage.sections = table_sections
             table = GCTable(title, table_id, title_offset, content_offset, columns,
                             table_sections, caption, caption_offset, footer, footer_offset)
             tables.append(table)
@@ -80,12 +85,19 @@ def parse_tables(file_input, nlp):
             if table.annotations:
                 contains_annotations = True
                 for bioc_table in tables_data["documents"]:
-                    for passage in bioc_table["passages"]:
-                        passage["relations"] = []
                     if bioc_table["id"] == table.table_id:
-                        bioc_table["annotations"] = table.annotations
-                        bioc_table["relations"] = table.relations
-                        break
+                        for passage in bioc_table["passages"]:
+                            passage["annotations"] = []
+                            used_ids = []
+                            passage["relations"] = []
+                            for annotation in table.annotations:
+                                if annotation.locations[0].table_element == passage['infons']['section_title_1']:
+                                    passage["annotations"].append(annotation)
+                                    used_ids.append(annotation.id)
+                            for relation in table.relations:
+                                if [x for x in relation.nodes if x.refid in used_ids]:
+                                    passage["relations"].append(relation)
+                    bioc_table["relations"] = []
     return tables_data, contains_annotations
 
 
@@ -119,8 +131,8 @@ class GCTable(Table):
                 if not contains_trait:
                     if self.COLUMN_TRAIT in self.section_ents[section_num - 1]:
                         entity = [x for x in section.doc.ents if x._.is_trait or x._.has_trait][0]
-                        annotation, nlp = get_cell_entity_annotation(nlp, entity, F"table_section_title_{section_num}",
-                                                                     None)
+                        annotation, nlp = get_cell_entity_annotation(nlp, entity, "section_title",
+                                                                     None, section.title_offset)
                         row_annotations.append(annotation)
                         contains_trait = True
                     elif self.COLUMN_TRAIT in self.caption_ents:
