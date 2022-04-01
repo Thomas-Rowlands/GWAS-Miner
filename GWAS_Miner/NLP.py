@@ -2,8 +2,6 @@ import itertools
 import json
 import logging
 import re
-from datetime import datetime
-
 from spacy.pipeline import merge_entities
 
 import config
@@ -11,7 +9,7 @@ import networkx as nx
 import spacy
 from DataStructures import Marker, Phenotype, Significance, Association, LexiconEntry
 from spacy import displacy
-from spacy.matcher import Matcher, PhraseMatcher, DependencyMatcher
+from spacy.matcher import Matcher, PhraseMatcher
 from spacy.tokens import Span, Token, Doc
 
 
@@ -114,7 +112,6 @@ class Interpreter:
         :param term: LexiconEntry object containing the desired term.
         :return: List of string variations.
         """
-        patterns = None
         if type(term) == str:
             patterns = [term]
         else:
@@ -122,8 +119,9 @@ class Interpreter:
             if term.synonyms():
                 for syn in term.synonyms():
                     patterns.append(syn['name'])
+        # TODO: plurals + reverse the roman numerals too!
         funcs = [Interpreter.remove_comma_variation, Interpreter.get_hyphenated_variations,
-                 Interpreter.get_roman_numeral_variation, Interpreter.get_plural_variation] # TODO: plurals + reverse the roman numerals too!
+                 Interpreter.get_roman_numeral_variation, Interpreter.get_plural_variation]
         new_patterns = []
         combos = [itertools.combinations(funcs, 1), itertools.combinations(funcs, 2),
                   itertools.combinations(funcs, 3), itertools.combinations(funcs, 4)]
@@ -166,36 +164,71 @@ class Interpreter:
         return output
 
     @staticmethod
+    def get_int_from_roman(s):
+        """
+        :type s: str
+        :rtype: int
+        """
+        # Credit to https://www.tutorialspoint.com/roman-to-integer-in-python for this function
+        roman = {'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100, 'D': 500, 'M': 1000, 'IV': 4, 'IX': 9, 'XL': 40, 'XC': 90,
+                 'CD': 400, 'CM': 900}
+        i = 0
+        num = 0
+        while i < len(s):
+            if i + 1 < len(s) and s[i:i + 2] in roman:
+                num += roman[s[i:i + 2]]
+                i += 2
+            else:
+                # print(i)
+                num += roman[s[i]]
+                i += 1
+        return num
+
+    @staticmethod
     def get_roman_numeral_variation(term: str):
         search_result = re.search(r"(\d+)", term)
+        roman_numerals = [
+            "M", "CM", "D", "CD",
+            "C", "XC", "L", "XL",
+            "X", "IX", "V", "IV",
+            "I"
+        ]
+        numerals = [
+            1000, 900, 500, 400,
+            100, 90, 50, 40,
+            10, 9, 5, 4,
+            1
+        ]
+        is_original_roman = False
+        if not search_result:
+            for word in term.split(" "):
+                if word in roman_numerals:
+                    replacement = word
+                    is_original_roman = True
+                    break
         result = None
         replacement = ''
-        if search_result:
+        if not is_original_roman:
+            if not search_result:
+                return None
             num = search_result.group(0)
             replacement = num
             # Adapted from solution found here
             # https://www.w3resource.com/python-exercises/class-exercises/python-class-exercise-1.php
-            val = [
-                1000, 900, 500, 400,
-                100, 90, 50, 40,
-                10, 9, 5, 4,
-                1
-            ]
-            syb = [
-                "M", "CM", "D", "CD",
-                "C", "XC", "L", "XL",
-                "X", "IX", "V", "IV",
-                "I"
-            ]
             roman_num = ''
             i = 0
             num = int(num)
             while num > 0:
-                for _ in range(num // val[i]):
-                    roman_num += syb[i]
-                    num -= val[i]
+                for _ in range(num // numerals[i]):
+                    roman_num += roman_numerals[i]
+                    num -= numerals[i]
                 i += 1
             result = term.replace(replacement, roman_num)
+        elif is_original_roman:
+            roman_num = replacement
+            replacement = Interpreter.get_int_from_roman(roman_num)
+            result = term.replace(roman_num, str(replacement))
+
         return result
 
     @staticmethod
@@ -353,11 +386,11 @@ class Interpreter:
             for ent_label in config.regex_entity_patterns:
                 if isinstance(config.regex_entity_patterns[ent_label], list):
                     for pattern in config.regex_entity_patterns[ent_label]:
-                        self.__regex_match(pattern, doc, ent_label)
+                        self._regex_match(pattern, doc, ent_label)
                         if ent_label not in self.__entity_labels:
                             self.__entity_labels.append(ent_label)
                 else:
-                    self.__regex_match(config.regex_entity_patterns[ent_label], doc, ent_label)
+                    self._regex_match(config.regex_entity_patterns[ent_label], doc, ent_label)
                     if ent_label not in self.__entity_labels:
                         self.__entity_labels.append(ent_label)
 
@@ -619,8 +652,8 @@ class Interpreter:
                         best_pval_distance = temp_distance
                     else:
                         continue
-                if not pval:
-                    continue
+                    if not pval:
+                        continue
                 if best_pval_distance:
                     pheno_assocs.append([marker[1], best_pval])
             if not top_phenotype:
@@ -690,9 +723,10 @@ class Interpreter:
             [int]: [Total number of entities found matching the supplied label]
         """
         count = 0
+        logger = logging.getLogger("GWAS Miner")
         for ent in doc.ents:
             if ent.label_ == label:
-                Interpreter.__logger.info((ent.lower_))
+                logger.info((ent.lower_))
                 count += 1
         return count
 
@@ -764,10 +798,10 @@ class Interpreter:
     def display_structure(sentence_spans, markup_only=False, theme="light"):
         """
         Start running the Displacy visualization of the tokenized sentences identified by the NLP pipeline.
-        @param doc: The NLP processed document.
+        @param sentence_spans: The SpaCy processed sentences.
         @param markup_only: If True, returns a HTML string instead of hosting.
+        @param theme: "light"or"dark" for desired colour palette.
         """
-        options = None
         if theme.lower() == "light":
             options = {"compact": True}
         else:
