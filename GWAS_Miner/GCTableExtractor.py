@@ -145,18 +145,20 @@ class GCTable(Table):
                         annotation, nlp = get_cell_entity_annotation(nlp, entity, "table_footer", None)
                         row_annotations.append(annotation)
                         contains_trait = True
-                if len(row_annotations) == 3:
+                if contains_variant and contains_significance: #len(row_annotations) == 3:
                     nlp.v += 1
-                    nlp.t += 1
+                    if contains_trait:
+                        nlp.t += 1
                     nlp.s += 1
                     annotations += row_annotations
-                    relations.append(BioC.BioCRelation(id=F"R{nlp.r}",
-                                                       infons={"type": "disease_assoc",
-                                                               "annotator": "GWASMiner@le.ac.uk",
-                                                               "updated_at": current_datetime},
-                                                       nodes=[BioC.BioCNode(refid=x.id, role="") for x in
-                                                              row_annotations]))
-                    nlp.r += 1
+                    if contains_trait:
+                        relations.append(BioC.BioCRelation(id=F"R{nlp.r}",
+                                                           infons={"type": "disease_assoc",
+                                                                   "annotator": "GWASMiner@le.ac.uk",
+                                                                   "updated_at": current_datetime},
+                                                           nodes=[BioC.BioCNode(refid=x.id, role="") for x in
+                                                                  row_annotations]))
+                        nlp.r += 1
             section_num += 1
         nlp.annotations += annotations
         nlp.relations += relations

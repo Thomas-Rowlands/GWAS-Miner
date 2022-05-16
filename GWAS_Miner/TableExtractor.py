@@ -25,8 +25,8 @@ def process_tables(nlp, tables):
         table.relations = nlp.relations
         nlp.annotations = []
         nlp.relations = []
-        # if table.table_type:
-        # t, m, p, r, used_annots = table.assign_annotations(t, m, p, r, used_annots)
+        if table.table_type:
+            t, m, p, r, used_annots = table.assign_annotations(t, m, p, r, used_annots)
     return tables, nlp
 
 
@@ -193,7 +193,7 @@ class Table:
 
     def __set_table_type(self):
         # Check column types
-        contains_marker, contains_trait, contains_pval = False, False, False
+        self.contains_marker, self.contains_trait, self.contains_pval = False, False, False
         if self.title_doc:
             if self.title_doc.ents and any(x for x in self.title_doc.ents if x._.is_trait or x._.has_trait):
                 self.contains_trait = True
@@ -208,7 +208,7 @@ class Table:
                     self.contains_marker = True
                     self.caption_ents.append(self.COLUMN_MARKER)
 
-        if self.footer_doc and not contains_trait:
+        if self.footer_doc and not self.contains_trait:
             if self.footer_doc.ents and any(x for x in self.footer_doc.ents if x._.is_trait or x._.has_trait):
                 self.contains_trait = True
                 self.footer_ents.append(self.COLUMN_TRAIT)
@@ -218,7 +218,7 @@ class Table:
             self.section_ents.append([])
             if section.doc:
                 self.has_super_rows = True
-                if not contains_trait or not contains_marker:
+                if not self.contains_trait or not self.contains_marker:
                     if section.doc.ents and any(x for x in section.doc.ents if x._.is_trait or x._.has_trait):
                         self.contains_trait = True
                         self.section_ents[i].append(self.COLUMN_TRAIT)
@@ -251,7 +251,7 @@ class Table:
                                 self.column_types[i].append(Table.COLUMN_TRAIT)
                             else:
                                 self.column_types[i] = [self.column_types[i], Table.COLUMN_TRAIT]
-                            contains_trait = True
+                            self.contains_trait = True
                         elif [x for x in Table.marker_strings if re.search(x, text)]:
                             if isinstance(self.column_types[i], list):
                                 self.column_types[i].append(Table.COLUMN_MARKER)

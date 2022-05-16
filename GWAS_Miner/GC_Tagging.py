@@ -323,8 +323,8 @@ def main():
     nlp = GCInterpreter(lexicon)
     failed_documents = []
     for pmc_id in gc_data.keys():
-        if pmc_id != "PMC4294952":
-            continue
+        # if pmc_id != "PMC4294952":
+        #     continue
         pvals = []
         rsids = []
         mesh_terms = []

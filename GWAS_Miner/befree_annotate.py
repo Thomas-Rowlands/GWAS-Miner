@@ -102,6 +102,7 @@ def get_befree_annotations(study, nlp, current_datetime):
     if pmid in befree_data.keys():
         study_befree_data = befree_data[pmid]
         relations = []
+        contains_missing_entities = False
         for passage in study['documents'][0]['passages']:
             annotations = []
             if passage['infons']['section_type'] == "ABSTRACT":
@@ -150,8 +151,10 @@ def get_befree_annotations(study, nlp, current_datetime):
                                                 locations=[loc], text=entry["gene_text"]))
                             nlp.g += 1
                     except TypeError as te:
-                        print(F"PMID: {pmid} - entity missing from sentence.")
+                        contains_missing_entities = True
                         continue
+                    if contains_missing_entities:
+                        print(F"PMID: {pmid} - contains missing entities from sentences.")
                     # nlp = get_bioc_annotations(annotations, passage["offset"], nlp)
                     phenotype_node = BioC.BioCNode(refid=F"T{disease_node_id}", role="")
                     marker_node = BioC.BioCNode(refid=F"M{marker_node_id}", role="")

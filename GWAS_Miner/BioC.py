@@ -111,13 +111,13 @@ class BioCLocation:
     offset = None
     length = None
     table_element = None
-    table_cell_id = None
+    cell_id = None
 
     def __init__(self, offset=None, length=None, table_element=None, table_cell_id=None):
         self.offset = offset
         self.length = length
         self.table_element = table_element
-        self.table_cell_id = table_cell_id
+        self.cell_id = table_cell_id
 
     def jsonable(self):
         return self.__dict__
