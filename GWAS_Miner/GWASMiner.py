@@ -46,7 +46,6 @@ nlp = None
 gui = None
 is_cancelled = False
 global output_xml
-output_xml = False
 processed_files = []
 
 
@@ -157,7 +156,7 @@ def process_study(nlp, study, qt_progress_signal=None, qt_study_finished_signal=
                     with open("training_input/training_input.txt", "a+", encoding="utf-8") as f_in:
                         f_in.write(training_string + "\n")
 
-        annotations = nlp.get_entities(doc, ["MESH", "HPO", "RSID", "PVAL"])
+        annotations = nlp.get_entities(doc)
         used_annots = []
         if annotations:
             for annot in annotations:

@@ -67,10 +67,7 @@ class GCInterpreter(Interpreter):
 
         # Ensure that rule-matched entities override data model entities when needed.
         for ent in old_ents:
-            try:
-                doc.ents += (ent,)
-            except:  # Default SpaCy entities should never override others.
-                continue
+            doc.ents += (ent,)
 
         # Ensure that multi-token entities are merged for extraction and association processing.
         for ent_label in self._Interpreter__entity_labels:
@@ -200,6 +197,7 @@ class GCInterpreter(Interpreter):
                         Association(marker=result_marker, significance=result_significance, phenotype=result_pheno))
         return results
 
+
 def get_relation(relation, passage, nlp):
     current_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
     if type(relation.phenotype.token) == Token:
@@ -221,6 +219,7 @@ def get_relation(relation, passage, nlp):
                                       nodes=[phenotype_node, marker_node, significance_node])
     return bioc_relation, nlp
 
+
 def process_study(nlp, study):
     if not study:
         return False
@@ -238,20 +237,16 @@ def process_study(nlp, study):
                                                                                  "caption"]:
             continue
         passage_text = passage['text']
-        # passage_text = re.sub(r"(?:\w)(\()", lambda x: x.group().replace("(", " ("), passage_text)
         doc = nlp.process_corpus(passage_text)
         top_phenotype = nlp.get_ubiquitous_phenotype(passage_text, nlp)
         doc.user_data["top_phenotype"] = top_phenotype
-        annotations = nlp.get_entities(doc, ["MESH", "HPO", "RSID", "PVAL"])
+        annotations = nlp.get_entities(doc)
         used_annots = []
         if annotations:
             for annot in annotations:
                 loc = BioC.BioCLocation(offset=annot["offset"] + passage["offset"], length=annot["length"])
-                if annot["text"] in used_annots:
-                    for old_annot in passage['annotations']:
-                        if old_annot.text == annot["text"] and loc not in old_annot.locations:
-                            old_annot.locations.append(loc)
-                if "RSID" not in annot["entity_type"] and "PVAL" not in annot["entity_type"]:
+                if "RSID" not in annot["entity_type"] and "PVAL" not in annot["entity_type"] \
+                        and "GENE" not in annot["entity_type"]:
                     genomic_trait = BioC.BioCAnnotation(id=F"T{nlp.t}",
                                                         infons={"type": "trait", "identifier": F"MeSH:{annot['id']}",
                                                                 "annotator": "GWASMiner@le.ac.uk",
@@ -270,12 +265,20 @@ def process_study(nlp, study):
                     nlp.v += 1
                 elif "PVAL" in annot["entity_type"]:
                     p_value = BioC.BioCAnnotation(id=F"S{nlp.s}",
-                                                  infons={"type": "significance", "identifier": annot["id"],
+                                                  infons={"type": "significance", "identifier": "PVAL",
                                                           "annotator": "GWASMiner@le.ac.uk",
                                                           "updated_at": current_datetime},
                                                   locations=[loc], text=annot["text"])
                     passage['annotations'].append(p_value)
                     nlp.s += 1
+                elif "GENE" in annot["entity_type"]:
+                    gene = BioC.BioCAnnotation(id=F"G{nlp.g}",
+                                                  infons={"type": "gene", "identifier": F"Entrez:{annot['id']}",
+                                                          "annotator": "GWASMiner@le.ac.uk",
+                                                          "updated_at": current_datetime},
+                                                  locations=[loc], text=annot["text"])
+                    passage['annotations'].append(gene)
+                    nlp.g += 1
                 used_annots.append(annot["text"])
 
             relations, uncertain_relations = nlp.extract_phenotypes(doc)
@@ -289,9 +292,11 @@ def process_study(nlp, study):
                 nlp.r += 1
     if document_relations:
         study['documents'][0]['relations'] = document_relations
-    study = befree_annotate.get_befree_annotations(study, nlp)
+    study = befree_annotate.get_befree_annotations(study, nlp, current_datetime)
     OutputConverter.output_xml(json.dumps(study, default=BioC.ComplexHandler),
-                               F"output/PMC{study['documents'][0]['id']}_result.xml")
+                               F"output/xml/PMC{study['documents'][0]['id']}_result.xml")
+    OutputConverter.convert_xml_to_json(F"output/xml/PMC{study['documents'][0]['id']}_result.xml",
+                                        F"output/json/PMC{study['documents'][0]['id']}_result.json")
     return study
 
 
@@ -318,7 +323,7 @@ def main():
     nlp = GCInterpreter(lexicon)
     failed_documents = []
     for pmc_id in gc_data.keys():
-        if pmc_id != "PMC5300750":
+        if pmc_id != "PMC4294952":
             continue
         pvals = []
         rsids = []
@@ -371,15 +376,6 @@ def main():
             TableExtractor.output_tables(F"output/{pmc_id}_tables.json", study_tables)
         if not result['documents'][0]['relations'] and not contains_annotations:
             failed_documents.append(pmc_id)
-    test = ["PMC4129543", "PMC4238043", "PMC3818640", "PMC6697541", "PMC3761075", "PMC5737791", "PMC5395320",
-            "PMC4127128", "PMC4289640", "PMC4072456", "PMC4656791", "PMC3691078", "PMC3816124", "PMC4339483",
-            "PMC4797637",
-            "PMC5851439", "PMC3775874", "PMC5867896", "PMC3891054", "PMC5118651", "PMC4333218", "PMC4333205",
-            "PMC4126189",
-            "PMC4986826", "PMC4114519"]
-    print([x for x in failed_documents if x not in test])
-    print(failed_documents)
-    # sys.exit()
 
 
 if __name__ == '__main__':

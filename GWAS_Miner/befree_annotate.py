@@ -1,13 +1,11 @@
 import html
-import json
 import re
 from datetime import datetime
 from difflib import SequenceMatcher
-from os import listdir
-from os.path import isfile, join
 
-from GWAS_Miner import Experimental, BioC, OutputConverter
+from GWAS_Miner import BioC
 from GWAS_Miner.BioC import BioCLocation, BioCAnnotation
+
 
 def get_befree_data(pmid):
     befree_data = {}
@@ -52,10 +50,11 @@ def get_bioc_annotations(annotations, offset, nlp):
     current_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
     for annot in annotations:
         loc = BioCLocation(offset=annot["offset"] + offset, length=annot["length"])
-        if "RSID" not in annot["entity_type"] and "PVAL" not in annot["entity_type"]:
+        if "RSID" not in annot["entity_type"] and "PVAL" not in annot["entity_type"] \
+                and "GENE" not in annot["entity_type"]:
             genomic_trait = BioCAnnotation(id=F"T{nlp.t}", infons={"type": "trait", "identifier": F"MeSH:{annot['id']}",
-                                                               "annotator": "BeFree@example.com",
-                                                               "updated_at": current_datetime},
+                                                                   "annotator": "BeFree@example.com",
+                                                                   "updated_at": current_datetime},
                                            locations=[loc], text=annot["text"])
             nlp.annotations.append(genomic_trait)
             nlp.t += 1
@@ -69,23 +68,23 @@ def get_bioc_annotations(annotations, offset, nlp):
             nlp.v += 1
         elif "PVAL" in annot["entity_type"]:
             p_value = BioCAnnotation(id=F"P{nlp.p}", infons={"type": "significance", "identifier": annot["id"],
-                                                         "annotator": "BeFree@example.com",
-                                                         "updated_at": current_datetime},
+                                                             "annotator": "BeFree@example.com",
+                                                             "updated_at": current_datetime},
                                      locations=[loc], text=annot["text"])
             nlp.annotations.append(p_value)
             nlp.p += 1
         elif "GENE" in annot["entity_type"]:
-            gene = BioCAnnotation(id=F"P{p}", infons={"type": "gene", "identifier": F"Entrez:{annot['id']}",
-                                                         "annotator": "BeFree@example.com",
-                                                         "updated_at": current_datetime},
-                                     locations=[loc], text=annot["text"])
+            gene = BioCAnnotation(id=F"G{nlp.g}", infons={"type": "gene", "identifier": F"Entrez:{annot['id']}",
+                                                      "annotator": "BeFree@example.com",
+                                                      "updated_at": current_datetime},
+                                  locations=[loc], text=annot["text"])
             nlp.annotations.append(gene)
             nlp.g += 1
     return nlp
 
 
 def get_closest_index(text, search, target):
-    closest_index = None
+    closest_index = 0
     closest_difference = None
     for match in re.finditer(search, text, flags=re.MULTILINE):
         if closest_index is None:
@@ -97,18 +96,20 @@ def get_closest_index(text, search, target):
     return closest_index
 
 
-def get_befree_annotations(study, nlp):
+def get_befree_annotations(study, nlp, current_datetime):
     pmid = study["documents"][0]["passages"][0]["infons"]["article-id_pmid"]
     befree_data = get_befree_data(pmid)
     if pmid in befree_data.keys():
         study_befree_data = befree_data[pmid]
-        used_annots = []
         relations = []
-        g = 0
         for passage in study['documents'][0]['passages']:
+            annotations = []
             if passage['infons']['section_type'] == "ABSTRACT":
                 text = passage["text"]
                 for entry in study_befree_data:
+                    disease_node_id = nlp.t
+                    marker_node_id = nlp.v
+                    gene_node_id = nlp.g
                     is_gene = "ncbi_id" in entry.keys()
                     sent = sorted([(SequenceMatcher(None, x, entry['sentence']).ratio(), x) for x in text.split(". ")],
                                   key=lambda y: y[0], reverse=True)[0]
@@ -116,53 +117,55 @@ def get_befree_annotations(study, nlp):
                     sent = sent[1]
                     if not sent or sent_score < 0.6:
                         continue
-                    annotations = []
-                    sentence_offset = text.index(sent)
+                    sentence_offset = text.index(sent) + passage["offset"]
                     try:
-                        annotations.append({
-                            "entity_type": "DISEASE",
-                            "id": entry["meshid"],
-                            "text": entry["disease_text"],
-                            "offset": get_closest_index(sent, entry["disease_text"], int(
-                                entry["disease_offset"][:entry["disease_offset"].index("#")])) + sentence_offset,
-                            "length": len(entry["disease_text"])
-                        })
+                        loc = BioC.BioCLocation(offset=get_closest_index(sent, entry["disease_text"], int(
+                            entry["disease_offset"][:entry["disease_offset"].index("#")]) + sentence_offset),
+                                                length=len(entry["disease_text"]))
+                        annotations.append(BioC.BioCAnnotation(id=F"T{nlp.g}",
+                                                               infons={"type": "trait",
+                                                                       "identifier": F"MeSH:{entry['meshid']}",
+                                                                       "annotator": "GWASMiner@le.ac.uk",
+                                                                       "updated_at": current_datetime},
+                                                               locations=[loc], text=entry["disease_text"]))
+                        nlp.t += 1
                         if not is_gene:
-                            annotations.append({
-                                "entity_type": "RSID",
-                                "id": entry["variantid"],
-                                "text": entry["variantid"],
-                                "offset": get_closest_index(sent, entry["variantid"], int(
-                                    entry["variant_offset"][:entry["variant_offset"].index("#")])) + sentence_offset,
-                                "length": len(entry["variantid"])
-                            })
+                            loc = BioC.BioCLocation(offset=get_closest_index(sent, entry["variantid"], int(
+                                    entry["variant_offset"][:entry["variant_offset"].index("#")]) + sentence_offset),
+                                                    length=len(entry["variantid"]))
+                            annotations.append(BioC.BioCAnnotation(id=F"V{nlp.g}",
+                                                infons={"type": "rsid", "identifier": F"dbSNP:{entry['variantid']}",
+                                                        "annotator": "GWASMiner@le.ac.uk",
+                                                        "updated_at": current_datetime},
+                                                locations=[loc], text=entry["variantid"]))
+                            nlp.v += 1
                         else:
-                            annotations.append({
-                                "entity_type": "GENE",
-                                "id": entry["ncbi_id"],
-                                "text": entry["gene_text"],
-                                "offset": get_closest_index(sent, entry["gene_text"], int(
-                                    entry["gene_offset"][:entry["gene_offset"].index("#")])) + sentence_offset,
-                                "length": len(entry["gene_text"])
-                            })
+                            loc = BioC.BioCLocation(offset=get_closest_index(sent, entry["gene_text"], int(
+                                    entry["gene_offset"][:entry["gene_offset"].index("#")]) + sentence_offset),
+                                                    length=len(entry["gene_text"]))
+                            annotations.append(BioC.BioCAnnotation(id=F"G{nlp.g}",
+                                                infons={"type": "gene", "identifier": F"Entrez:{entry['ncbi_id']}",
+                                                        "annotator": "GWASMiner@le.ac.uk",
+                                                        "updated_at": current_datetime},
+                                                locations=[loc], text=entry["gene_text"]))
+                            nlp.g += 1
                     except TypeError as te:
                         print(F"PMID: {pmid} - entity missing from sentence.")
                         continue
-                    disease_node_id = nlp.t
-                    marker_node_id = nlp.v
-                    gene_node_id = nlp.g
-                    nlp = get_bioc_annotations(annotations, passage["offset"], nlp)
+                    # nlp = get_bioc_annotations(annotations, passage["offset"], nlp)
                     phenotype_node = BioC.BioCNode(refid=F"T{disease_node_id}", role="")
                     marker_node = BioC.BioCNode(refid=F"M{marker_node_id}", role="")
                     gene_node = BioC.BioCNode(refid=F"G{gene_node_id}", role="")
                     bioc_relation = BioC.BioCRelation(id=F"R{nlp.r}",
                                                       infons={"type": "BeFree_Association",
                                                               "annotator": "tr142@le.ac.uk",
-                                                              "updated_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")},
-                                                      nodes=[phenotype_node, marker_node] if not is_gene else [phenotype_node, gene_node])
+                                                              "updated_at": datetime.now().strftime(
+                                                                  "%Y-%m-%dT%H:%M:%SZ")},
+                                                      nodes=[phenotype_node, marker_node] if not is_gene else [
+                                                          phenotype_node, gene_node])
                     nlp.r += 1
                     relations.append(bioc_relation)
-                for annot in used_annots:
+                for annot in annotations:
                     passage['annotations'].append(annot)
         if relations:
             for relation in relations:

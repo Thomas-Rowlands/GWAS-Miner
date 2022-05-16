@@ -16,7 +16,7 @@ from spacy.tokens import Span, Token, Doc
 class Interpreter:
     def __init__(self, lexicon, ontology_only=False):
         self.lexicon = lexicon
-        self.nlp = spacy.load("en_core_sci_lg", disable=["ner"])
+        self.nlp = spacy.load("en_core_sci_scibert", disable=["ner"])
         self.nlp.add_pipe("merge_noun_chunks")
         self.__failed_matches = []
         self.nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
@@ -29,7 +29,7 @@ class Interpreter:
         self.__logger = logging.getLogger("GWAS Miner")
         self.__entity_labels = ["MESH", "HPO", "PVAL"]
         self.lexicon = lexicon
-        self.nlp = spacy.load("en_core_sci_lg", disable=["ner"])
+        # self.nlp = spacy.load("en_core_sci_lg", disable=["ner"])
         self.__failed_matches = []
         # self.nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
         infixes = self.nlp.Defaults.infixes + [r'(?!\w)(\()']
@@ -555,7 +555,7 @@ class Interpreter:
         return input
 
     @staticmethod
-    def get_entities(doc, entity_list):
+    def get_entities(doc):
         result = []
         for ent in doc.ents:
             result.append({
