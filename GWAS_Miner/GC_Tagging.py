@@ -273,10 +273,10 @@ def process_study(nlp, study):
                     nlp.s += 1
                 elif "GENE" in annot["entity_type"]:
                     gene = BioC.BioCAnnotation(id=F"G{nlp.g}",
-                                                  infons={"type": "gene", "identifier": F"Entrez:{annot['id']}",
-                                                          "annotator": "GWASMiner@le.ac.uk",
-                                                          "updated_at": current_datetime},
-                                                  locations=[loc], text=annot["text"])
+                                               infons={"type": "gene", "identifier": F"Entrez:{annot['id']}",
+                                                       "annotator": "GWASMiner@le.ac.uk",
+                                                       "updated_at": current_datetime},
+                                               locations=[loc], text=annot["text"])
                     passage['annotations'].append(gene)
                     nlp.g += 1
                 used_annots.append(annot["text"])
@@ -322,9 +322,11 @@ def main():
     lexicon = Ontology.get_master_lexicon()
     nlp = GCInterpreter(lexicon)
     failed_documents = []
+    study_processing_times = []
     for pmc_id in gc_data.keys():
-        # if pmc_id != "PMC4294952":
+        # if pmc_id != "PMC5851439":
         #     continue
+        start_time = datetime.now()
         pvals = []
         rsids = []
         mesh_terms = []
@@ -372,10 +374,21 @@ def main():
         result = process_study(nlp, study)
         nlp.clear_saved_study_data()
         study_tables, contains_annotations = GCTableExtractor.parse_tables(F"BioC_Studies/{pmc_id}_tables.json", nlp)
+        time_taken = (datetime.now() - start_time).total_seconds()
+        study_processing_times.append((pmc_id, time_taken))
         if contains_annotations:
             TableExtractor.output_tables(F"output/{pmc_id}_tables.json", study_tables)
         if not result['documents'][0]['relations'] and not contains_annotations:
             failed_documents.append(pmc_id)
+
+    def avg(times):
+        sum = 0
+        for i in times:
+            sum += i
+        return sum / len(times)
+
+    print(F"Times taken: {study_processing_times}")
+    print(F"Average processing time: {avg([y for x, y in study_processing_times if y < 600])}")
 
 
 if __name__ == '__main__':

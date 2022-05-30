@@ -164,7 +164,7 @@ class Interpreter:
         return output
 
     @staticmethod
-    def get_int_from_roman(s):
+    def get_int_from_roman(s: str) -> int:
         """
         :type s: str
         :rtype: int
@@ -179,7 +179,6 @@ class Interpreter:
                 num += roman[s[i:i + 2]]
                 i += 2
             else:
-                # print(i)
                 num += roman[s[i]]
                 i += 1
         return num

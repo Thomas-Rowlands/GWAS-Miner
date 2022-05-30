@@ -116,14 +116,18 @@ class GCTable(Table):
         for section in self.data_sections:
             contains_trait, contains_variant, contains_significance = False, False, False
             for row in section.rows:
+                row_contains_variant = False
+                row_contains_significance = False
                 row_annotations = []
                 for cell in row.cells:
                     if cell.doc and cell.doc.ents:
                         entity = cell.doc.ents[0]
                         if entity.label_ == "PVAL":
                             contains_significance = True
+                            row_contains_significance = True
                         elif entity.label_ == "RSID":
                             contains_variant = True
+                            row_contains_variant = True
                         else:
                             contains_trait = True
                         annotation, nlp = get_cell_entity_annotation(nlp, entity, "table_content", cell.id)
@@ -145,7 +149,7 @@ class GCTable(Table):
                         annotation, nlp = get_cell_entity_annotation(nlp, entity, "table_footer", None)
                         row_annotations.append(annotation)
                         contains_trait = True
-                if contains_variant and contains_significance: #len(row_annotations) == 3:
+                if row_contains_variant and row_contains_significance: #len(row_annotations) == 3:
                     nlp.v += 1
                     if contains_trait:
                         nlp.t += 1
