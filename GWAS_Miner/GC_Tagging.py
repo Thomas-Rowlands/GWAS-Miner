@@ -13,9 +13,6 @@ from GWAS_Miner import BioC, OutputConverter, Experimental, befree_annotate, GCT
 from GWAS_Miner.DataStructures import Marker, Significance, Phenotype, Association
 from NLP import Interpreter
 
-gc_data = {}
-headers_skipped = False
-
 
 class GCInterpreter(Interpreter):
 
@@ -300,14 +297,30 @@ def process_study(nlp, study):
     return study
 
 
-def main():
-    # load bioc pmc ids
-    bioc_pmcids = [x.replace(".json", "").replace("_abbreviations", "") for x in listdir("BioC_Studies") if
-                   isfile(join("BioC_Studies", x))]
+def generate_pval_regex_strings(input_string: str) -> str:
+    if "." in input_string:
+        pval_input_int = int(input_string[:input_string.find(".")])
+    else:
+        pval_input_int = int(input_string[:input_string.lower().find("e")])
+    pval_input_range = F"{pval_input_int - 1}{pval_input_int}{pval_input_int + 1}"
+    power_digits = input_string[input_string.find('-') + 1:]
+    pval = [F"([{pval_input_range}][ \.0-9]*[ xX*×]*10 ?(<sup>)?[-−] ?"
+            F"{power_digits[0] + '?' if power_digits[0] == '0' else power_digits[0]}"
+            F"{power_digits[1:] + '(</sup>)?)' if len(power_digits) > 1 else '(</sup>)?)'}",
+            F"([{pval_input_range}][ \.0-9]*E ?(<sup>)?[-−] ?"
+            F"{power_digits[0] + '?' if power_digits[0] == '0' else power_digits[0]}"
+            F"{power_digits[1:] + '(</sup>)?)' if len(power_digits) > 1 else '(</sup>)?)'}",
+            F"(?:[pP][- \(\)metavalueofcbind]" + "{0,13}"
+            + F"[ =<of]*[ ]?)([{pval_input_range}][ \.0-9]*[ xX*×]*10 ?[-−] ?"
+              F"{power_digits[0] + '?' if power_digits[0] == '0' else power_digits[0]}"
+              F"{power_digits[1:] + ')' if len(power_digits) > 1 else ')'}"]
+    return pval
 
-    # retrieve matching data.
-    with open("GC_content.tsv", "r", encoding="utf-8") as f_in:
-        global headers_skipped
+
+def get_matching_data(input_file: str, bioc_pmcids: list, headers_skipped=False) -> dict:
+
+    gc_data = {}
+    with open(input_file, "r", encoding="utf-8") as f_in:
         for line in f_in.readlines():
             if not headers_skipped:
                 headers_skipped = not headers_skipped
@@ -318,13 +331,23 @@ def main():
             if line[0] not in gc_data.keys():
                 gc_data[line[0]] = []
             gc_data[line[0]].append([line[5], line[6], line[8]])
+    return gc_data
+
+
+def main():
+    # load bioc pmc ids
+    bioc_pmcids = [x.replace(".json", "").replace("_abbreviations", "") for x in listdir("BioC_Studies") if
+                   isfile(join("BioC_Studies", x))]
+
+    # retrieve matching data.
+    gc_data = get_matching_data("GC_content.tsv", bioc_pmcids)
 
     lexicon = Ontology.get_master_lexicon()
     nlp = GCInterpreter(lexicon)
     failed_documents = []
     study_processing_times = []
     for pmc_id in gc_data.keys():
-        # if pmc_id != "PMC5851439":
+        # if pmc_id != "PMC5536245":
         #     continue
         start_time = datetime.now()
         pvals = []
@@ -335,47 +358,38 @@ def main():
         for relation in gc_data[pmc_id]:
             rsid = relation[0]
             mesh_id = relation[2]
-            if "." in relation[1]:
-                pval_input_int = int(relation[1][:relation[1].find(".")])
-            else:
-                pval_input_int = int(relation[1][:relation[1].lower().find("e")])
-            pval_input_range = F"{pval_input_int - 1}{pval_input_int}{pval_input_int + 1}"
-            power_digits = relation[1][relation[1].find('-') + 1:]
-            pval = F"(?:[pP][- \(\)metavalueofcbind]" + "{0,13}" \
-                   + F"[ =<of]*[ ]?)([{pval_input_range}][ \.0-9]*[ xX*×]*10 ?[-−] ?" \
-                     F"{power_digits[0] + '?' if power_digits[0] == '0' else power_digits[0]}" \
-                     F"{power_digits[1:] + ')' if len(power_digits) > 1 else ')'} "
-            pvals.append(pval)
-            table_pval = F"([{pval_input_range}][ \.0-9]*[ xX*×]*10 ?(<sup>)?[-−] ?" \
-                         F"{power_digits[0] + '?' if power_digits[0] == '0' else power_digits[0]}" \
-                         F"{power_digits[1:] + '(</sup>)?)' if len(power_digits) > 1 else '(</sup>)?)'}"
-            pvals.append(table_pval)
-            table_pval = F"([{pval_input_range}][ \.0-9]*E ?(<sup>)?[-−] ?" \
-                         F"{power_digits[0] + '?' if power_digits[0] == '0' else power_digits[0]}" \
-                         F"{power_digits[1:] + '(</sup>)?)' if len(power_digits) > 1 else '(</sup>)?)'}"
-            pvals.append(table_pval)
+            new_pvals = generate_pval_regex_strings(relation[1])
+            pvals.extend(new_pvals)
             rsids.append(F"({rsid})(?:\[[a-zA-Z0-9]\])?")
             mesh_terms.append(mesh_id)
-            gc_relations.append([pval, rsid, mesh_id])
+            for x in new_pvals:
+                gc_relations.append([x, rsid, mesh_id])
         nlp.set_ontology_terms([x for x in mesh_terms if x])
         nlp.pval_patterns = pvals
         nlp.rsid_patterns = rsids
         nlp.gc_relations = gc_relations
+
         study = Experimental.load_bioc_study("BioC_Studies", F"{pmc_id}.json")
         if not study:
             continue
+
         fulltext = "\n".join([x['text'] for x in study['documents'][0]['passages']])
         altered_text = re.sub(r"(?:\w)(\()", lambda x: x.group().replace("(", " ("), fulltext)
+
         abbreviations = nlp.get_all_abbreviations(altered_text)
         file_abbrevs = nlp.get_study_abbreviations(F"BioC_Studies/{pmc_id}_abbreviations.json")
         if file_abbrevs:
             abbreviations += file_abbrevs
         nlp.set_abbreviations(abbreviations)  # TODO: Check abbreviation partial entity HPC.
+
         result = process_study(nlp, study)
         nlp.clear_saved_study_data()
+
         study_tables, contains_annotations = GCTableExtractor.parse_tables(F"BioC_Studies/{pmc_id}_tables.json", nlp)
+
         time_taken = (datetime.now() - start_time).total_seconds()
         study_processing_times.append((pmc_id, time_taken))
+
         if contains_annotations:
             TableExtractor.output_tables(F"output/{pmc_id}_tables.json", study_tables)
         if not result['documents'][0]['relations'] and not contains_annotations:
