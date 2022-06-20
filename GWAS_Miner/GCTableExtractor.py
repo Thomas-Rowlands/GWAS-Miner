@@ -154,7 +154,7 @@ class GCTable(Table):
                     if contains_trait:
                         nlp.t += 1
                     nlp.s += 1
-                    annotations += row_annotations
+                    annotations.extend(row_annotations)
                     if contains_trait:
                         relations.append(BioC.BioCRelation(id=F"R{nlp.r}",
                                                            infons={"type": "disease_assoc",

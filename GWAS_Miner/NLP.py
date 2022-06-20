@@ -423,7 +423,7 @@ class Interpreter:
                 retokenizer.merge(doc[ent.start:ent.end])
 
     @staticmethod
-    def __filter_sents_by_entity(sents, entity_list, property_list=[]):
+    def _filter_sents_by_entity(sents, entity_list, property_list=[]):
         """
         Remove sentence objects from a list if they do not contain all of the provided entities.
         @param sents: List of sentence objects, with nested lists for OR conditions
@@ -458,10 +458,10 @@ class Interpreter:
                     if not found_match:
                         missing_property = True
                         break
-                elif [x.has_extension(property) for x in ents]:
+                elif not [x.has_extension(property) for x in ents]:
                     missing_property = True
                     break
-            if not missing_entity:
+            if (entity_list and not missing_entity) or (property_list and not missing_property):
                 output.append(sent)
         return output
 
@@ -575,9 +575,9 @@ class Interpreter:
         Returns:
             [dict]: [Dictionary containing extracted phenotype, marker and p-values associated together based on SDP calculation.]
         """
-        phenotype_sents = Interpreter.__filter_sents_by_entity(
-            doc.sents, ["PVAL", "RSID"], ["has_ontology"])
-        uncertain_sents = Interpreter.__filter_sents_by_entity(doc.sents, ["PVAL", "RSID"])
+        phenotype_sents = Interpreter._filter_sents_by_entity(
+            doc.sents,  ["PVAL", "RSID", "GENE"], ["has_trait"])
+        uncertain_sents = Interpreter._filter_sents_by_entity(doc.sents, ["PVAL", "RSID"])
         results, uncertain_results = [], []
         results = self.calculate_sdp(phenotype_sents)
         uncertain_results = self.calculate_sdp(uncertain_sents, doc.user_data["top_phenotype"])

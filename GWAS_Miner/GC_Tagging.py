@@ -279,6 +279,7 @@ def process_study(nlp, study):
                 used_annots.append(annot["text"])
 
             relations, uncertain_relations = nlp.extract_phenotypes(doc)
+            relations = validate_relations(nlp, relations)
             for relation in relations:
                 bioc_relation, nlp = get_relation(relation, passage, nlp)
                 document_relations.append(bioc_relation)
@@ -318,7 +319,6 @@ def generate_pval_regex_strings(input_string: str) -> str:
 
 
 def get_matching_data(input_file: str, bioc_pmcids: list, headers_skipped=False) -> dict:
-
     gc_data = {}
     with open(input_file, "r", encoding="utf-8") as f_in:
         for line in f_in.readlines():
@@ -334,6 +334,14 @@ def get_matching_data(input_file: str, bioc_pmcids: list, headers_skipped=False)
     return gc_data
 
 
+def validate_relations(nlp, relations):
+    new_relations = []
+    for relation in relations:
+        pass
+    #TODO: Complete validation step.
+    return new_relations
+
+
 def main():
     # load bioc pmc ids
     bioc_pmcids = [x.replace(".json", "").replace("_abbreviations", "") for x in listdir("BioC_Studies") if
@@ -347,8 +355,8 @@ def main():
     failed_documents = []
     study_processing_times = []
     for pmc_id in gc_data.keys():
-        # if pmc_id != "PMC5536245":
-        #     continue
+        if pmc_id != "PMC5536245":
+            continue
         start_time = datetime.now()
         pvals = []
         rsids = []
@@ -399,7 +407,7 @@ def main():
         sum = 0
         for i in times:
             sum += i
-        return sum / len(times)
+        return sum / len(times) if times else 0
 
     print(F"Times taken: {study_processing_times}")
     print(F"Average processing time: {avg([y for x, y in study_processing_times if y < 600])}")
