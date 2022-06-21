@@ -628,12 +628,15 @@ class Interpreter:
                 [x for x in sent.ents if x._.has_trait], graph.nodes) if not top_phenotype else None
             markers = Interpreter._validate_node_entities(
                 [x for x in sent.ents if x.label_ == 'RSID'], graph.nodes)
+            genes = Interpreter._validate_node_entities(
+                [x for x in sent.ents if x.label_ == 'GENE'], graph.nodes)
             pvals = Interpreter._validate_node_entities(
                 [x for x in sent.ents if x.label_ == 'PVAL'], graph.nodes)
 
             phenotype_count = len(phenotypes) if not top_phenotype else None
             marker_count = len(markers)
             pval_count = len(pvals)
+            gene_count = len(genes)
             # immediate_relations = Interpreter.allocate_contiguous_phenotypes(sent)
 
             pheno_assocs = []

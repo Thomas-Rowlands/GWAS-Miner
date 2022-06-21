@@ -84,13 +84,13 @@ def get_bioc_annotations(annotations, offset, nlp):
 
 
 def get_closest_index(text, search, target):
-    closest_index = 0
+    closest_index = None
     closest_difference = None
     for match in re.finditer(search, text, flags=re.MULTILINE):
         if closest_index is None:
             closest_index = match.start()
             closest_difference = abs(target - closest_index)
-        elif abs(target - match.start()) < closest_difference:
+        elif closest_difference and abs(target - match.start()) < closest_difference:
             closest_index = match.start()
             closest_difference = abs(target - closest_index)
     return closest_index
@@ -105,7 +105,7 @@ def get_befree_annotations(study, nlp, current_datetime):
         contains_missing_entities = False
         for passage in study['documents'][0]['passages']:
             annotations = []
-            if passage['infons']['section_type'] == "ABSTRACT":
+            if passage['infons']['section_type'] == "ABSTRACT" and "title" not in passage['infons']['type']:
                 text = passage["text"]
                 for entry in study_befree_data:
                     disease_node_id = nlp.t
@@ -116,14 +116,14 @@ def get_befree_annotations(study, nlp, current_datetime):
                                   key=lambda y: y[0], reverse=True)[0]
                     sent_score = sent[0]
                     sent = sent[1]
-                    if not sent or sent_score < 0.6:
+                    if not sent or sent_score < 0.7:
                         continue
                     sentence_offset = text.index(sent) + passage["offset"]
                     try:
                         loc = BioC.BioCLocation(offset=get_closest_index(sent, entry["disease_text"], int(
-                            entry["disease_offset"][:entry["disease_offset"].index("#")]) + sentence_offset),
+                            entry["disease_offset"][:entry["disease_offset"].index("#")]) + sentence_offset) + sentence_offset,
                                                 length=len(entry["disease_text"]))
-                        annotations.append(BioC.BioCAnnotation(id=F"T{nlp.g}",
+                        annotations.append(BioC.BioCAnnotation(id=F"T{nlp.t}",
                                                                infons={"type": "trait",
                                                                        "identifier": F"MeSH:{entry['meshid']}",
                                                                        "annotator": "GWASMiner@le.ac.uk",
@@ -132,17 +132,17 @@ def get_befree_annotations(study, nlp, current_datetime):
                         nlp.t += 1
                         if not is_gene:
                             loc = BioC.BioCLocation(offset=get_closest_index(sent, entry["variantid"], int(
-                                    entry["variant_offset"][:entry["variant_offset"].index("#")]) + sentence_offset),
+                                    entry["variant_offset"][:entry["variant_offset"].index("#")]) + sentence_offset) + sentence_offset,
                                                     length=len(entry["variantid"]))
-                            annotations.append(BioC.BioCAnnotation(id=F"V{nlp.g}",
-                                                infons={"type": "rsid", "identifier": F"dbSNP:{entry['variantid']}",
+                            annotations.append(BioC.BioCAnnotation(id=F"V{nlp.v}",
+                                                infons={"type": "genetic_variant", "identifier": F"dbSNP:{entry['variantid']}",
                                                         "annotator": "GWASMiner@le.ac.uk",
                                                         "updated_at": current_datetime},
                                                 locations=[loc], text=entry["variantid"]))
                             nlp.v += 1
                         else:
                             loc = BioC.BioCLocation(offset=get_closest_index(sent, entry["gene_text"], int(
-                                    entry["gene_offset"][:entry["gene_offset"].index("#")]) + sentence_offset),
+                                    entry["gene_offset"][:entry["gene_offset"].index("#")]) + sentence_offset) + sentence_offset,
                                                     length=len(entry["gene_text"]))
                             annotations.append(BioC.BioCAnnotation(id=F"G{nlp.g}",
                                                 infons={"type": "gene", "identifier": F"Entrez:{entry['ncbi_id']}",
@@ -160,7 +160,7 @@ def get_befree_annotations(study, nlp, current_datetime):
                     marker_node = BioC.BioCNode(refid=F"M{marker_node_id}", role="")
                     gene_node = BioC.BioCNode(refid=F"G{gene_node_id}", role="")
                     bioc_relation = BioC.BioCRelation(id=F"R{nlp.r}",
-                                                      infons={"type": "BeFree_Association",
+                                                      infons={"type": "Gene_Trait" if is_gene else "GeneticVariant_Trait",
                                                               "annotator": "tr142@le.ac.uk",
                                                               "updated_at": datetime.now().strftime(
                                                                   "%Y-%m-%dT%H:%M:%SZ")},
@@ -173,4 +173,4 @@ def get_befree_annotations(study, nlp, current_datetime):
         if relations:
             for relation in relations:
                 study['documents'][0]['relations'].append(relation)
-    return study
+    return study, nlp

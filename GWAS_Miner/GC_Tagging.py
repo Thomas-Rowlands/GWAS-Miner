@@ -9,8 +9,10 @@ from spacy.matcher import PhraseMatcher
 from spacy.tokens import Span, Token
 
 import Ontology
-from GWAS_Miner import BioC, OutputConverter, Experimental, befree_annotate, GCTableExtractor, TableExtractor
+from GWAS_Miner import BioC, OutputConverter, Experimental, befree_annotate, GCTableExtractor, TableExtractor, \
+    DataStructures
 from GWAS_Miner.DataStructures import Marker, Significance, Phenotype, Association
+from GWAS_Miner.befree_annotate import get_befree_annotations
 from NLP import Interpreter
 
 
@@ -107,7 +109,7 @@ class GCInterpreter(Interpreter):
                 phenotypes, graph.nodes) if not top_phenotype else None
 
             markers = Interpreter._validate_node_entities(
-                [x for x in sent.ents if x.label_ == 'RSID'], graph.nodes)
+                [x for x in sent.ents if x.label_ == 'RSID' or x.label_ == "GENE"], graph.nodes)
             pvals = Interpreter._validate_node_entities(
                 [x for x in sent.ents if x.label_ == 'PVAL'], graph.nodes)
 
@@ -155,7 +157,7 @@ class GCInterpreter(Interpreter):
 
                 # Validate associations are triples
                 pheno_assocs = [x for x in relations if len(x) == 3]
-                for (rsid, pval, phenotype) in pheno_assocs:
+                for (pval, rsid, phenotype) in pheno_assocs:
                     temp_marker = sent.doc[
                         token_indexes[int(rsid[rsid.find("<id") + 3: rsid.find(">", rsid.find("<id") + 3)])]]
                     temp_pval = sent.doc[
@@ -181,7 +183,7 @@ class GCInterpreter(Interpreter):
                             relations.append([significance, marker, phenotype])
 
                 pheno_assocs = [x for x in relations if len(x) == 3]
-                for (rsid, pval, phenotype) in pheno_assocs:
+                for (pval, rsid, phenotype) in pheno_assocs:
                     temp_marker = sent.doc[
                         token_indexes[int(rsid[rsid.find("<id") + 3: rsid.find(">", rsid.find("<id") + 3)])]]
                     temp_pval = sent.doc[
@@ -211,7 +213,7 @@ def get_relation(relation, passage, nlp):
     marker_node = BioC.BioCNode(refid=marker_id, role="")
     significance_node = BioC.BioCNode(refid=significance_id, role="")
     bioc_relation = BioC.BioCRelation(id=F"R{nlp.r}",
-                                      infons={"type": "disease_assoc", "annotator": "GWASMiner@le.ac.uk",
+                                      infons={"type": "GeneticVariant_Trait_Significance", "annotator": "GWASMiner@le.ac.uk",
                                               "updated_at": current_datetime},
                                       nodes=[phenotype_node, marker_node, significance_node])
     return bioc_relation, nlp
@@ -279,7 +281,10 @@ def process_study(nlp, study):
                 used_annots.append(annot["text"])
 
             relations, uncertain_relations = nlp.extract_phenotypes(doc)
-            relations = validate_relations(nlp, relations)
+            if relations:
+                relations = validate_relations(nlp, relations)
+            if uncertain_relations:
+                uncertain_relations = validate_relations(nlp, uncertain_relations)
             for relation in relations:
                 bioc_relation, nlp = get_relation(relation, passage, nlp)
                 document_relations.append(bioc_relation)
@@ -290,12 +295,12 @@ def process_study(nlp, study):
                 nlp.r += 1
     if document_relations:
         study['documents'][0]['relations'] = document_relations
-    study = befree_annotate.get_befree_annotations(study, nlp, current_datetime)
+    study, nlp = befree_annotate.get_befree_annotations(study, nlp, current_datetime)
     OutputConverter.output_xml(json.dumps(study, default=BioC.ComplexHandler),
                                F"output/xml/PMC{study['documents'][0]['id']}_result.xml")
     OutputConverter.convert_xml_to_json(F"output/xml/PMC{study['documents'][0]['id']}_result.xml",
                                         F"output/json/PMC{study['documents'][0]['id']}_result.json")
-    return study
+    return study, nlp
 
 
 def generate_pval_regex_strings(input_string: str) -> str:
@@ -337,8 +342,19 @@ def get_matching_data(input_file: str, bioc_pmcids: list, headers_skipped=False)
 def validate_relations(nlp, relations):
     new_relations = []
     for relation in relations:
-        pass
-    #TODO: Complete validation step.
+        marker = relation.marker
+        gene = relation.gene
+        pval = relation.significance
+        phenotype = relation.phenotype
+        # above are mismatched!
+        for gc_relation in nlp.gc_relations:
+            if (marker and (marker.token.text == gc_relation[1])) or (gene and (gene.token.text == gc_relation[1])):
+                phenotype_text = phenotype.token.ent_type_ if type(phenotype.token) != Span else \
+                    phenotype.token.ents[0].label_
+                if re.match(gc_relation[0], pval.token.text) and phenotype_text == gc_relation[2]:
+                    new_relations.append(relation)
+                    break
+
     return new_relations
 
 
@@ -355,8 +371,8 @@ def main():
     failed_documents = []
     study_processing_times = []
     for pmc_id in gc_data.keys():
-        if pmc_id != "PMC5536245":
-            continue
+        # if pmc_id != "PMC5536245":
+        #     continue
         start_time = datetime.now()
         pvals = []
         rsids = []
@@ -390,7 +406,7 @@ def main():
             abbreviations += file_abbrevs
         nlp.set_abbreviations(abbreviations)  # TODO: Check abbreviation partial entity HPC.
 
-        result = process_study(nlp, study)
+        result, nlp = process_study(nlp, study)
         nlp.clear_saved_study_data()
 
         study_tables, contains_annotations = GCTableExtractor.parse_tables(F"BioC_Studies/{pmc_id}_tables.json", nlp)

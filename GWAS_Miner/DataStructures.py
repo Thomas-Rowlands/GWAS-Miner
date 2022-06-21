@@ -370,10 +370,11 @@ class Table:
 
 
 class Association:
-    def __init__(self, marker=None, significance=None, phenotype=None):
+    def __init__(self, marker=None, significance=None, phenotype=None, gene=None):
         self.marker = marker
         self.significance = significance
         self.phenotype = phenotype
+        self.gene = gene
 
 
 class Phenotype:
