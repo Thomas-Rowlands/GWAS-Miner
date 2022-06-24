@@ -12,6 +12,8 @@ from spacy import displacy
 from spacy.matcher import Matcher, PhraseMatcher
 from spacy.tokens import Span, Token, Doc
 
+from Utility_Functions import Utility
+
 
 class Interpreter:
     def __init__(self, lexicon, ontology_only=False):
@@ -579,8 +581,8 @@ class Interpreter:
             doc.sents,  ["PVAL", "RSID", "GENE"], ["has_trait"])
         uncertain_sents = Interpreter._filter_sents_by_entity(doc.sents, ["PVAL", "RSID"])
         results, uncertain_results = [], []
-        results = self.calculate_sdp(phenotype_sents)
-        uncertain_results = self.calculate_sdp(uncertain_sents, doc.user_data["top_phenotype"])
+        results = Utility.remove_duplicate_associations(self.calculate_sdp(phenotype_sents))
+        uncertain_results = Utility.remove_duplicate_associations(self.calculate_sdp(uncertain_sents, doc.user_data["top_phenotype"]))
         filtered_uncertain_results = []
         if results and uncertain_results:
             for association in results:

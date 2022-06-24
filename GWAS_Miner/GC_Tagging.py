@@ -256,7 +256,7 @@ def process_study(nlp, study):
                 elif "RSID" in annot["entity_type"]:
                     marker_identifier = BioC.BioCAnnotation(id=F"V{nlp.v}",
                                                             infons={"type": "genetic_variant",
-                                                                    "identifier": F"dbSNP:{annot['id']}",
+                                                                    "identifier": F"dbSNP:{annot['text']}",
                                                                     "annotator": "GWASMiner@le.ac.uk",
                                                                     "updated_at": current_datetime},
                                                             locations=[loc], text=annot["text"])
@@ -384,7 +384,7 @@ def main():
             mesh_id = relation[2]
             new_pvals = generate_pval_regex_strings(relation[1])
             pvals.extend(new_pvals)
-            rsids.append(F"({rsid})(?:\[[a-zA-Z0-9]\])?")
+            rsids.append(F"({rsid})") #(?:\[[a-zA-Z0-9]\])?")
             mesh_terms.append(mesh_id)
             for x in new_pvals:
                 gc_relations.append([x, rsid, mesh_id])

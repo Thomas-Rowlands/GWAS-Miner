@@ -5,7 +5,7 @@ from difflib import SequenceMatcher
 
 from GWAS_Miner import BioC
 from GWAS_Miner.BioC import BioCLocation, BioCAnnotation
-
+from Utility_Functions import Utility
 
 def get_befree_data(pmid):
     befree_data = {}
@@ -60,7 +60,7 @@ def get_bioc_annotations(annotations, offset, nlp):
             nlp.t += 1
         elif "RSID" in annot["entity_type"]:
             marker_identifier = BioCAnnotation(id=F"V{nlp.v}",
-                                               infons={"type": "genetic_variant", "identifier": F"dbSNP:{annot['id']}",
+                                               infons={"type": "genetic_variant", "identifier": F"dbSNP:{annot['text']}",
                                                        "annotator": "BeFree@example.com",
                                                        "updated_at": current_datetime},
                                                locations=[loc], text=annot["text"])
@@ -171,6 +171,7 @@ def get_befree_annotations(study, nlp, current_datetime):
                 for annot in annotations:
                     passage['annotations'].append(annot)
         if relations:
+            relations = Utility.remove_duplicate_bioc_associations(relations)
             for relation in relations:
                 study['documents'][0]['relations'].append(relation)
     return study, nlp
