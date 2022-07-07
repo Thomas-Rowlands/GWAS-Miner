@@ -31,10 +31,8 @@ class Interpreter:
         self.__logger = logging.getLogger("GWAS Miner")
         self.__entity_labels = ["MESH", "HPO", "PVAL"]
         self.lexicon = lexicon
-        # self.nlp = spacy.load("en_core_sci_lg", disable=["ner"])
         self.__failed_matches = []
-        # self.nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
-        infixes = self.nlp.Defaults.infixes + [r'(?!\w)(\()']
+        infixes = self.nlp.Defaults.infixes + [r'(?!\w)(\()', r'(?!\d)(\))']
         infix_regex = spacy.util.compile_infix_regex(infixes)
         self.nlp.tokenizer.infix_finditer = infix_regex.finditer
         self.__basic_matcher = None
@@ -302,10 +300,14 @@ class Interpreter:
 
     @staticmethod
     def get_study_abbreviations(file_input):
-        with open(file_input, "r", encoding="utf-8") as fin:
-            abbrevs = json.load(fin)
-        if abbrevs:
-            abbrevs = [[x['text_short'], x['text_long_1']] for x in abbrevs['documents'][0]['passages']]
+        abbrevs = []
+        try:
+            with open(file_input, "r", encoding="utf-8") as fin:
+                abbrevs = json.load(fin)
+            if abbrevs:
+                abbrevs = [[x['text_short'], x['text_long_1']] for x in abbrevs['documents'][0]['passages']]
+        except IOError as io:
+            print(F"No abbreviation file found at {file_input}. Continuing...")
         return abbrevs
 
     def __on_match(self, matcher, doc, i, matches):
@@ -345,7 +347,15 @@ class Interpreter:
         for match in matches:
             start, end = match.span()
             if label == "PVAL":
-                span = doc.char_span(start, end, label=label, alignment_mode="expand")
+                while not doc.text[start].isdigit():
+                    start += 1
+                while not doc.text[end].isdigit():
+                    end -= 1
+                span = doc.char_span(start, end + 1, label=label, alignment_mode="expand")
+                if span.text[-1] == ")":
+                    with doc.retokenize() as retokenizer:
+                        heads = [(doc[span.end], 1), doc[span.end - 1]]
+                        retokenizer.split(doc[span.end - 1], [doc[span.end - 1].text[-2], doc[span.end - 1].text[-1]], heads=heads)
             else:
                 span = doc.char_span(start, end, label=label)
             if span is not None:

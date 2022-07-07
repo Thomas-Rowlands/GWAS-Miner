@@ -9,10 +9,8 @@ from spacy.matcher import PhraseMatcher
 from spacy.tokens import Span, Token
 
 import Ontology
-from GWAS_Miner import BioC, OutputConverter, Experimental, befree_annotate, GCTableExtractor, TableExtractor, \
-    DataStructures
+from GWAS_Miner import BioC, OutputConverter, Experimental, befree_annotate, GCTableExtractor, TableExtractor
 from GWAS_Miner.DataStructures import Marker, Significance, Phenotype, Association
-from GWAS_Miner.befree_annotate import get_befree_annotations
 from NLP import Interpreter
 
 
@@ -298,7 +296,7 @@ def process_study(nlp, study):
     study, nlp = befree_annotate.get_befree_annotations(study, nlp, current_datetime)
     OutputConverter.output_xml(json.dumps(study, default=BioC.ComplexHandler),
                                F"output/xml/PMC{study['documents'][0]['id']}_result.xml")
-    OutputConverter.convert_xml_to_json(F"output/xml/PMC{study['documents'][0]['id']}_result.xml",
+    OutputConverter.output_json(study,
                                         F"output/json/PMC{study['documents'][0]['id']}_result.json")
     return study, nlp
 
@@ -371,8 +369,8 @@ def main():
     failed_documents = []
     study_processing_times = []
     for pmc_id in gc_data.keys():
-        # if pmc_id != "PMC5536245":
-        #     continue
+        if pmc_id != "PMC5536245":
+            continue
         start_time = datetime.now()
         pvals = []
         rsids = []
