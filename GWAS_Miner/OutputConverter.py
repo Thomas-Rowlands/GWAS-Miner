@@ -8,6 +8,8 @@ import json
 
 import bioc
 
+from GWAS_Miner import BioC
+
 
 class BioC2JSON:
     def node(self, node):
@@ -83,9 +85,9 @@ class BioC2JSON:
 class JSON2BioC:
 
     def node(self, json_node):
-        node = bioc.BioCNode()
-        node.refid = json_node['refid']
-        node.role = json_node['role']
+        refid = json_node['refid']
+        role = json_node['role']
+        node = bioc.BioCNode(refid=refid, role=role)
         return node
 
     def relation(self, json_rel):
@@ -96,9 +98,9 @@ class JSON2BioC:
         return rel
 
     def location(self, json_loc):
-        loc = bioc.BioCLocation()
-        loc.offset = str(json_loc['offset'])
-        loc.length = str(json_loc['length'])
+        offset = json_loc['offset']
+        length = json_loc['length']
+        loc = bioc.BioCLocation(length=length, offset=offset)
         return loc
 
     def annotation(self, json_note):
@@ -156,22 +158,13 @@ class JSON2BioC:
 
 
 def output_xml(in_file, out_file):
-    bioc_json = None
     bioc_json = json.loads(in_file)
-
     json2bioc = JSON2BioC()
     bioc_collection = json2bioc.collection(bioc_json)
+    with open(out_file, "w", encoding="UTF-8") as fout:
+        bioc.dump(bioc_collection, fout)
 
-    writer = bioc.BioCXMLWriter(out_file, bioc_collection)
-    writer.write()
 
-
-def convert_xml_to_json(in_file, out_file):
-    reader = bioc.BioCXMLReader(in_file)
-    reader.read()
-
-    bioc2json = BioC2JSON()
-    bioc_json = bioc2json.collection(reader.collection)
-    with open(out_file, 'w') as f:
-        json.dump(bioc_json, f, indent=2)
-        print(file=f)
+def output_json(study, out_file):
+    with open(out_file, "w", encoding="UTF-8") as fout:
+        json.dump(study, fout, default=BioC.ComplexHandler)
