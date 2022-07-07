@@ -345,19 +345,28 @@ class Interpreter:
         else:
             matches = re.finditer(pattern, doc.text)
         for match in matches:
-            start, end = match.span()
+            start, end = match.span(1) if len(match.groups()) > 1 else match.span()
+            end -= 1
             if label == "PVAL":
                 while not doc.text[start].isdigit():
                     start += 1
                 while not doc.text[end].isdigit():
                     end -= 1
                 span = doc.char_span(start, end + 1, label=label, alignment_mode="expand")
-                if span.text[-1] == ")":
-                    with doc.retokenize() as retokenizer:
-                        heads = [(doc[span.end], 1), doc[span.end - 1]]
-                        retokenizer.split(doc[span.end - 1], [doc[span.end - 1].text[-2], doc[span.end - 1].text[-1]], heads=heads)
+                # Below code causes far too many invalid entities unrelated to pvalues. Do not mess with the tokens!
+                # while not span.text[0].isdigit() and not span.text[-1].isdigit():
+                #         # Ensure tokens are split for cleaning the entity tag.
+                #         with doc.retokenize() as retokenizer:
+                #             if not span.text[-1].isdigit():
+                #                 heads = [(doc[span.end], 1), doc[span.end - 1]]
+                #                 retokenizer.split(doc[span.end - 1], [doc[span.end - 1].text[-2], doc[span.end - 1].text[-1]], heads=heads)
+                #             if not span.text[0].isdigit():
+                #                 heads = [(doc[span.start], 1), doc[span.start + 1]]
+                #                 retokenizer.split(doc[span.start], [doc[span.start].text[0], doc[span.start].text[1]],
+                #                                   heads=heads)
+                #             span = doc.char_span(start, end + 1, label=label, alignment_mode="expand")
             else:
-                span = doc.char_span(start, end, label=label)
+                span = doc.char_span(start, end, label=label, alignment_mode="expand")
             if span is not None:
                 try:
                     doc.ents += (span,)

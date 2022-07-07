@@ -296,8 +296,7 @@ def process_study(nlp, study):
     study, nlp = befree_annotate.get_befree_annotations(study, nlp, current_datetime)
     OutputConverter.output_xml(json.dumps(study, default=BioC.ComplexHandler),
                                F"output/xml/PMC{study['documents'][0]['id']}_result.xml")
-    OutputConverter.output_json(study,
-                                        F"output/json/PMC{study['documents'][0]['id']}_result.json")
+    OutputConverter.output_json(study, F"output/json/PMC{study['documents'][0]['id']}_result.json")
     return study, nlp
 
 

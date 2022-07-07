@@ -7,11 +7,12 @@ from GWAS_Miner import BioC
 from GWAS_Miner.BioC import BioCLocation, BioCAnnotation
 from Utility_Functions import Utility
 
+
 def get_befree_data(pmid):
     befree_data = {}
     headers_skipped = False
     # retrieve befree variants
-    with open("vdas_version_2_mesh.tsv", "r", encoding="utf-8") as f_in:
+    with open("vdas_version_2+mesh.tsv", "r", encoding="utf-8") as f_in:
         for line in f_in.readlines():
             if not headers_skipped:
                 headers_skipped = not headers_skipped
@@ -27,7 +28,7 @@ def get_befree_data(pmid):
                                          "meshid": line[11],
                                          "mapping_source": line[13]})
     # retrieve befree genes
-    with open("gdas_version_1_mesh.tsv", "r", encoding="utf-8") as f_in:
+    with open("gdas_version_1+mesh.tsv", "r", encoding="utf-8") as f_in:
         for line in f_in.readlines():
             if not headers_skipped:
                 headers_skipped = not headers_skipped
@@ -60,7 +61,8 @@ def get_bioc_annotations(annotations, offset, nlp):
             nlp.t += 1
         elif "RSID" in annot["entity_type"]:
             marker_identifier = BioCAnnotation(id=F"V{nlp.v}",
-                                               infons={"type": "genetic_variant", "identifier": F"dbSNP:{annot['text']}",
+                                               infons={"type": "genetic_variant",
+                                                       "identifier": F"dbSNP:{annot['text']}",
                                                        "annotator": "BeFree@example.com",
                                                        "updated_at": current_datetime},
                                                locations=[loc], text=annot["text"])
@@ -75,8 +77,8 @@ def get_bioc_annotations(annotations, offset, nlp):
             nlp.p += 1
         elif "GENE" in annot["entity_type"]:
             gene = BioCAnnotation(id=F"G{nlp.g}", infons={"type": "gene", "identifier": F"Entrez:{annot['id']}",
-                                                      "annotator": "BeFree@example.com",
-                                                      "updated_at": current_datetime},
+                                                          "annotator": "BeFree@example.com",
+                                                          "updated_at": current_datetime},
                                   locations=[loc], text=annot["text"])
             nlp.annotations.append(gene)
             nlp.g += 1
@@ -121,7 +123,8 @@ def get_befree_annotations(study, nlp, current_datetime):
                     sentence_offset = text.index(sent) + passage["offset"]
                     try:
                         loc = BioC.BioCLocation(offset=get_closest_index(sent, entry["disease_text"], int(
-                            entry["disease_offset"][:entry["disease_offset"].index("#")]) + sentence_offset) + sentence_offset,
+                            entry["disease_offset"][
+                            :entry["disease_offset"].index("#")]) + sentence_offset) + sentence_offset,
                                                 length=len(entry["disease_text"]))
                         annotations.append(BioC.BioCAnnotation(id=F"T{nlp.t}",
                                                                infons={"type": "trait",
@@ -132,23 +135,27 @@ def get_befree_annotations(study, nlp, current_datetime):
                         nlp.t += 1
                         if not is_gene:
                             loc = BioC.BioCLocation(offset=get_closest_index(sent, entry["variantid"], int(
-                                    entry["variant_offset"][:entry["variant_offset"].index("#")]) + sentence_offset) + sentence_offset,
+                                entry["variant_offset"][
+                                :entry["variant_offset"].index("#")]) + sentence_offset) + sentence_offset,
                                                     length=len(entry["variantid"]))
                             annotations.append(BioC.BioCAnnotation(id=F"V{nlp.v}",
-                                                infons={"type": "genetic_variant", "identifier": F"dbSNP:{entry['variantid']}",
-                                                        "annotator": "GWASMiner@le.ac.uk",
-                                                        "updated_at": current_datetime},
-                                                locations=[loc], text=entry["variantid"]))
+                                                                   infons={"type": "genetic_variant",
+                                                                           "identifier": F"dbSNP:{entry['variantid']}",
+                                                                           "annotator": "GWASMiner@le.ac.uk",
+                                                                           "updated_at": current_datetime},
+                                                                   locations=[loc], text=entry["variantid"]))
                             nlp.v += 1
                         else:
                             loc = BioC.BioCLocation(offset=get_closest_index(sent, entry["gene_text"], int(
-                                    entry["gene_offset"][:entry["gene_offset"].index("#")]) + sentence_offset) + sentence_offset,
+                                entry["gene_offset"][
+                                :entry["gene_offset"].index("#")]) + sentence_offset) + sentence_offset,
                                                     length=len(entry["gene_text"]))
                             annotations.append(BioC.BioCAnnotation(id=F"G{nlp.g}",
-                                                infons={"type": "gene", "identifier": F"Entrez:{entry['ncbi_id']}",
-                                                        "annotator": "GWASMiner@le.ac.uk",
-                                                        "updated_at": current_datetime},
-                                                locations=[loc], text=entry["gene_text"]))
+                                                                   infons={"type": "gene",
+                                                                           "identifier": F"Entrez:{entry['ncbi_id']}",
+                                                                           "annotator": "GWASMiner@le.ac.uk",
+                                                                           "updated_at": current_datetime},
+                                                                   locations=[loc], text=entry["gene_text"]))
                             nlp.g += 1
                     except TypeError as te:
                         contains_missing_entities = True
@@ -160,10 +167,11 @@ def get_befree_annotations(study, nlp, current_datetime):
                     marker_node = BioC.BioCNode(refid=F"M{marker_node_id}", role="")
                     gene_node = BioC.BioCNode(refid=F"G{gene_node_id}", role="")
                     bioc_relation = BioC.BioCRelation(id=F"R{nlp.r}",
-                                                      infons={"type": "Gene_Trait" if is_gene else "GeneticVariant_Trait",
-                                                              "annotator": "tr142@le.ac.uk",
-                                                              "updated_at": datetime.now().strftime(
-                                                                  "%Y-%m-%dT%H:%M:%SZ")},
+                                                      infons={
+                                                          "type": "Gene_Trait" if is_gene else "GeneticVariant_Trait",
+                                                          "annotator": "tr142@le.ac.uk",
+                                                          "updated_at": datetime.now().strftime(
+                                                              "%Y-%m-%dT%H:%M:%SZ")},
                                                       nodes=[phenotype_node, marker_node] if not is_gene else [
                                                           phenotype_node, gene_node])
                     nlp.r += 1
