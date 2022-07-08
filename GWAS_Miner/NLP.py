@@ -366,7 +366,7 @@ class Interpreter:
                 #                                   heads=heads)
                 #             span = doc.char_span(start, end + 1, label=label, alignment_mode="expand")
             else:
-                span = doc.char_span(start, end, label=label, alignment_mode="expand")
+                span = doc.char_span(start, end, label=label)
             if span is not None:
                 try:
                     doc.ents += (span,)
