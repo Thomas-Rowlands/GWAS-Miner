@@ -19,7 +19,7 @@ class Interpreter:
     def __init__(self, lexicon, ontology_only=False):
         self.lexicon = lexicon
         self.nlp = spacy.load("en_core_sci_scibert", disable=["ner"])
-        self.nlp.add_pipe("merge_noun_chunks")
+        # self.nlp.add_pipe("merge_noun_chunks")
         self.__failed_matches = []
         self.nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
         self.__rsid_regex = {"LOWER": {"REGEX": "((?:[(]?)(rs[0-9]{1,}){1,})"}}  # "(?:rs[0-9]{1,}){1}"}}
@@ -341,32 +341,12 @@ class Interpreter:
             for i in range(token.idx, token.idx + len(token.text)):
                 chars_to_tokens[i] = token.i
         if ignore_case:
-            matches = re.finditer(pattern, doc.text, flags=re.IGNORECASE)
+            matches = re.finditer(pattern, doc.text_with_ws, flags=re.IGNORECASE)
         else:
-            matches = re.finditer(pattern, doc.text)
+            matches = re.finditer(pattern, doc.text_with_ws)
         for match in matches:
             start, end = match.span(1) if len(match.groups()) > 1 else match.span()
-            end -= 1
-            if label == "PVAL":
-                while not doc.text[start].isdigit():
-                    start += 1
-                while not doc.text[end].isdigit():
-                    end -= 1
-                span = doc.char_span(start, end + 1, label=label, alignment_mode="expand")
-                # Below code causes far too many invalid entities unrelated to pvalues. Do not mess with the tokens!
-                # while not span.text[0].isdigit() and not span.text[-1].isdigit():
-                #         # Ensure tokens are split for cleaning the entity tag.
-                #         with doc.retokenize() as retokenizer:
-                #             if not span.text[-1].isdigit():
-                #                 heads = [(doc[span.end], 1), doc[span.end - 1]]
-                #                 retokenizer.split(doc[span.end - 1], [doc[span.end - 1].text[-2], doc[span.end - 1].text[-1]], heads=heads)
-                #             if not span.text[0].isdigit():
-                #                 heads = [(doc[span.start], 1), doc[span.start + 1]]
-                #                 retokenizer.split(doc[span.start], [doc[span.start].text[0], doc[span.start].text[1]],
-                #                                   heads=heads)
-                #             span = doc.char_span(start, end + 1, label=label, alignment_mode="expand")
-            else:
-                span = doc.char_span(start, end, label=label)
+            span = doc.char_span(start, end, label=label, alignment_mode="expand" if label == "PVAL" else "strict")
             if span is not None:
                 try:
                     doc.ents += (span,)

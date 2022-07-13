@@ -45,10 +45,7 @@ class Utility:
         for i in assoc_input:
             is_unique = True
             for l in filtered_results:
-                if i == l:
-                    is_unique = False
-                    break
-                if i.nodes == l.nodes:
+                if i.nodes[0].refid in [x.refid for x in l.nodes] and i.nodes[1].refid in [x.refid for x in l.nodes]:
                     is_unique = False
                     break
             if is_unique:

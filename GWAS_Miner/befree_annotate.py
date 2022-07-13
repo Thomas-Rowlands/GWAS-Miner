@@ -12,21 +12,21 @@ def get_befree_data(pmid):
     befree_data = {}
     headers_skipped = False
     # retrieve befree variants
-    with open("vdas_version_2+mesh.tsv", "r", encoding="utf-8") as f_in:
-        for line in f_in.readlines():
-            if not headers_skipped:
-                headers_skipped = not headers_skipped
-                continue
-            line = line.split("\t")
-            if line[0] != pmid:
-                continue
-            if line[0] not in befree_data.keys():
-                befree_data[line[0]] = []
-            befree_data[line[0]].append({"sentence_number": line[3], "variantid": line[4], "variant_offset": line[6],
-                                         "diseaseid": line[7], "disease_text": line[8], "disease_offset": line[9],
-                                         "sentence": html.unescape(line[10].lstrip('"').rstrip('"')),
-                                         "meshid": line[11],
-                                         "mapping_source": line[13]})
+    # with open("vdas_version_2+mesh.tsv", "r", encoding="utf-8") as f_in:
+    #     for line in f_in.readlines():
+    #         if not headers_skipped:
+    #             headers_skipped = not headers_skipped
+    #             continue
+    #         line = line.split("\t")
+    #         if line[0] != pmid:
+    #             continue
+    #         if line[0] not in befree_data.keys():
+    #             befree_data[line[0]] = []
+    #         befree_data[line[0]].append({"sentence_number": line[3], "variantid": line[4], "variant_offset": line[6],
+    #                                      "diseaseid": line[7], "disease_text": line[8], "disease_offset": line[9],
+    #                                      "sentence": html.unescape(line[10].lstrip('"').rstrip('"')),
+    #                                      "meshid": line[11],
+    #                                      "mapping_source": line[13]})
     # retrieve befree genes
     with open("gdas_version_1+mesh.tsv", "r", encoding="utf-8") as f_in:
         for line in f_in.readlines():
@@ -98,6 +98,14 @@ def get_closest_index(text, search, target):
     return closest_index
 
 
+def offset_in_list(offset, used_offsets):
+    input_offset = offset
+    for offset, ident in used_offsets:
+        if input_offset == offset:
+            return ident
+    return False
+
+
 def get_befree_annotations(study, nlp, current_datetime):
     pmid = study["documents"][0]["passages"][0]["infons"]["article-id_pmid"]
     befree_data = get_befree_data(pmid)
@@ -107,12 +115,14 @@ def get_befree_annotations(study, nlp, current_datetime):
         contains_missing_entities = False
         for passage in study['documents'][0]['passages']:
             annotations = []
+            used_offsets = []  # track repeated entities in dataset.
             if passage['infons']['section_type'] == "ABSTRACT" and "title" not in passage['infons']['type']:
                 text = passage["text"]
                 for entry in study_befree_data:
-                    disease_node_id = nlp.t
-                    marker_node_id = nlp.v
-                    gene_node_id = nlp.g
+                    duplicate_gene, duplicate_disease, duplicate_variant = False, False, False
+                    disease_node_id, marker_node_id, gene_node_id = nlp.t, nlp.v, nlp.g
+                    used_variant_ident, used_disease_ident, used_gene_ident = False, False, False
+                    closest_gene_index, closest_variant_index, closest_disease_index = False, False, False
                     is_gene = "ncbi_id" in entry.keys()
                     sent = sorted([(SequenceMatcher(None, x, entry['sentence']).ratio(), x) for x in text.split(". ")],
                                   key=lambda y: y[0], reverse=True)[0]
@@ -122,60 +132,85 @@ def get_befree_annotations(study, nlp, current_datetime):
                         continue
                     sentence_offset = text.index(sent) + passage["offset"]
                     try:
-                        loc = BioC.BioCLocation(offset=get_closest_index(sent, entry["disease_text"], int(
-                            entry["disease_offset"][
-                            :entry["disease_offset"].index("#")]) + sentence_offset) + sentence_offset,
-                                                length=len(entry["disease_text"]))
-                        annotations.append(BioC.BioCAnnotation(id=F"T{nlp.t}",
-                                                               infons={"type": "trait",
-                                                                       "identifier": F"MeSH:{entry['meshid']}",
-                                                                       "annotator": "GWASMiner@le.ac.uk",
-                                                                       "updated_at": current_datetime},
-                                                               locations=[loc], text=entry["disease_text"]))
-                        nlp.t += 1
+                        closest_disease_index = get_closest_index(sent, entry["disease_text"], int(
+                                entry["disease_offset"][
+                                :entry["disease_offset"].index("#")]) + sentence_offset)
+                        used_disease_ident = offset_in_list(closest_disease_index, used_offsets)
+                        if not used_disease_ident:
+                            loc = BioC.BioCLocation(offset=get_closest_index(sent, entry["disease_text"], int(
+                                entry["disease_offset"][
+                                :entry["disease_offset"].index("#")]) + sentence_offset) + sentence_offset,
+                                                    length=len(entry["disease_text"]))
+                            annotations.append(BioC.BioCAnnotation(id=F"T{nlp.t}",
+                                                                   infons={"type": "trait",
+                                                                           "identifier": F"MeSH:{entry['meshid']}",
+                                                                           "annotator": "GWASMiner@le.ac.uk",
+                                                                           "updated_at": current_datetime},
+                                                                   locations=[loc], text=entry["disease_text"]))
+                            nlp.t += 1
                         if not is_gene:
-                            loc = BioC.BioCLocation(offset=get_closest_index(sent, entry["variantid"], int(
-                                entry["variant_offset"][
-                                :entry["variant_offset"].index("#")]) + sentence_offset) + sentence_offset,
-                                                    length=len(entry["variantid"]))
-                            annotations.append(BioC.BioCAnnotation(id=F"V{nlp.v}",
-                                                                   infons={"type": "genetic_variant",
-                                                                           "identifier": F"dbSNP:{entry['variantid']}",
-                                                                           "annotator": "GWASMiner@le.ac.uk",
-                                                                           "updated_at": current_datetime},
-                                                                   locations=[loc], text=entry["variantid"]))
-                            nlp.v += 1
+                            closest_variant_index = get_closest_index(sent, entry["variantid"], int(
+                                    entry["variant_offset"][
+                                    :entry["variant_offset"].index("#")]) + sentence_offset)
+                            used_variant_ident = offset_in_list(closest_variant_index, used_offsets)
+                            if not used_variant_ident:
+                                loc = BioC.BioCLocation(offset=get_closest_index(sent, entry["variantid"], int(
+                                    entry["variant_offset"][
+                                    :entry["variant_offset"].index("#")]) + sentence_offset) + sentence_offset,
+                                                        length=len(entry["variantid"]))
+                                annotations.append(BioC.BioCAnnotation(id=F"V{nlp.v}",
+                                                                       infons={"type": "genetic_variant",
+                                                                               "identifier": F"dbSNP:{entry['variantid']}",
+                                                                               "annotator": "GWASMiner@le.ac.uk",
+                                                                               "updated_at": current_datetime},
+                                                                       locations=[loc], text=entry["variantid"]))
+                                nlp.v += 1
                         else:
-                            loc = BioC.BioCLocation(offset=get_closest_index(sent, entry["gene_text"], int(
-                                entry["gene_offset"][
-                                :entry["gene_offset"].index("#")]) + sentence_offset) + sentence_offset,
-                                                    length=len(entry["gene_text"]))
-                            annotations.append(BioC.BioCAnnotation(id=F"G{nlp.g}",
-                                                                   infons={"type": "gene",
-                                                                           "identifier": F"Entrez:{entry['ncbi_id']}",
-                                                                           "annotator": "GWASMiner@le.ac.uk",
-                                                                           "updated_at": current_datetime},
-                                                                   locations=[loc], text=entry["gene_text"]))
-                            nlp.g += 1
+                            closest_gene_index = get_closest_index(sent, entry["gene_text"], int(
+                                    entry["gene_offset"][
+                                    :entry["gene_offset"].index("#")]) + sentence_offset)
+                            used_gene_ident = offset_in_list(closest_gene_index, used_offsets)
+                            if not used_gene_ident:
+                                loc = BioC.BioCLocation(offset=get_closest_index(sent, entry["gene_text"], int(
+                                    entry["gene_offset"][
+                                    :entry["gene_offset"].index("#")]) + sentence_offset) + sentence_offset,
+                                                        length=len(entry["gene_text"]))
+                                annotations.append(BioC.BioCAnnotation(id=F"G{nlp.g}",
+                                                                       infons={"type": "gene",
+                                                                               "identifier": F"Entrez:{entry['ncbi_id']}",
+                                                                               "annotator": "GWASMiner@le.ac.uk",
+                                                                               "updated_at": current_datetime},
+                                                                       locations=[loc], text=entry["gene_text"]))
+                                nlp.g += 1
                     except TypeError as te:
-                        contains_missing_entities = True
-                        continue
-                    if contains_missing_entities:
                         print(F"PMID: {pmid} - contains missing entities from sentences.")
-                    # nlp = get_bioc_annotations(annotations, passage["offset"], nlp)
-                    phenotype_node = BioC.BioCNode(refid=F"T{disease_node_id}", role="")
-                    marker_node = BioC.BioCNode(refid=F"M{marker_node_id}", role="")
-                    gene_node = BioC.BioCNode(refid=F"G{gene_node_id}", role="")
+                        continue
+                    phenotype_node = BioC.BioCNode(refid=F"T{used_disease_ident if used_disease_ident else disease_node_id}", role="")
+                    marker_node = BioC.BioCNode(refid=F"M{used_variant_ident if used_variant_ident else marker_node_id}", role="")
+                    gene_node = BioC.BioCNode(refid=F"G{used_gene_ident if used_gene_ident else gene_node_id}", role="")
                     bioc_relation = BioC.BioCRelation(id=F"R{nlp.r}",
                                                       infons={
-                                                          "type": "Gene_Trait" if is_gene else "GeneticVariant_Trait",
+                                                          "type": "Gene_Trait",
                                                           "annotator": "tr142@le.ac.uk",
                                                           "updated_at": datetime.now().strftime(
                                                               "%Y-%m-%dT%H:%M:%SZ")},
-                                                      nodes=[phenotype_node, marker_node] if not is_gene else [
-                                                          phenotype_node, gene_node])
-                    nlp.r += 1
-                    relations.append(bioc_relation)
+                                                      nodes=[phenotype_node, gene_node])
+
+                    if bioc_relation not in relations:
+                        relations.append(bioc_relation)
+                        nlp.r += 1
+                    if closest_disease_index:
+                        temp = [closest_disease_index]
+                        temp.append(nlp.t - 1)
+                        used_offsets.append(temp)
+                    if closest_variant_index:
+                        temp = [closest_variant_index]
+                        temp.append(nlp.v - 1)
+                        used_offsets.append(temp)
+                    if closest_gene_index:
+                        temp = [closest_gene_index]
+                        temp.append(nlp.g - 1)
+                        used_offsets.append(temp)
                 for annot in annotations:
                     passage['annotations'].append(annot)
         if relations:

@@ -232,7 +232,7 @@ def process_study(nlp, study):
     for passage in study['documents'][0]['passages']:
         # footnotes need to be excluded.
         if results_present and passage["infons"]["section_type"].lower() not in ["abstract", "results",
-                                                                                 "caption"]:
+                                                                                 "discussion", "conclusion"]:
             continue
         passage_text = passage['text']
         doc = nlp.process_corpus(passage_text)
@@ -370,8 +370,8 @@ def main():
     failed_documents = []
     study_processing_times = []
     for pmc_id in gc_data.keys():
-        # if pmc_id != "PMC5536245":
-        #     continue
+        if pmc_id != "PMC5536245":
+            continue
         start_time = datetime.now()
         pvals = []
         rsids = []
