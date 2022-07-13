@@ -18,7 +18,7 @@ setuptools.setup(
        "jsonschema>=3.2.0",
        "networkx>=2.5",
        "spacy>=3.2.1",
-       "en_core_sci_lg @ https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.4.0/en_core_sci_lg-0.4.0.tar.gz",
+       "en_core_sci_scibert @ https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.0/en_core_sci_scibert-0.5.0.tar.gz",
        "svglib>=1.0.1",
        "reportlab>=3.5.49",
        "PyQt5>=5.15.0",
