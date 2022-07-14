@@ -106,7 +106,20 @@ def offset_in_list(offset, used_offsets):
     return False
 
 
-def get_befree_annotations(study, nlp, current_datetime):
+def get_befree_entities(study):
+    pmid = study["documents"][0]["passages"][0]["infons"]["article-id_pmid"]
+    befree_data = get_befree_data(pmid)
+    if befree_data:
+        befree_data = befree_data[pmid]
+    entities = []
+    for entry in befree_data:
+        if "gene_text" in entry.keys():
+            entities.append([entry["gene_text"], entry["ncbi_id"]])
+        entities.append([entry["disease_text"], entry["meshid"]])
+    return entities
+
+
+def get_befree_strict_annotations(study, nlp, current_datetime):
     pmid = study["documents"][0]["passages"][0]["infons"]["article-id_pmid"]
     befree_data = get_befree_data(pmid)
     if pmid in befree_data.keys():
@@ -119,7 +132,6 @@ def get_befree_annotations(study, nlp, current_datetime):
             if passage['infons']['section_type'] == "ABSTRACT" and "title" not in passage['infons']['type']:
                 text = passage["text"]
                 for entry in study_befree_data:
-                    duplicate_gene, duplicate_disease, duplicate_variant = False, False, False
                     disease_node_id, marker_node_id, gene_node_id = nlp.t, nlp.v, nlp.g
                     used_variant_ident, used_disease_ident, used_gene_ident = False, False, False
                     closest_gene_index, closest_variant_index, closest_disease_index = False, False, False
@@ -133,10 +145,10 @@ def get_befree_annotations(study, nlp, current_datetime):
                     sentence_offset = text.index(sent) + passage["offset"]
                     try:
                         closest_disease_index = get_closest_index(sent, entry["disease_text"], int(
-                                entry["disease_offset"][
-                                :entry["disease_offset"].index("#")]) + sentence_offset)
+                            entry["disease_offset"][
+                            :entry["disease_offset"].index("#")]) + sentence_offset)
                         used_disease_ident = offset_in_list(closest_disease_index, used_offsets)
-                        if not used_disease_ident:
+                        if used_disease_ident is False:
                             loc = BioC.BioCLocation(offset=get_closest_index(sent, entry["disease_text"], int(
                                 entry["disease_offset"][
                                 :entry["disease_offset"].index("#")]) + sentence_offset) + sentence_offset,
@@ -150,10 +162,10 @@ def get_befree_annotations(study, nlp, current_datetime):
                             nlp.t += 1
                         if not is_gene:
                             closest_variant_index = get_closest_index(sent, entry["variantid"], int(
-                                    entry["variant_offset"][
-                                    :entry["variant_offset"].index("#")]) + sentence_offset)
+                                entry["variant_offset"][
+                                :entry["variant_offset"].index("#")]) + sentence_offset)
                             used_variant_ident = offset_in_list(closest_variant_index, used_offsets)
-                            if not used_variant_ident:
+                            if used_variant_ident is False:
                                 loc = BioC.BioCLocation(offset=get_closest_index(sent, entry["variantid"], int(
                                     entry["variant_offset"][
                                     :entry["variant_offset"].index("#")]) + sentence_offset) + sentence_offset,
@@ -167,10 +179,10 @@ def get_befree_annotations(study, nlp, current_datetime):
                                 nlp.v += 1
                         else:
                             closest_gene_index = get_closest_index(sent, entry["gene_text"], int(
-                                    entry["gene_offset"][
-                                    :entry["gene_offset"].index("#")]) + sentence_offset)
+                                entry["gene_offset"][
+                                :entry["gene_offset"].index("#")]) + sentence_offset)
                             used_gene_ident = offset_in_list(closest_gene_index, used_offsets)
-                            if not used_gene_ident:
+                            if used_gene_ident is False:
                                 loc = BioC.BioCLocation(offset=get_closest_index(sent, entry["gene_text"], int(
                                     entry["gene_offset"][
                                     :entry["gene_offset"].index("#")]) + sentence_offset) + sentence_offset,
@@ -185,9 +197,12 @@ def get_befree_annotations(study, nlp, current_datetime):
                     except TypeError as te:
                         print(F"PMID: {pmid} - contains missing entities from sentences.")
                         continue
-                    phenotype_node = BioC.BioCNode(refid=F"T{used_disease_ident if used_disease_ident else disease_node_id}", role="")
-                    marker_node = BioC.BioCNode(refid=F"M{used_variant_ident if used_variant_ident else marker_node_id}", role="")
-                    gene_node = BioC.BioCNode(refid=F"G{used_gene_ident if used_gene_ident else gene_node_id}", role="")
+                    phenotype_node = BioC.BioCNode(
+                        refid=F"T{used_disease_ident if used_disease_ident is not False else disease_node_id}", role="")
+                    marker_node = BioC.BioCNode(
+                        refid=F"M{used_variant_ident if used_variant_ident is not False else marker_node_id}", role="")
+                    gene_node = BioC.BioCNode(
+                        refid=F"G{used_gene_ident if used_gene_ident is not False else gene_node_id}", role="")
                     bioc_relation = BioC.BioCRelation(id=F"R{nlp.r}",
                                                       infons={
                                                           "type": "Gene_Trait",
@@ -199,15 +214,15 @@ def get_befree_annotations(study, nlp, current_datetime):
                     if bioc_relation not in relations:
                         relations.append(bioc_relation)
                         nlp.r += 1
-                    if closest_disease_index:
+                    if closest_disease_index is not False:
                         temp = [closest_disease_index]
                         temp.append(nlp.t - 1)
                         used_offsets.append(temp)
-                    if closest_variant_index:
+                    if closest_variant_index is not False:
                         temp = [closest_variant_index]
                         temp.append(nlp.v - 1)
                         used_offsets.append(temp)
-                    if closest_gene_index:
+                    if closest_gene_index is not False:
                         temp = [closest_gene_index]
                         temp.append(nlp.g - 1)
                         used_offsets.append(temp)

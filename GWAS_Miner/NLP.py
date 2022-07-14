@@ -324,11 +324,15 @@ class Interpreter:
         try:
             doc.ents += (entity,)
         except Exception:
+            if entity.label_.isnumeric():
+                return
             entities_to_replace = []
             for ent in doc.ents:
                 if (start <= ent.start < end) or (start < ent.end <= end):
-                    if len(ent) <= len(entity):
+                    if len(ent) < len(entity):
                         entities_to_replace.append(ent)
+                    # elif len(ent) == len(entity):
+                    #     ent.set_extension("additional_labels", )
             if entities_to_replace:
                 doc.ents = [x for x in doc.ents if x not in entities_to_replace]
                 doc.ents += (entity,)
@@ -567,7 +571,7 @@ class Interpreter:
             })
         return result
 
-    def extract_phenotypes(self, doc):
+    def extract_relationships(self, doc):
         """[Extract phenotype to genotype associations from the provided SpaCy doc object]
 
         Args:
@@ -580,8 +584,12 @@ class Interpreter:
             doc.sents,  ["PVAL", "RSID", "GENE"], ["has_trait"])
         uncertain_sents = Interpreter._filter_sents_by_entity(doc.sents, ["PVAL", "RSID"])
         results, uncertain_results = [], []
-        results = Utility.remove_duplicate_associations(self.calculate_sdp(phenotype_sents))
-        uncertain_results = Utility.remove_duplicate_associations(self.calculate_sdp(uncertain_sents, doc.user_data["top_phenotype"]))
+        results = self.get_triple_relationships(phenotype_sents)
+        results += self.get_double_relationships(phenotype_sents)
+        results = Utility.remove_duplicate_associations(results)
+        uncertain_results = self.get_triple_relationships(uncertain_sents, doc.user_data["top_phenotype"])
+        uncertain_results += self.get_double_relationships(uncertain_sents, doc.user_data["top_phenotype"])
+        uncertain_results = Utility.remove_duplicate_associations(uncertain_results)
         filtered_uncertain_results = []
         if results and uncertain_results:
             for association in results:
@@ -597,34 +605,54 @@ class Interpreter:
         return results, filtered_uncertain_results
 
     @staticmethod
-    def calculate_sdp(phenotype_sents, top_phenotype=None):
-        """[Calculates the shortest dependency path for each phenotype/marker/p-value combination, returning the shortest for each one.]
-
-        Args:
-            phenotype_sents ([list]): [List of SpaCy sent objects containing phenotype entities.]
-
-        Returns:
-            [dict]: [Dictionary containing extracted phenotype, marker and p-values associated together based on SDP calculation.]
-        """
+    def get_double_relationships(phenotype_sents, top_phenotype=None):
         results = []
-        # Iterate through each sentence containing a phenotype named entity label
         for sent in phenotype_sents:
-            edges = []
-            token_indexes = {}
-            for token in sent:
-                for child in token.children:
-                    # Add unique id to token strings.
-                    token_text = F"{token}<id{token.idx}>"
-                    child_text = F"{child}<id{child.idx}>"
-                    if token.idx not in token_indexes.keys():
-                        token_indexes[token.idx] = token.i
-                    if child.idx not in token_indexes.keys():
-                        token_indexes[child.idx] = child.i
-                    edges.append(('{0}'.format(token_text),
-                                  '{0}'.format(child_text)))
+            graph, token_indexes = Interpreter.get_sentence_graph(sent)
+            # immediate_relations = Interpreter.allocate_contiguous_phenotypes(sent)
+            pheno_assocs = []
+            if not top_phenotype:
+                # Validate associations are triples
+                pheno_assocs = [x for x in pheno_assocs if len(x) == 3]
+                for (rsid, pval, phenotype) in pheno_assocs:
+                    temp_marker = sent.doc[
+                        token_indexes[int(rsid[rsid.find("<id") + 3: rsid.find(">", rsid.find("<id") + 3)])]]
+                    temp_pval = sent.doc[
+                        token_indexes[int(pval[pval.find("<id") + 3: pval.find(">", pval.find("<id") + 3)])]]
+                    temp_pheno = sent.doc[token_indexes[
+                        int(phenotype[phenotype.find("<id") + 3: phenotype.find(">", phenotype.find("<id") + 3)])]]
+                    result_marker = Marker(temp_marker)
+                    result_significance = Significance(temp_pval)
+                    result_pheno = Phenotype(temp_pheno)
 
-            graph = nx.Graph(edges)
+                    results.append(
+                        Association(marker=result_marker, significance=result_significance, phenotype=result_pheno))
+            else:
+                # Validate associations are doubles
+                pheno_assocs = [x for x in pheno_assocs if len(x) == 2]
+                for (rsid, pval) in pheno_assocs:
+                    temp_marker = sent.doc[
+                        token_indexes[int(rsid[rsid.find("<id") + 3: rsid.find(">", rsid.find("<id") + 3)])]]
+                    temp_pval = sent.doc[
+                        token_indexes[int(pval[pval.find("<id") + 3: pval.find(">", pval.find("<id") + 3)])]]
+                    result_marker = Marker(temp_marker)
+                    result_significance = Significance(temp_pval)
+                    result_pheno = None
+                    for ent in sent.doc.ents:
+                        if ent.label_ == top_phenotype["ID"]:
+                            result_pheno = Phenotype(next(x for x in ent.sent if x.ent_type_ == ent.label_))
+                            break
 
+                    if result_pheno:
+                        results.append(
+                            Association(marker=result_marker, significance=result_significance, phenotype=result_pheno))
+        return results
+
+    @staticmethod
+    def get_triple_relationships(phenotype_sents, top_phenotype=None):
+        results = []
+        for sent in phenotype_sents:
+            graph, token_indexes = Interpreter.get_sentence_graph(sent)
             phenotypes = Interpreter._validate_node_entities(
                 [x for x in sent.ents if x._.has_trait], graph.nodes) if not top_phenotype else None
             markers = Interpreter._validate_node_entities(
@@ -634,10 +662,6 @@ class Interpreter:
             pvals = Interpreter._validate_node_entities(
                 [x for x in sent.ents if x.label_ == 'PVAL'], graph.nodes)
 
-            phenotype_count = len(phenotypes) if not top_phenotype else None
-            marker_count = len(markers)
-            pval_count = len(pvals)
-            gene_count = len(genes)
             # immediate_relations = Interpreter.allocate_contiguous_phenotypes(sent)
 
             pheno_assocs = []
@@ -676,43 +700,27 @@ class Interpreter:
                         continue
                     if best_pheno_distance:
                         pair.append(best_pheno)
-
-            if not top_phenotype:
-                # Validate associations are triples
-                pheno_assocs = [x for x in pheno_assocs if len(x) == 3]
-                for (rsid, pval, phenotype) in pheno_assocs:
-                    temp_marker = sent.doc[
-                        token_indexes[int(rsid[rsid.find("<id") + 3: rsid.find(">", rsid.find("<id") + 3)])]]
-                    temp_pval = sent.doc[
-                        token_indexes[int(pval[pval.find("<id") + 3: pval.find(">", pval.find("<id") + 3)])]]
-                    temp_pheno = sent.doc[token_indexes[
-                        int(phenotype[phenotype.find("<id") + 3: phenotype.find(">", phenotype.find("<id") + 3)])]]
-                    result_marker = Marker(temp_marker)
-                    result_significance = Significance(temp_pval)
-                    result_pheno = Phenotype(temp_pheno)
-
-                    results.append(
-                        Association(marker=result_marker, significance=result_significance, phenotype=result_pheno))
-            else:
-                # Validate associations are doubles
-                pheno_assocs = [x for x in pheno_assocs if len(x) == 2]
-                for (rsid, pval) in pheno_assocs:
-                    temp_marker = sent.doc[
-                        token_indexes[int(rsid[rsid.find("<id") + 3: rsid.find(">", rsid.find("<id") + 3)])]]
-                    temp_pval = sent.doc[
-                        token_indexes[int(pval[pval.find("<id") + 3: pval.find(">", pval.find("<id") + 3)])]]
-                    result_marker = Marker(temp_marker)
-                    result_significance = Significance(temp_pval)
-                    result_pheno = None
-                    for ent in sent.doc.ents:
-                        if ent.label_ == top_phenotype["ID"]:
-                            result_pheno = Phenotype(next(x for x in ent.sent if x.ent_type_ == ent.label_))
-                            break
-
-                    if result_pheno:
-                        results.append(
-                            Association(marker=result_marker, significance=result_significance, phenotype=result_pheno))
         return results
+
+    @staticmethod
+    def get_sentence_graph(sent):
+        # Iterate through each sentence containing a phenotype named entity label
+        edges = []
+        token_indexes = {}
+        for token in sent:
+            for child in token.children:
+                # Add unique id to token strings.
+                token_text = F"{token}<id{token.idx}>"
+                child_text = F"{child}<id{child.idx}>"
+                if token.idx not in token_indexes.keys():
+                    token_indexes[token.idx] = token.i
+                if child.idx not in token_indexes.keys():
+                    token_indexes[child.idx] = child.i
+                edges.append(('{0}'.format(token_text),
+                              '{0}'.format(child_text)))
+
+        graph = nx.Graph(edges)
+        return graph, token_indexes
 
     @staticmethod
     def count_entities(doc, label):

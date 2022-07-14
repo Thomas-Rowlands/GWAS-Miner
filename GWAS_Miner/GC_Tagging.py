@@ -37,6 +37,12 @@ class GCInterpreter(Interpreter):
                 new_matcher.add(entry.identifier, patterns, on_match=self._Interpreter__on_match)
         self.__phrase_matcher = new_matcher
 
+    def set_custom_entities(self, entities: list):
+        for label, entity_id in entities:
+            label_patterns = Interpreter.get_term_variations(label)
+            label_patterns = self.nlp.tokenizer.pipe(label_patterns)
+            self.__phrase_matcher.add(entity_id, label_patterns, on_match=self._Interpreter__on_match)
+
     def process_corpus(self, corpus, **kwargs):
         """[Applies tokenization, entity recognition and dependency parsing to the supplied corpus.]
 
@@ -224,7 +230,9 @@ def process_study(nlp, study):
     current_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
     document_relations = []
     results_present = False
-
+    befree_entity_data = befree_annotate.get_befree_entities(study)
+    if befree_entity_data:
+        nlp.set_custom_entities(befree_entity_data)
     for passage in study['documents'][0]['passages']:
         if passage["infons"]["section_type"].lower() == "results":
             results_present = True
@@ -279,7 +287,7 @@ def process_study(nlp, study):
                     nlp.g += 1
                 used_annots.append(annot["text"])
 
-            relations, uncertain_relations = nlp.extract_phenotypes(doc)
+            relations, uncertain_relations = nlp.extract_relationships(doc)
             if relations:
                 relations = validate_relations(nlp, relations)
             if uncertain_relations:
@@ -292,9 +300,11 @@ def process_study(nlp, study):
                 bioc_relation, nlp = get_relation(relation, passage, nlp)
                 document_relations.append(bioc_relation)
                 nlp.r += 1
+
+    study, nlp = befree_annotate.get_befree_strict_annotations(study, nlp, current_datetime)
     if document_relations:
-        study['documents'][0]['relations'] = document_relations
-    study, nlp = befree_annotate.get_befree_annotations(study, nlp, current_datetime)
+        study['documents'][0]['relations'] += document_relations
+
     study = clean_output_annotations(study)
     OutputConverter.output_xml(json.dumps(study, default=BioC.ComplexHandler),
                                F"output/xml/PMC{study['documents'][0]['id']}_result.xml")
