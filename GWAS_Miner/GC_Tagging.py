@@ -287,7 +287,7 @@ def process_study(nlp, study):
                     nlp.g += 1
                 used_annots.append(annot["text"])
 
-            relations, uncertain_relations = nlp.extract_relationships(doc)
+            relations, uncertain_relations = nlp.extract_phenotypes(doc)
             if relations:
                 relations = validate_relations(nlp, relations)
             if uncertain_relations:
@@ -380,8 +380,8 @@ def main():
     failed_documents = []
     study_processing_times = []
     for pmc_id in gc_data.keys():
-        if pmc_id != "PMC5536245":
-            continue
+        # if pmc_id != "PMC5536245":
+        #     continue
         start_time = datetime.now()
         pvals = []
         rsids = []
