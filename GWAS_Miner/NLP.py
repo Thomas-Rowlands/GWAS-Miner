@@ -351,7 +351,7 @@ class Interpreter:
             matches = re.finditer(pattern, doc.text_with_ws)
         for match in matches:
             start, end = match.span(1) if len(match.groups()) > 1 else match.span()
-            span = doc.char_span(start, end, label=label)
+            span = doc.char_span(start, end, label=label, alignment_mode="expand")
             if span is not None:
                 try:
                     doc.ents += (span,)

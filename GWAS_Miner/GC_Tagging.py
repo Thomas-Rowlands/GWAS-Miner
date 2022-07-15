@@ -43,6 +43,65 @@ class GCInterpreter(Interpreter):
             label_patterns = self.nlp.tokenizer.pipe(label_patterns)
             self.__phrase_matcher.add(entity_id, label_patterns, on_match=self._Interpreter__on_match)
 
+    def extract_phenotypes(self, doc):
+        """[Extract phenotype to genotype associations from the provided SpaCy doc object]
+
+        Args:
+            doc ([SpaCy doc object]): [SpaCy processed document containing entities for extraction]
+
+        Returns:
+            [dict]: [Dictionary containing extracted phenotype, marker and p-values associated together based on SDP calculation.]
+        """
+        phenotype_sents = Interpreter._filter_sents_by_entity(
+            doc.sents,  ["PVAL", "RSID", "GENE"], ["has_trait"])
+        uncertain_sents = Interpreter._filter_sents_by_entity(doc.sents, ["PVAL", "RSID"])
+        results, uncertain_results = [], []
+        results = Utility.remove_duplicate_associations(self.calculate_sdp(phenotype_sents))
+        uncertain_results = Utility.remove_duplicate_associations(self.calculate_sdp(uncertain_sents, doc.user_data["top_phenotype"]))
+        filtered_uncertain_results = []
+        if results and uncertain_results:
+            for association in results:
+                match_found = False
+                for u_association in uncertain_results:
+                    if association.marker.token.text == u_association.marker.token.text and association.significance.token.text == u_association.significance.token.text:
+                        match_found = True
+                        break
+                if not match_found:
+                    filtered_uncertain_results += uncertain_results
+        else:
+            filtered_uncertain_results = uncertain_results
+        return results, filtered_uncertain_results
+
+    def extract_relationships(self, doc):
+        phenotype_sents = Interpreter._filter_sents_by_entity(
+            doc.sents,  ["PVAL", "RSID", "GENE"], ["has_trait"])
+        results = []
+        for sent in phenotype_sents:
+            for pval, marker, trait in self.gc_relations:
+                new_assoc = Association()
+                entity_count_matched = 0
+                for tagged_pval in [x for x in sent.ents if x.label_ == "PVAL"]:
+                    if re.match(pval, tagged_pval.text_with_ws):
+                        new_assoc.significance = Significance(tagged_pval)
+                        entity_count_matched += 1
+                        break
+                for tagged_marker in [x for x in sent.ents if x.label_ == "RSID"]:
+                    if tagged_marker.text == marker:
+                        new_assoc.marker = Marker(tagged_marker)
+                        entity_count_matched += 1
+                        break
+                for tagged_trait in [x for x in sent.ents if x._.has_trait or x._.is_trait]:
+                    if tagged_trait.label_ == trait:
+                        new_assoc.phenotype = Phenotype(tagged_trait)
+                        entity_count_matched += 1
+                        break
+                if entity_count_matched > 1:
+                    results.append(new_assoc)
+        return results
+
+
+
+
     def process_corpus(self, corpus, **kwargs):
         """[Applies tokenization, entity recognition and dependency parsing to the supplied corpus.]
 
@@ -204,25 +263,44 @@ class GCInterpreter(Interpreter):
 
 def get_relation(relation, passage, nlp):
     current_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-    if type(relation.phenotype.token) == Token:
-        pheno_id = [x.id for x in passage['annotations'] if
-                    relation.phenotype.token.idx + passage["offset"] == x.locations[0].offset][0]
-    else:
-        pheno_id = [x.id for x in passage['annotations'] if
-                    relation.phenotype.token.start_char + passage["offset"] == x.locations[0].offset][0]
-    marker_id = [x.id for x in passage['annotations'] if
-                 relation.marker.token.idx + passage["offset"] == x.locations[0].offset][0]
-    significance_id = [x.id for x in passage['annotations'] if
-                       relation.significance.token.idx + passage["offset"] == x.locations[0].offset][0]
-    phenotype_node = BioC.BioCNode(refid=pheno_id, role="")
-    marker_node = BioC.BioCNode(refid=marker_id, role="")
-    significance_node = BioC.BioCNode(refid=significance_id, role="")
-    bioc_relation = BioC.BioCRelation(id=F"R{nlp.r}",
-                                      infons={"type": "GeneticVariant_Trait_Significance", "annotator": "GWASMiner@le.ac.uk",
+    significance_id, pheno_id, marker_id, gene_id = None, None, None, None
+    if relation.phenotype:
+        if type(relation.phenotype.token) == Token:
+            pheno_id = [x.id for x in passage['annotations'] if
+                        relation.phenotype.token.idx + passage["offset"] == x.locations[0].offset][0]
+        else:
+            pheno_id = [x.id for x in passage['annotations'] if
+                        relation.phenotype.token.start_char + passage["offset"] == x.locations[0].offset][0]
+    if relation.marker:
+        marker_id = [x.id for x in passage['annotations'] if
+                     relation.marker.token.start_char + passage["offset"] == x.locations[0].offset][0]
+    if relation.significance:
+        significance_id = [x.id for x in passage['annotations'] if
+                           relation.significance.token.start_char + passage["offset"] == x.locations[0].offset][0]
+    if relation.gene:
+        gene_id = [x.id for x in passage['annotations'] if
+                     relation.gene.token.start_char + passage["offset"] == x.locations[0].offset][0]
+    phenotype_node = BioC.BioCNode(refid=pheno_id, role="") if pheno_id else None
+    marker_node = BioC.BioCNode(refid=marker_id, role="") if marker_id else None
+    significance_node = BioC.BioCNode(refid=significance_id, role="") if significance_id else None
+    gene_node = BioC.BioCNode(refid=gene_id, role="") if gene_id else None
+    bioc_relation = None
+    if phenotype_node and gene_node:
+        bioc_relation = BioC.BioCRelation(id=F"R{nlp.r}",
+                                      infons={"type": "Gene_Trait", "annotator": "GWASMiner@le.ac.uk",
                                               "updated_at": current_datetime},
-                                      nodes=[phenotype_node, marker_node, significance_node])
+                                      nodes=[phenotype_node, gene_node])
+    elif phenotype_node and marker_node and significance_node:
+        bioc_relation = BioC.BioCRelation(id=F"R{nlp.r}",
+                                          infons={"type": "GeneticVariant_Trait_Significance", "annotator": "GWASMiner@le.ac.uk",
+                                                  "updated_at": current_datetime},
+                                          nodes=[phenotype_node, marker_node, significance_node])
+    elif marker_node and significance_node:
+        bioc_relation = BioC.BioCRelation(id=F"R{nlp.r}",
+                                          infons={"type": "GeneticVariant_Significance", "annotator": "GWASMiner@le.ac.uk",
+                                                  "updated_at": current_datetime},
+                                          nodes=[marker_node, significance_node])
     return bioc_relation, nlp
-
 
 def process_study(nlp, study):
     if not study:
@@ -287,23 +365,15 @@ def process_study(nlp, study):
                     nlp.g += 1
                 used_annots.append(annot["text"])
 
-            relations, uncertain_relations = nlp.extract_phenotypes(doc)
-            if relations:
-                relations = validate_relations(nlp, relations)
-            if uncertain_relations:
-                uncertain_relations = validate_relations(nlp, uncertain_relations)
+            relations = nlp.extract_relationships(doc)
             for relation in relations:
-                bioc_relation, nlp = get_relation(relation, passage, nlp)
-                document_relations.append(bioc_relation)
-                nlp.r += 1
-            for relation in uncertain_relations:
                 bioc_relation, nlp = get_relation(relation, passage, nlp)
                 document_relations.append(bioc_relation)
                 nlp.r += 1
 
     study, nlp = befree_annotate.get_befree_strict_annotations(study, nlp, current_datetime)
     if document_relations:
-        study['documents'][0]['relations'] += document_relations
+        study['documents'][0]['relations'] += [x for x in document_relations if x]
 
     study = clean_output_annotations(study)
     OutputConverter.output_xml(json.dumps(study, default=BioC.ComplexHandler),
