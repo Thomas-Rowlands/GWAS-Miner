@@ -98,10 +98,10 @@ def get_closest_index(text, search, target):
     return closest_index
 
 
-def offset_in_list(offset, used_offsets):
+def offset_in_list(offset, used_offsets, entity_type):
     input_offset = offset
-    for offset, ident in used_offsets:
-        if input_offset == offset:
+    for offset, ident, entity in used_offsets:
+        if input_offset == offset and entity == entity_type:
             return ident
     return False
 
@@ -146,12 +146,12 @@ def get_befree_strict_annotations(study, nlp, current_datetime):
                     try:
                         closest_disease_index = get_closest_index(sent, entry["disease_text"], int(
                             entry["disease_offset"][
-                            :entry["disease_offset"].index("#")]) + sentence_offset)
-                        used_disease_ident = offset_in_list(closest_disease_index, used_offsets)
+                            :entry["disease_offset"].index("#")]))
+                        used_disease_ident = offset_in_list(closest_disease_index, used_offsets, "T")
                         if used_disease_ident is False:
                             loc = BioC.BioCLocation(offset=get_closest_index(sent, entry["disease_text"], int(
                                 entry["disease_offset"][
-                                :entry["disease_offset"].index("#")]) + sentence_offset) + sentence_offset,
+                                :entry["disease_offset"].index("#")])) + sentence_offset,
                                                     length=len(entry["disease_text"]))
                             annotations.append(BioC.BioCAnnotation(id=F"T{nlp.t}",
                                                                    infons={"type": "trait",
@@ -163,12 +163,12 @@ def get_befree_strict_annotations(study, nlp, current_datetime):
                         if not is_gene:
                             closest_variant_index = get_closest_index(sent, entry["variantid"], int(
                                 entry["variant_offset"][
-                                :entry["variant_offset"].index("#")]) + sentence_offset)
-                            used_variant_ident = offset_in_list(closest_variant_index, used_offsets)
+                                :entry["variant_offset"].index("#")]))
+                            used_variant_ident = offset_in_list(closest_variant_index, used_offsets, "V")
                             if used_variant_ident is False:
                                 loc = BioC.BioCLocation(offset=get_closest_index(sent, entry["variantid"], int(
                                     entry["variant_offset"][
-                                    :entry["variant_offset"].index("#")]) + sentence_offset) + sentence_offset,
+                                    :entry["variant_offset"].index("#")])) + sentence_offset,
                                                         length=len(entry["variantid"]))
                                 annotations.append(BioC.BioCAnnotation(id=F"V{nlp.v}",
                                                                        infons={"type": "genetic_variant",
@@ -180,12 +180,12 @@ def get_befree_strict_annotations(study, nlp, current_datetime):
                         else:
                             closest_gene_index = get_closest_index(sent, entry["gene_text"], int(
                                 entry["gene_offset"][
-                                :entry["gene_offset"].index("#")]) + sentence_offset)
-                            used_gene_ident = offset_in_list(closest_gene_index, used_offsets)
+                                :entry["gene_offset"].index("#")]))
+                            used_gene_ident = offset_in_list(closest_gene_index, used_offsets, "G")
                             if used_gene_ident is False:
                                 loc = BioC.BioCLocation(offset=get_closest_index(sent, entry["gene_text"], int(
                                     entry["gene_offset"][
-                                    :entry["gene_offset"].index("#")]) + sentence_offset) + sentence_offset,
+                                    :entry["gene_offset"].index("#")])) + sentence_offset,
                                                         length=len(entry["gene_text"]))
                                 annotations.append(BioC.BioCAnnotation(id=F"G{nlp.g}",
                                                                        infons={"type": "gene",
@@ -214,18 +214,14 @@ def get_befree_strict_annotations(study, nlp, current_datetime):
                     if bioc_relation not in relations:
                         relations.append(bioc_relation)
                         nlp.r += 1
-                    if closest_disease_index is not False:
-                        temp = [closest_disease_index]
-                        temp.append(nlp.t - 1)
-                        used_offsets.append(temp)
-                    if closest_variant_index is not False:
-                        temp = [closest_variant_index]
-                        temp.append(nlp.v - 1)
-                        used_offsets.append(temp)
-                    if closest_gene_index is not False:
-                        temp = [closest_gene_index]
-                        temp.append(nlp.g - 1)
-                        used_offsets.append(temp)
+                    if not used_disease_ident:
+                        used_offsets.append([closest_disease_index, nlp.t - 1, "T"])
+                    if not is_gene:
+                        if not used_variant_ident and not [closest_variant_index, nlp.v - 1] in used_offsets:
+                            used_offsets.append([closest_variant_index, nlp.v - 1, "V"])
+                    elif is_gene:
+                        if not used_gene_ident and not [closest_gene_index, nlp.g - 1] in used_offsets:
+                            used_offsets.append([closest_gene_index, nlp.g - 1, "G"])
                 for annot in annotations:
                     passage['annotations'].append(annot)
         if relations:
