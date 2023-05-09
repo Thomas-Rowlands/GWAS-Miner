@@ -167,4 +167,4 @@ def output_xml(in_file, out_file):
 
 def output_json(study, out_file):
     with open(out_file, "w", encoding="UTF-8") as fout:
-        json.dump(study, fout, default=BioC.ComplexHandler)
+        json.dump(study, fout, default=BioC.ComplexHandler, indent=4)
