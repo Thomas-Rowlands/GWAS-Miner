@@ -23,7 +23,7 @@ class GCInterpreter(Interpreter):
 
     def set_ontology_terms(self, term_ids):
         term_ids = list(set(term_ids))
-        new_matcher = PhraseMatcher(self.nlp.vocab, attr="LOWER")
+        new_matcher = PhraseMatcher(self.model.vocab, attr="LOWER")
         for lexicon in self.lexicon.get_ordered_lexicons():
             if lexicon.name == "HPO":
                 continue
@@ -33,14 +33,14 @@ class GCInterpreter(Interpreter):
                     print(term_id)
                     continue
                 patterns = Interpreter.get_term_variations(entry)
-                patterns = self.nlp.tokenizer.pipe(patterns)
+                patterns = self.model.tokenizer.pipe(patterns)
                 new_matcher.add(entry.identifier, patterns, on_match=self._Interpreter__on_match)
         self.__phrase_matcher = new_matcher
 
     def set_custom_entities(self, entities: list):
         for label, entity_id in entities:
             label_patterns = Interpreter.get_term_variations(label)
-            label_patterns = self.nlp.tokenizer.pipe(label_patterns)
+            label_patterns = self.model.tokenizer.pipe(label_patterns)
             self.__phrase_matcher.add(entity_id, label_patterns, on_match=self._Interpreter__on_match)
 
     def extract_phenotypes(self, doc):
@@ -112,7 +112,7 @@ class GCInterpreter(Interpreter):
         tokens and dependencies.]
         """
 
-        doc = self.nlp(corpus)
+        doc = self.model(corpus)
         doc.user_data["relations"] = {"PHENO_ASSOC": []}
 
         old_ents, doc.ents = doc.ents, []
@@ -450,7 +450,7 @@ def main():
     failed_documents = []
     study_processing_times = []
     for pmc_id in gc_data.keys():
-        # if pmc_id != "PMC5536245":
+        # if pmc_id != "PMC5118651":
         #     continue
         start_time = datetime.now()
         pvals = []

@@ -18,10 +18,10 @@ from Utility_Functions import Utility
 class Interpreter:
     def __init__(self, lexicon, ontology_only=False):
         self.lexicon = lexicon
-        self.nlp = spacy.load("en_core_sci_scibert", disable=["ner"])
+        self.model = spacy.load("en_core_sci_scibert", disable=["ner"])
         # self.nlp.add_pipe("merge_noun_chunks")
         self.__failed_matches = []
-        self.nlp.tokenizer.add_special_case(",", [{"ORTH": ","}])
+        self.model.tokenizer.add_special_case(",", [{"ORTH": ","}])
         self.__rsid_regex = {"LOWER": {"REGEX": "((?:[(]?)(rs[0-9]{1,}){1,})"}}  # "(?:rs[0-9]{1,}){1}"}}
         self.__marker_regex = {"TEXT": {"REGEX": r"([ATCG]{1}[a-z]{1,}[0-9]{1,}[ATCG]{1}[a-z]{1,})"}}
         self.__gene_seq_regex = {"TEXT": {"REGEX": "([ ][ACTG]{3,}[ ])"}}
@@ -32,12 +32,12 @@ class Interpreter:
         self.__entity_labels = ["MESH", "HPO", "PVAL"]
         self.lexicon = lexicon
         self.__failed_matches = []
-        infixes = self.nlp.Defaults.infixes + [r'(?!\w)(\()', r'(?!\d)(\))']
+        infixes = self.model.Defaults.infixes + [r'(?!\w)(\()', r'(?!\d)(\))']
         infix_regex = spacy.util.compile_infix_regex(infixes)
-        self.nlp.tokenizer.infix_finditer = infix_regex.finditer
+        self.model.tokenizer.infix_finditer = infix_regex.finditer
         self.__basic_matcher = None
         self.__phrase_matcher = None
-        self.__abbreviation_matcher = PhraseMatcher(self.nlp.vocab, attr="ORTH")
+        self.__abbreviation_matcher = PhraseMatcher(self.model.vocab, attr="ORTH")
         self.__entity_labels = ["MESH", "HPO", "PVAL"]
         self.pval_patterns = []
         self.rsid_patterns = []
@@ -82,16 +82,16 @@ class Interpreter:
         self.abbrev_pattens = result
 
     def __add_matchers(self, lexicon):
-        self.__basic_matcher = Matcher(self.nlp.vocab)
+        self.__basic_matcher = Matcher(self.model.vocab)
         # self.__basic_matcher.add('marker', [[self.__marker_regex]], on_match=self.__on_match)
 
-        new_matcher = PhraseMatcher(self.nlp.vocab, attr="LOWER")
+        new_matcher = PhraseMatcher(self.model.vocab, attr="LOWER")
         for lexicon in lexicon.get_ordered_lexicons():
             if lexicon.name == "HPO":
                 continue
             for entry in lexicon.get_entries():
                 patterns = Interpreter.get_term_variations(entry)
-                patterns = self.nlp.tokenizer.pipe(patterns)
+                patterns = self.model.tokenizer.pipe(patterns)
                 new_matcher.add(entry.identifier, patterns, on_match=self.__on_match)
         self.__phrase_matcher = new_matcher
         # Assign extension getters
@@ -320,7 +320,7 @@ class Interpreter:
         """
         match_id, start, end = matches[i]
         entity = Span(doc, start, end,
-                      label=self.nlp.vocab.strings[match_id])
+                      label=self.model.vocab.strings[match_id])
         try:
             doc.ents += (entity,)
         except Exception:
@@ -382,7 +382,7 @@ class Interpreter:
         # for parser in parsers:
         #     corpus = parser(corpus)
 
-        doc = self.nlp(corpus)
+        doc = self.model(corpus)
 
         old_ents, doc.ents = doc.ents, []
 

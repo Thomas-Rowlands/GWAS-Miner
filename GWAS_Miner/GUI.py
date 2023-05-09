@@ -113,7 +113,7 @@ class MainForm:
         self.form.result_viewer_textbrowser.clear()
 
     def view_result(self, file):
-        with open(F"output/{file}_result.json", "r", encoding="utf-8") as f_in:
+        with open(F"output/json/{file}_result.json", "r", encoding="utf-8") as f_in:
             self.form.result_viewer_textbrowser.setText(f_in.read())
         self.navigate_to_page(4)
 
@@ -226,44 +226,44 @@ class MainForm:
         self.form.study_file_tablewidget.setRowCount(0)
         if self.validate_directory(path):
             self.form.file_select_all_checkbox.setChecked(True)
-            files = sorted([x for x in os.listdir(self.form.study_directory_input.text()) if x.endswith(".json")])
+            files = sorted([x for x in os.listdir(self.form.study_directory_input.text()) if x.endswith(".json")
+                            and "_abbreviations" not in x])
             for file in files:
-                if file.endswith(".json"):
-                    # Add analysis button for the study.
-                    analyse_btn = QPushButton()
-                    analyse_icon = QIcon("res/icons/statistics.png")
-                    analyse_btn.setIcon(analyse_icon)
-                    analyse_btn.clicked.connect(partial(self.render_study_visualisation, file))  # partial is essential
-                    analyse_widget = QWidget()
-                    analyse_layout = QHBoxLayout(analyse_widget)
-                    analyse_layout.setAlignment(Qt.AlignCenter)
-                    analyse_layout.addWidget(analyse_btn)
-                    analyse_layout.setContentsMargins(0, 0, 0, 0)
-                    # Add study label text.
-                    study = QTableWidgetItem()
-                    study.setTextAlignment(Qt.AlignCenter)
-                    study.setData(Qt.DisplayRole, file)
-                    # Add checkbox for study record.
-                    check_box_widget = QWidget()
-                    check_box_layout = QHBoxLayout(check_box_widget)
-                    check_box = QCheckBox()
-                    check_box.setChecked(True)
-                    check_box_layout.addWidget(check_box)
-                    check_box_layout.setAlignment(Qt.AlignCenter)
-                    check_box_layout.setContentsMargins(0, 0, 0, 0)
+                # Add analysis button for the study.
+                analyse_btn = QPushButton()
+                analyse_icon = QIcon("res/icons/statistics.png")
+                analyse_btn.setIcon(analyse_icon)
+                analyse_btn.clicked.connect(partial(self.render_study_visualisation, file))  # partial is essential
+                analyse_widget = QWidget()
+                analyse_layout = QHBoxLayout(analyse_widget)
+                analyse_layout.setAlignment(Qt.AlignCenter)
+                analyse_layout.addWidget(analyse_btn)
+                analyse_layout.setContentsMargins(0, 0, 0, 0)
+                # Add study label text.
+                study = QTableWidgetItem()
+                study.setTextAlignment(Qt.AlignCenter)
+                study.setData(Qt.DisplayRole, file)
+                # Add checkbox for study record.
+                check_box_widget = QWidget()
+                check_box_layout = QHBoxLayout(check_box_widget)
+                check_box = QCheckBox()
+                check_box.setChecked(True)
+                check_box_layout.addWidget(check_box)
+                check_box_layout.setAlignment(Qt.AlignCenter)
+                check_box_layout.setContentsMargins(0, 0, 0, 0)
 
-                    row_index = self.form.study_file_tablewidget.rowCount()
+                row_index = self.form.study_file_tablewidget.rowCount()
 
-                    self.form.study_file_tablewidget.insertRow(row_index)
-                    self.form.study_file_tablewidget.setItem(row_index, 0, study)
-                    self.form.study_file_tablewidget.setCellWidget(row_index, 1, analyse_widget)
-                    self.form.study_file_tablewidget.setCellWidget(row_index, 2, check_box_widget)
+                self.form.study_file_tablewidget.insertRow(row_index)
+                self.form.study_file_tablewidget.setItem(row_index, 0, study)
+                self.form.study_file_tablewidget.setCellWidget(row_index, 1, analyse_widget)
+                self.form.study_file_tablewidget.setCellWidget(row_index, 2, check_box_widget)
 
-                    header = self.form.study_file_tablewidget.horizontalHeader()
-                    analyse_btn.setFixedWidth(30)
-                    header.resizeSection(0, 220)
-                    header.resizeSection(1, 40)
-                    header.resizeSection(2, 30)
+                header = self.form.study_file_tablewidget.horizontalHeader()
+                analyse_btn.setFixedWidth(30)
+                header.resizeSection(0, 220)
+                header.resizeSection(1, 40)
+                header.resizeSection(2, 30)
 
     def validate_directory(self, path):
         """

@@ -95,13 +95,13 @@ def output_study_results(study, qt_study_finished_signal=None):
     # # else:
     # with open(F"output/PMC{study['documents'][0]['id']}_result.json", "w", encoding="utf-8") as out_file:
     #     json.dump(study, out_file, default=BioC.ComplexHandler)
-
     OutputConverter.output_xml(json.dumps(study, default=BioC.ComplexHandler),
-                               F"output/PMC{study['documents'][0]['id']}_result.xml")
+                               F"output/xml/{study['documents'][0]['id']}_result.xml")
+    OutputConverter.output_json(study, F"output/json/{study['documents'][0]['id']}_result.json")
 
     if qt_study_finished_signal:
         from GUI import QtFinishedResponse
-        response = QtFinishedResponse(True, F"PMC{study['documents'][0]['id']}")
+        response = QtFinishedResponse(True, F"{study['documents'][0]['id']}")
         qt_study_finished_signal.emit(response)
 
 
@@ -136,7 +136,7 @@ def process_study(nlp, study, qt_progress_signal=None, qt_study_finished_signal=
     study_fulltext = "\n".join([x['text'] for x in study['documents'][0]['passages']])
     # abbreviations = nlp.get_all_abbreviations(study_fulltext)
     for passage in study['documents'][0]['passages']:
-        if passage["infons"]["section_type"].lower() != "results":
+        if "section_title_1" in passage["infons"].keys() and passage["infons"]["section_title_1"].lower() != "results":
             continue
         passage_text = passage['text']
         # if abbreviations:
