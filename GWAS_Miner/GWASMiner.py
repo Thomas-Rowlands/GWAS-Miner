@@ -247,7 +247,7 @@ def process_studies(directory, visualise=None, shortlist=None, qt_progress_signa
         if file_name.endswith("tables.json"):
             tables, contains_annotations = parse_tables(os.path.join(directory, file_name), nlp_object)
             if tables and contains_annotations:
-                output_tables(F"output/json/{file_name.replace('.json', '_tables.json')}", tables)
+                output_tables(F"output/json/{file_name}", tables)
             elif tables and not contains_annotations:
                 update_gui_progress(qt_progress_signal, F"No annotations found for {file_name}...")
             else:
