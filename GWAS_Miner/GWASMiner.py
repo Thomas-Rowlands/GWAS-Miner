@@ -16,6 +16,7 @@ import BioC
 import json
 # import OutputConverter
 from GWAS_Miner import OutputConverter
+from TableExtractor import parse_tables, output_tables
 
 
 def __load_config():
@@ -133,7 +134,6 @@ def process_study(nlp, study, qt_progress_signal=None, qt_study_finished_signal=
 
     update_gui_progress(qt_progress_signal, F"Identifying data from study {study['documents'][0]['id']}...")
     t, m, p = 0, 0, 0
-    study_fulltext = "\n".join([x['text'] for x in study['documents'][0]['passages']])
     # abbreviations = nlp.get_all_abbreviations(study_fulltext)
     for passage in study['documents'][0]['passages']:
         if "section_title_1" in passage["infons"].keys() and passage["infons"]["section_title_1"].lower() != "results":
@@ -144,17 +144,17 @@ def process_study(nlp, study, qt_progress_signal=None, qt_study_finished_signal=
         #         passage_text = passage_text.replace(abbrev[0], abbrev[1])
 
         doc = nlp.process_corpus(passage_text, )
-        for sent in doc.sents:
-            training_sent = [x.label_ for x in sent.ents]
-            if training_sent:
-                if [x for x in training_sent if x[0] == "D"] and "RSID" in training_sent and "PVAL" in training_sent:
-                    training_string = sent.text_with_ws
-                    for ent in sent.ents:
-                        ent_string = F"<!TRAIT:{ent.text_with_ws}!>" if ent.label_[
-                                                                            0] == "D" else F"<!{ent.label_}:{ent.text_with_ws}!>"
-                        training_string = training_string.replace(ent.text_with_ws, ent_string)
-                    with open("training_input/training_input.txt", "a+", encoding="utf-8") as f_in:
-                        f_in.write(training_string + "\n")
+        # for sent in doc.sents:
+        #     training_sent = [x.label_ for x in sent.ents]
+        #     if training_sent:
+        #         if [x for x in training_sent if x[0] == "D"] and "RSID" in training_sent and "PVAL" in training_sent:
+        #             training_string = sent.text_with_ws
+        #             for ent in sent.ents:
+        #                 ent_string = F"<!TRAIT:{ent.text_with_ws}!>" if ent.label_[
+        #                                                                     0] == "D" else F"<!{ent.label_}:{ent.text_with_ws}!>"
+        #                 training_string = training_string.replace(ent.text_with_ws, ent_string)
+        #             with open("training_input/training_input.txt", "a+", encoding="utf-8") as f_in:
+        #                 f_in.write(training_string + "\n")
 
         annotations = nlp.get_entities(doc)
         used_annots = []
@@ -243,6 +243,16 @@ def process_studies(directory, visualise=None, shortlist=None, qt_progress_signa
 
         logger.info(F"Extracting data for file: {file_name}")
         update_gui_progress(qt_progress_signal, F"Extracting data for file: {file_name}")
+
+        if file_name.endswith("tables.json"):
+            tables, contains_annotations = parse_tables(os.path.join(directory, file_name), nlp_object)
+            if tables and contains_annotations:
+                output_tables(F"output/json/{file_name.replace('.json', '_tables.json')}", tables)
+            elif tables and not contains_annotations:
+                update_gui_progress(qt_progress_signal, F"No annotations found for {file_name}...")
+            else:
+                update_gui_progress(qt_progress_signal, F"Unable to process study {file_name}. Skipping...")
+            continue
         study = prepare_study(directory, file_name)
 
         if not study:

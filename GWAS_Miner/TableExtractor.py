@@ -11,7 +11,7 @@ table_significance_pattern = r""
 def output_tables(destination, tables):
     try:
         with open(destination, "w", encoding="utf-8") as fout:
-            json.dump(tables, fout, default=ComplexHandler, ensure_ascii=False)
+            json.dump(tables, fout, default=ComplexHandler, ensure_ascii=False, indent=4)
     except IOError as ie:
         print(F"IO Error occurred: {ie}")
     except Exception as e:
@@ -26,7 +26,7 @@ def process_tables(nlp, tables):
         nlp.annotations = []
         nlp.relations = []
         if table.table_type:
-            t, m, p, r, used_annots = table.assign_annotations(t, m, p, r, used_annots)
+            nlp.t, nlp.m, nlp.p, nlp.r, nlp.used_annots = table.assign_annotations(nlp.t, nlp.m, nlp.p, nlp.r, nlp.used_annots)
     return tables, nlp
 
 
@@ -128,8 +128,8 @@ def parse_tables(file_input, nlp):
                         bioc_table["relations"] = table.relations
                         break
 
-    if contains_annotations:
-        print(F"Table(s) have annotation(s) in: {file_input}")
+    # if contains_annotations:
+    #     print(F"Table(s) have annotation(s) in: {file_input}")
     # else:
     #     print(F"No table annotations found in: {file_input}")
     # if not contains_annotations:
