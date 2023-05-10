@@ -10,7 +10,7 @@ from PyQt5 import QtGui
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtSvg import QGraphicsSvgItem
 from PyQt5.QtWidgets import QApplication, QFileDialog, QPushButton, QGraphicsScene, QTableWidgetItem, QCheckBox, \
-    QHBoxLayout, QWidget, QMessageBox
+    QHBoxLayout, QWidget, QMessageBox, QHeaderView
 from reportlab.graphics import renderPM
 from svglib.svglib import svg2rlg
 
@@ -106,7 +106,8 @@ class MainForm:
         state = self.form.file_select_all_checkbox.isChecked()
         table = self.form.study_file_tablewidget
         for i in range(table.rowCount()):
-            table.cellWidget(i, 2).findChild(QCheckBox).setChecked(state)
+            current_checkbox = table.cellWidget(i, 2)
+            current_checkbox.setChecked(state)
 
     def result_back_btn_click_handler(self):
         self.navigate_to_page(1)
@@ -226,44 +227,38 @@ class MainForm:
         self.form.study_file_tablewidget.setRowCount(0)
         if self.validate_directory(path):
             self.form.file_select_all_checkbox.setChecked(True)
-            files = sorted([x for x in os.listdir(self.form.study_directory_input.text()) if x.endswith(".json")
-                            and "_abbreviations" not in x])
-            for file in files:
+            files = sorted([x for x in os.listdir(self.form.study_directory_input.text())
+                            if x.endswith(".json") and "_abbreviations" not in x])
+
+            table_widget = self.form.study_file_tablewidget
+            header = table_widget.horizontalHeader()
+            header.setSectionResizeMode(0, QHeaderView.Stretch)
+            header.resizeSection(1, 40)
+            header.resizeSection(2, 30)
+            row_count = table_widget.rowCount()
+            table_widget.setRowCount(len(files) + row_count)
+            btn_icon = QIcon("res/icons/statistics.png")
+
+            for row_index, file in enumerate(files, start=row_count):
                 # Add analysis button for the study.
                 analyse_btn = QPushButton()
-                analyse_icon = QIcon("res/icons/statistics.png")
-                analyse_btn.setIcon(analyse_icon)
-                analyse_btn.clicked.connect(partial(self.render_study_visualisation, file))  # partial is essential
-                analyse_widget = QWidget()
-                analyse_layout = QHBoxLayout(analyse_widget)
-                analyse_layout.setAlignment(Qt.AlignCenter)
-                analyse_layout.addWidget(analyse_btn)
-                analyse_layout.setContentsMargins(0, 0, 0, 0)
+                analyse_btn.setIcon(btn_icon)
+                analyse_btn.clicked.connect(partial(self.render_study_visualisation, file))
+                analyse_btn.setFixedWidth(30)
                 # Add study label text.
                 study = QTableWidgetItem()
                 study.setTextAlignment(Qt.AlignCenter)
                 study.setData(Qt.DisplayRole, file)
+
                 # Add checkbox for study record.
-                check_box_widget = QWidget()
-                check_box_layout = QHBoxLayout(check_box_widget)
                 check_box = QCheckBox()
                 check_box.setChecked(True)
-                check_box_layout.addWidget(check_box)
-                check_box_layout.setAlignment(Qt.AlignCenter)
-                check_box_layout.setContentsMargins(0, 0, 0, 0)
 
-                row_index = self.form.study_file_tablewidget.rowCount()
+                table_widget.setItem(row_index, 0, study)
+                table_widget.setCellWidget(row_index, 1, analyse_btn)
+                table_widget.setCellWidget(row_index, 2, check_box)
 
-                self.form.study_file_tablewidget.insertRow(row_index)
-                self.form.study_file_tablewidget.setItem(row_index, 0, study)
-                self.form.study_file_tablewidget.setCellWidget(row_index, 1, analyse_widget)
-                self.form.study_file_tablewidget.setCellWidget(row_index, 2, check_box_widget)
 
-                header = self.form.study_file_tablewidget.horizontalHeader()
-                analyse_btn.setFixedWidth(30)
-                header.resizeSection(0, 220)
-                header.resizeSection(1, 40)
-                header.resizeSection(2, 30)
 
     def validate_directory(self, path):
         """
@@ -333,7 +328,7 @@ class MainForm:
         shortlist = []
         table = self.form.study_file_tablewidget
         for i in range(table.rowCount()):
-            if table.cellWidget(i, 2).findChild(QCheckBox).isChecked():
+            if table.cellWidget(i, 2).isChecked():
                 shortlist.append(table.item(i, 0).text())
         return shortlist
 
