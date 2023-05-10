@@ -19,6 +19,7 @@ def output_tables(destination, tables):
 
 
 def process_tables(nlp, tables):
+    t, m, p, r = 0, 0, 0, 0
     for table in tables:
         nlp = table.add_spacy_docs(nlp)
         table.annotations = nlp.annotations
@@ -26,7 +27,7 @@ def process_tables(nlp, tables):
         nlp.annotations = []
         nlp.relations = []
         if table.table_type:
-            nlp.t, nlp.m, nlp.p, nlp.r, nlp.used_annots = table.assign_annotations(nlp.t, nlp.m, nlp.p, nlp.r, nlp.used_annots)
+            t, m, p, r = table.assign_annotations(t, m, p, r)
     return tables, nlp
 
 
@@ -340,9 +341,10 @@ class Table:
             column_types = [col_types[i]] if isinstance(col_types[i], int) \
                 else col_types[i]
             for col_type in set(column_types):
-                annotation, t, m, p = Table.__get_cell_annotation(cell, col_type, t, m, p)
-                row_annotations.append(annotation)
-        row_relations, r = Table.__get_row_relations(row_annotations, r)
+                annotation, t, m, p = self.__get_cell_annotation(cell, col_type, t, m, p)
+                if annotation:
+                    row_annotations.append(annotation)
+        row_relations, r = self.__get_row_relations(row_annotations, r)
         return row_annotations, row_relations, t, m, p, r
 
     def __get_row_relations(self, row_annotations, r):
@@ -414,7 +416,7 @@ class Table:
         self.annotations = used_annots
         return t, m, p, r, used_annots
 
-    def assign_annotations(self, t, m, p, r, used_annots):
+    def assign_annotations(self, t, m, p, r):
         docs_iter = [(self.title_doc, self.title_offset, "table_title"),
                      (self.caption_doc, self.caption_offset, "table_caption"),
                      (self.footer_doc, self.footer_offset, "table_footer")]
@@ -433,7 +435,7 @@ class Table:
                                                                                         p, r)
                 used_annots += row_annotations
         self.annotations = used_annots
-        return t, m, p, r, used_annots
+        return t, m, p, r
 
     def jsonable(self):
         output_dict = self.__dict__
