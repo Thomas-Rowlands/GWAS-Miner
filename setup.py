@@ -11,7 +11,7 @@ setuptools.setup(
     description="A python package for extracting key information from GWAS publications.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/Thomas-Rowlands/GWAS-Miner/tree/Dev1",
+    url="https://github.com/Thomas-Rowlands/GWAS-Miner",
     packages=setuptools.find_packages(),
     install_requires=[
        "python-dateutil>=2.8.1",
@@ -22,7 +22,9 @@ setuptools.setup(
        "svglib>=1.0.1",
        "reportlab>=3.5.49",
        "PyQt5>=5.15.0",
-        "bs4"
+        "bs4>=4.12.2",
+        "bioc>=2.0.post5",
+        "py2neo>=2021.2.3"
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
