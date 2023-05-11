@@ -398,8 +398,8 @@ class Interpreter:
                     self._regex_match(config.regex_entity_patterns[ent_label], doc, ent_label)
                     if ent_label not in self.__entity_labels:
                         self.__entity_labels.append(ent_label)
-
-        self.__basic_matcher(doc)
+        if len(self.__basic_matcher) > 0:
+            self.__basic_matcher(doc)
         self.__phrase_matcher(doc)
 
         # Ensure that rule-matched entities override data model entities when needed.
