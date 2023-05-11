@@ -143,7 +143,7 @@ def process_study(nlp, study, qt_progress_signal=None, qt_study_finished_signal=
         #     for abbrev in abbreviations:
         #         passage_text = passage_text.replace(abbrev[0], abbrev[1])
 
-        doc = nlp.process_corpus(passage_text, )
+        doc = nlp.process_corpus(passage_text)
         # for sent in doc.sents:
         #     training_sent = [x.label_ for x in sent.ents]
         #     if training_sent:
@@ -194,6 +194,7 @@ def process_study(nlp, study, qt_progress_signal=None, qt_study_finished_signal=
         relations = None
         if relations:
             print(relations)
+
     output_study_results(study, qt_study_finished_signal)
     return True
 

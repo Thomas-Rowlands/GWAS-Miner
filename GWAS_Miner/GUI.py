@@ -32,10 +32,12 @@ class MainForm:
         self.is_cancelled = False
         self.is_running = False
         self.worker = None
-        self.run_worker(GWASMiner.load_nlp_object, None, self.initial_loading_finished_callback, True)
+        # self.run_worker(GWASMiner.load_nlp_object, None, self.initial_loading_finished_callback, True)
+        self.initial_loading_finished_callback(True)
         self.dependency_svgs = []
         self.dependency_index = 0
         self.previous_page = 0
+        self.update_message = ""
 
     def __load_style(self, theme):
         with open(F'res/{theme}') as file:
@@ -104,10 +106,8 @@ class MainForm:
 
     def set_study_checkbox_states(self):
         state = self.form.file_select_all_checkbox.isChecked()
-        table = self.form.study_file_tablewidget
-        for i in range(table.rowCount()):
-            current_checkbox = table.cellWidget(i, 2)
-            current_checkbox.setChecked(state)
+        for i in range(self.form.study_file_tablewidget.rowCount()):
+            self.form.study_file_tablewidget.cellWidget(i, 2).setChecked(state)
 
     def result_back_btn_click_handler(self):
         self.navigate_to_page(1)
@@ -224,6 +224,7 @@ class MainForm:
         if not path:
             return
         self.form.study_directory_input.setText(path)
+        self.form.study_file_tablewidget.clear()
         self.form.study_file_tablewidget.setRowCount(0)
         if self.validate_directory(path):
             self.form.file_select_all_checkbox.setChecked(True)
@@ -442,6 +443,7 @@ class MainForm:
         self.navigate_to_page(1)
 
     def set_progress_text(self, progress):
+        # self.update_message = progress
         self.form.status_lbl.setText(progress)
         self.form.status_lbl.setHidden(False)
 
