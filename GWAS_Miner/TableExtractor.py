@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 from datetime import datetime
 
@@ -27,7 +28,10 @@ def process_tables(nlp, tables):
         nlp.annotations = []
         nlp.relations = []
         if table.table_type:
-            t, m, p, r = table.assign_annotations(t, m, p, r)
+            try:
+                t, m, p, r = table.assign_annotations(t, m, p, r)
+            except TableTypeError as tte:
+                logging.error(F"Failed to interpret table type correctly - Table {table.table_id}")
     return tables, nlp
 
 
@@ -367,25 +371,53 @@ class Table:
     def __get_trait_list_row_relations(self, row_annotations_dict, r):
         row_relations = []
         trait_count, pval_count, variant_count = self.__get_row_annotation_counts(row_annotations_dict)
+        if trait_count > 1 or pval_count > 1:
+            raise TableTypeError(self)
+        if len([x for x in row_annotations_dict if len(row_annotations_dict[x]) > 0]) < 2:
+            return [], r
+        new_relationship = BioC.BioCRelation(id=F"R{r}")
+        if trait_count > 0:
+            new_relationship.nodes.append(row_annotations_dict['traits'][0].locations[0])
+        if pval_count > 0:
+            new_relationship.nodes.append(row_annotations_dict['pvals'][0].locations[0])
 
+        row_relations.append(new_relationship)
         return row_relations, r
 
     def __get_marker_list_row_relations(self, row_annotations_dict, r):
         row_relations = []
         trait_count, pval_count, variant_count = self.__get_row_annotation_counts(row_annotations_dict)
-        if trait_count > 1 or pval_count > 1 or variant_count > 1:
+        if pval_count > 1 or variant_count > 1:
             raise TableTypeError(self)
-        trait_annot = row_annotations_dict['traits'][0]
-        variant_annot = row_annotations_dict['variants'][0]
-        pval_annot = row_annotations_dict['pvals'][0]
-        row_relations.append(
-            BioC.BioCRelation()
-        )
+        if len([x for x in row_annotations_dict if len(row_annotations_dict[x]) > 0]) < 2:
+            return [], r
+        new_relationship = BioC.BioCRelation(id=F"R{r}")
+        if variant_count > 0:
+            new_relationship.nodes.append(row_annotations_dict['variants'][0].locations[0])
+        if pval_count > 0:
+            new_relationship.nodes.append(row_annotations_dict['pvals'][0].locations[0])
+
+
+        row_relations.append(new_relationship)
         return row_relations, r
 
     def __get_trait_marker_list_row_relations(self, row_annotations_dict, r):
         row_relations = []
         trait_count, pval_count, variant_count = self.__get_row_annotation_counts(row_annotations_dict)
+        if trait_count > 1 or pval_count > 1 or variant_count > 1:
+            raise TableTypeError(self)
+        if len([x for x in row_annotations_dict if len(row_annotations_dict[x]) > 0]) < 2:
+            return [], r
+        new_relationship = BioC.BioCRelation(id=F"R{r}")
+        if trait_count > 0:
+            new_relationship.nodes.append(row_annotations_dict['traits'][0].locations[0])
+        if variant_count > 0:
+            new_relationship.nodes.append(row_annotations_dict['variants'][0].locations[0])
+        if pval_count > 0:
+            new_relationship.nodes.append(row_annotations_dict['pvals'][0].locations[0])
+
+
+        row_relations.append(new_relationship)
         return row_relations, r
 
     @staticmethod
