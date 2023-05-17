@@ -99,6 +99,10 @@ class BioCRelation:
     nodes = None
 
     def __init__(self, id=None, infons=None, nodes=None):
+        if infons is None:
+            infons = []
+        if nodes is None:
+            nodes = []
         self.id = id
         self.infons = infons
         self.nodes = nodes
