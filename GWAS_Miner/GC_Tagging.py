@@ -312,12 +312,13 @@ def process_study(nlp, study):
     if befree_entity_data:
         nlp.set_custom_entities(befree_entity_data)
     for passage in study['documents'][0]['passages']:
-        if passage["infons"]["section_type"].lower() == "results":
+        if "section_title_1" in passage["infons"].keys() and passage["infons"]["section_title_1"].lower() == "results":
             results_present = True
             break
     for passage in study['documents'][0]['passages']:
         # footnotes need to be excluded.
-        if results_present and passage["infons"]["section_type"].lower() not in ["abstract", "results",
+        if results_present and "section_title_1" in passage["infons"].keys() and \
+                passage["infons"]["section_title_1"].lower() not in ["abstract", "results",
                                                                                  "discussion", "conclusion"]:
             continue
         passage_text = passage['text']
@@ -377,8 +378,8 @@ def process_study(nlp, study):
 
     study = clean_output_annotations(study)
     OutputConverter.output_xml(json.dumps(study, default=BioC.ComplexHandler),
-                               F"output/xml/PMC{study['documents'][0]['id']}_result.xml")
-    OutputConverter.output_json(study, F"output/json/PMC{study['documents'][0]['id']}_result.json")
+                               F"output/xml/{study['documents'][0]['id']}_bioc.xml")
+    OutputConverter.output_json(study, F"output/json/{study['documents'][0]['id']}_bioc.json")
     return study, nlp
 
 
@@ -472,7 +473,7 @@ def main():
         nlp.rsid_patterns = rsids
         nlp.gc_relations = gc_relations
 
-        study = Experimental.load_bioc_study("BioC_Studies", F"{pmc_id}.json")
+        study = Experimental.load_bioc_study("BioC_Studies", F"{pmc_id}_bioc.json")
         if not study:
             continue
 
@@ -492,7 +493,6 @@ def main():
 
         time_taken = (datetime.now() - start_time).total_seconds()
         study_processing_times.append((pmc_id, time_taken))
-
         if contains_annotations:
             TableExtractor.output_tables(F"output/{pmc_id}_tables.json", study_tables)
         if not result['documents'][0]['relations'] and not contains_annotations:

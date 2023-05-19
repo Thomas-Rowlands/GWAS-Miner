@@ -107,7 +107,7 @@ def offset_in_list(offset, used_offsets, entity_type):
 
 
 def get_befree_entities(study):
-    pmid = study["documents"][0]["passages"][0]["infons"]["article-id_pmid"]
+    pmid = study["documents"][0]["id"]
     befree_data = get_befree_data(pmid)
     if befree_data:
         befree_data = befree_data[pmid]
@@ -120,7 +120,7 @@ def get_befree_entities(study):
 
 
 def get_befree_strict_annotations(study, nlp, current_datetime):
-    pmid = study["documents"][0]["passages"][0]["infons"]["article-id_pmid"]
+    pmid = study["documents"][0]["id"]
     befree_data = get_befree_data(pmid)
     if pmid in befree_data.keys():
         study_befree_data = befree_data[pmid]
@@ -129,7 +129,7 @@ def get_befree_strict_annotations(study, nlp, current_datetime):
         for passage in study['documents'][0]['passages']:
             annotations = []
             used_offsets = []  # track repeated entities in dataset.
-            if passage['infons']['section_type'] == "ABSTRACT" and "title" not in passage['infons']['type']:
+            if passage['infons']['section_title_1'] == "ABSTRACT" and "title" not in passage['infons']['section_title_2']:
                 text = passage["text"]
                 for entry in study_befree_data:
                     disease_node_id, marker_node_id, gene_node_id = nlp.t, nlp.v, nlp.g

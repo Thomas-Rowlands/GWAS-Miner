@@ -18,7 +18,7 @@ def load_bioc_study(directory, file_name):
     bioc_study = None
     try:
         with open(F"{directory}/{file_name}", "r", encoding="utf-8") as fin:
-            bioc_study = json.load(fin)
+            bioc_study = json.loads(fin.read())
     except IOError:
         print(F"Unable to locate/open file: {file_name}")
     return bioc_study
