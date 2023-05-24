@@ -387,7 +387,10 @@ def generate_pval_regex_strings(input_string: str) -> str:
     if "." in input_string:
         pval_input_int = int(input_string[:input_string.find(".")])
     else:
-        pval_input_int = int(input_string[:input_string.lower().find("e")])
+        if "e" in input_string:
+            pval_input_int = int(input_string[:input_string.lower().find("e")])
+        else:
+            pval_input_int = int(input_string)
     pval_input_range = F"{pval_input_int - 1}{pval_input_int}{pval_input_int + 1}"
     power_digits = input_string[input_string.find('-') + 1:]
     pval = [F"([{pval_input_range}][ \.0-9]*[ xX*×]*10 ?(<sup>)?[-−] ?"
@@ -400,6 +403,7 @@ def generate_pval_regex_strings(input_string: str) -> str:
             + F"[ =<of]*[ ]?)([{pval_input_range}][ \.0-9]*[ xX*×]*10 ?[-−] ?"
               F"{power_digits[0] + '?' if power_digits[0] == '0' else power_digits[0]}"
               F"{power_digits[1:] + ')' if len(power_digits) > 1 else ')'}"]
+    pval = [re.escape(x) for x in pval]
     return pval
 
 
@@ -444,15 +448,16 @@ def main():
                    isfile(join("BioC_Studies", x))]
 
     # retrieve matching data.
-    gc_data = get_matching_data("GC_content.tsv", bioc_pmcids)
+    gc_data = get_matching_data("GC_content_459.tsv", bioc_pmcids)
 
     lexicon = Ontology.get_master_lexicon()
     nlp = GCInterpreter(lexicon)
     failed_documents = []
     study_processing_times = []
     for pmc_id in gc_data.keys():
-        # if pmc_id != "PMC5118651":
-        #     continue
+        if pmc_id != "PMC4260321":
+            continue
+        print(pmc_id)
         start_time = datetime.now()
         pvals = []
         rsids = []
@@ -460,8 +465,8 @@ def main():
         gc_relations = []
         nlp.reset_annotation_identifiers()
         for relation in gc_data[pmc_id]:
-            rsid = relation[0]
-            mesh_id = relation[2]
+            rsid = re.escape(relation[0])
+            mesh_id = re.escape(relation[2])
             new_pvals = generate_pval_regex_strings(relation[1])
             pvals.extend(new_pvals)
             rsids.append(F"({rsid})") #(?:\[[a-zA-Z0-9]\])?")
@@ -484,6 +489,7 @@ def main():
         file_abbrevs = nlp.get_study_abbreviations(F"BioC_Studies/{pmc_id}_abbreviations.json")
         if file_abbrevs:
             abbreviations += file_abbrevs
+        abbreviations = [[re.escape(x), y] for x, y in abbreviations]
         nlp.set_abbreviations(abbreviations)  # TODO: Check abbreviation partial entity HPC.
 
         result, nlp = process_study(nlp, study)
