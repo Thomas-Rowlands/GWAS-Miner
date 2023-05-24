@@ -457,7 +457,7 @@ def main():
     for pmc_id in gc_data.keys():
         # if pmc_id != "PMC4260321":
         #     continue
-        print(pmc_id)
+        # print(pmc_id)
         start_time = datetime.now()
         pvals = []
         rsids = []
