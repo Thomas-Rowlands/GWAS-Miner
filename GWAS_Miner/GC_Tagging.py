@@ -13,6 +13,7 @@ from GWAS_Miner import BioC, OutputConverter, Experimental, befree_annotate, GCT
 from GWAS_Miner.DataStructures import Marker, Significance, Phenotype, Association
 from GWAS_Miner.PostProcessing import clean_output_annotations
 from NLP import Interpreter
+from Utility_Functions import Utility
 
 
 class GCInterpreter(Interpreter):
@@ -387,7 +388,7 @@ def generate_pval_regex_strings(input_string: str) -> str:
     if "." in input_string:
         pval_input_int = int(input_string[:input_string.find(".")])
     else:
-        if "e" in input_string:
+        if "e" in input_string.lower():
             pval_input_int = int(input_string[:input_string.lower().find("e")])
         else:
             pval_input_int = int(input_string)
@@ -403,6 +404,7 @@ def generate_pval_regex_strings(input_string: str) -> str:
             + F"[ =<of]*[ ]?)([{pval_input_range}][ \.0-9]*[ xX*×]*10 ?[-−] ?"
               F"{power_digits[0] + '?' if power_digits[0] == '0' else power_digits[0]}"
               F"{power_digits[1:] + ')' if len(power_digits) > 1 else ')'}"]
+    pval.extend([x.replace("<sup>", "").replace("</sup>", "") for x in pval])
     pval = [re.escape(x) for x in pval]
     return pval
 
