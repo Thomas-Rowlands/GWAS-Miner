@@ -5,6 +5,7 @@ from os import listdir
 from os.path import isfile, join
 
 import networkx as nx
+import requests
 from spacy.matcher import PhraseMatcher
 from spacy.tokens import Span, Token
 
@@ -405,7 +406,7 @@ def generate_pval_regex_strings(input_string: str) -> str:
               F"{power_digits[0] + '?' if power_digits[0] == '0' else power_digits[0]}"
               F"{power_digits[1:] + ')' if len(power_digits) > 1 else ')'}"]
     pval.extend([x.replace("<sup>", "").replace("</sup>", "") for x in pval])
-    pval = [re.escape(x) for x in pval]
+    # pval = [re.escape(x) for x in pval]
     return pval
 
 
@@ -421,7 +422,7 @@ def get_matching_data(input_file: str, bioc_pmcids: list, headers_skipped=False)
                 continue
             if line[0] not in gc_data.keys():
                 gc_data[line[0]] = []
-            gc_data[line[0]].append([line[5], line[6], line[8]])
+            gc_data[line[0]].append([line[5], line[6], line[8], line[1]])
     return gc_data
 
 
@@ -444,6 +445,33 @@ def validate_relations(nlp, relations):
     return new_relations
 
 
+def get_catalog_relations(pmid):
+    result = []
+    url = F"https://www.ebi.ac.uk/gwas/rest/api/studies/search/findByPublicationIdPubmedId?pubmedId={pmid}"
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        data = response.json()
+        if len(data['_embedded']["studies"]) > 0:
+            associations = requests.get(F"https://www.ebi.ac.uk/gwas/rest/api/studies/{data['_embedded']['studies'][0]['accessionId']}/associations")
+            if associations.status_code == 200:
+                associations = associations.json()
+                for association in associations["_embedded"]["associations"]:
+                    snp = association["loci"][0]["strongestRiskAlleles"][0]["riskAlleleName"]
+                    if "-" in snp:
+                        snp = snp[:snp.index("-")]
+                    pval = str(association["pvalue"])
+                    result.append([snp, pval])
+            return result
+        else:
+            print("No GWAS study found for the provided PubMed ID.")
+            return None
+    else:
+        print("Error: Unable to retrieve data from the GWAS Catalog API.")
+        return None
+
+
+
 def main():
     # load bioc pmc ids
     bioc_pmcids = [x.replace(".json", "").replace("_abbreviations", "") for x in listdir("BioC_Studies") if
@@ -456,9 +484,13 @@ def main():
     nlp = GCInterpreter(lexicon)
     failed_documents = []
     study_processing_times = []
+    reached = False
     for pmc_id in gc_data.keys():
-        # if pmc_id != "PMC4260321":
+        # if pmc_id != "PMC5612337" and not reached:
         #     continue
+        # else:
+        #     reached = True
+        gwas_catalog_data = get_catalog_relations(gc_data[pmc_id][0][3])
         # print(pmc_id)
         start_time = datetime.now()
         pvals = []
@@ -466,13 +498,21 @@ def main():
         mesh_terms = []
         gc_relations = []
         nlp.reset_annotation_identifiers()
+        mesh_id = ""
         for relation in gc_data[pmc_id]:
-            rsid = re.escape(relation[0])
-            mesh_id = re.escape(relation[2])
+            rsid = relation[0]
+            mesh_id = relation[2]
             new_pvals = generate_pval_regex_strings(relation[1])
             pvals.extend(new_pvals)
             rsids.append(F"({rsid})") #(?:\[[a-zA-Z0-9]\])?")
             mesh_terms.append(mesh_id)
+            for x in new_pvals:
+                gc_relations.append([x, rsid, mesh_id])
+        for catalog_relation in gwas_catalog_data:
+            rsid = catalog_relation[0]
+            new_pvals = generate_pval_regex_strings(catalog_relation[1])
+            pvals.extend(new_pvals)
+            rsids.append(F"({rsid})")
             for x in new_pvals:
                 gc_relations.append([x, rsid, mesh_id])
         nlp.set_ontology_terms([x for x in mesh_terms if x])
@@ -483,7 +523,8 @@ def main():
         study = Experimental.load_bioc_study("BioC_Studies", F"{pmc_id}_bioc.json")
         if not study:
             continue
-
+        if not study["documents"][0]["id"]:
+            study["documents"][0]["id"] = pmc_id
         fulltext = "\n".join([x['text'] for x in study['documents'][0]['passages']])
         altered_text = re.sub(r"(?:\w)(\()", lambda x: x.group().replace("(", " ("), fulltext)
 
