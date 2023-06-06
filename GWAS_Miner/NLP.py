@@ -346,9 +346,15 @@ class Interpreter:
             for i in range(token.idx, token.idx + len(token.text)):
                 chars_to_tokens[i] = token.i
         if ignore_case:
-            matches = re.finditer(pattern, doc.text_with_ws, flags=re.IGNORECASE)
+            try:
+                matches = re.finditer(pattern, doc.text_with_ws, flags=re.IGNORECASE)
+            except re.error as r:
+                matches = re.finditer(re.escape(pattern), doc.text_with_ws, flags=re.IGNORECASE)
         else:
-            matches = re.finditer(pattern, doc.text_with_ws)
+            try:
+                matches = re.finditer(pattern, doc.text_with_ws)
+            except re.error as r:
+                matches = re.finditer(re.escape(pattern), doc.text_with_ws)
         for match in matches:
             start, end = match.span(1) if len(match.groups()) > 1 else match.span()
             span = doc.char_span(start, end, label=label, alignment_mode="expand")
