@@ -396,8 +396,9 @@ class MainForm:
         self.dependency_svgs.clear()
         self.dependency_index = 0
         self.form.dependency_image_label.setStyleSheet("background-color: transparent;")
-        self.dependency_svgs = response.data[1]
-        self.render_dependency_svg(0)
+        if response.data[1]:
+            self.dependency_svgs = response.data[1]
+            self.render_dependency_svg(0)
         self.form.visualise_stats_table.setRowCount(0)
         # Always disable sorting before changing contents to avoid missing data bug.
         self.form.visualise_stats_table.setSortingEnabled(False)
