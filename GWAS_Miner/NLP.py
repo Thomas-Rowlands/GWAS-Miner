@@ -83,7 +83,8 @@ class Interpreter:
 
     def __add_matchers(self, lexicon):
         self.__basic_matcher = Matcher(self.model.vocab)
-        # self.__basic_matcher.add('marker', [[self.__marker_regex]], on_match=self.__on_match)
+        self.__basic_matcher.add('marker', [[self.__marker_regex]], on_match=self.__on_match)
+        self.__basic_matcher.add('rsid', [[self.__rsid_regex]], on_match=self.__on_match)
 
         new_matcher = PhraseMatcher(self.model.vocab, attr="LOWER")
         for lexicon in lexicon.get_ordered_lexicons():
@@ -383,11 +384,6 @@ class Interpreter:
         Returns:
             [SpaCy doc object]: [Parsed SpaCy doc object containing the processed input text with entities, tokens and dependencies.]
         """
-        # Clean corpus with NLPre parsers
-        # parsers = [dedash(), titlecaps(), separate_reference(), unidecoder()]
-        # for parser in parsers:
-        #     corpus = parser(corpus)
-
         doc = self.model(corpus)
 
         old_ents, doc.ents = doc.ents, []
