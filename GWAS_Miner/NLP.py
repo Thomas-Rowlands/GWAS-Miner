@@ -84,7 +84,7 @@ class Interpreter:
     def __add_matchers(self, lexicon):
         self.__basic_matcher = Matcher(self.model.vocab)
         self.__basic_matcher.add('marker', [[self.__marker_regex]], on_match=self.__on_match)
-        self.__basic_matcher.add('rsid', [[self.__rsid_regex]], on_match=self.__on_match)
+        self.__basic_matcher.add('RSID', [[self.__rsid_regex]], on_match=self.__on_match)
 
         new_matcher = PhraseMatcher(self.model.vocab, attr="LOWER")
         for lexicon in lexicon.get_ordered_lexicons():
@@ -566,7 +566,7 @@ class Interpreter:
         result = []
         for ent in doc.ents:
             result.append({
-                "entity_type": ent.label_,
+                "entity_type": ent.label_.upper(),
                 "id": ent.label_[ent.label_.index(":") + 2:] if ":" in ent.label_ else ent.label_,
                 "text": ent.text,  # self.trim_brackets(ent.text),
                 "offset": ent.start_char,

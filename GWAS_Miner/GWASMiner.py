@@ -175,7 +175,7 @@ def process_study(nlp, study, qt_progress_signal=None, qt_study_finished_signal=
                     t += 1
                 elif "RSID" in annot["entity_type"]:
                     marker_identifier = BioC.BioCAnnotation(id=F"M{m}",
-                                                            infons={"type": "genomic_marker", "identifier": annot["id"],
+                                                            infons={"type": "genetic_variant", "identifier": annot["id"],
                                                                     "annotator": "tr142@le.ac.uk",
                                                                     "updated_at": current_datetime},
                                                             locations=[loc], text=annot["text"])
