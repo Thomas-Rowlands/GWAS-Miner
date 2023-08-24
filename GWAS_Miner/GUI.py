@@ -1,3 +1,4 @@
+import math
 import os
 import sys
 from functools import partial
@@ -372,7 +373,7 @@ class MainForm:
         self.form.dependency_image_label.setPixmap(qp)
         self.update_dependency_index_text()
         self.form.dependency_scrollarea.horizontalScrollBar().setValue(
-            self.form.dependency_scrollarea.horizontalScrollBar().maximum() / 2)
+            math.floor(self.form.dependency_scrollarea.horizontalScrollBar().maximum() / 2))
         self.form.dependency_scrollarea.verticalScrollBar().setValue(
             self.form.dependency_scrollarea.verticalScrollBar().maximum())
 
