@@ -1,5 +1,7 @@
 import json
+import os
 import re
+import sys
 from datetime import datetime
 from os import listdir
 from os.path import isfile, join
@@ -55,11 +57,12 @@ class GCInterpreter(Interpreter):
             [dict]: [Dictionary containing extracted phenotype, marker and p-values associated together based on SDP calculation.]
         """
         phenotype_sents = Interpreter._filter_sents_by_entity(
-            doc.sents,  ["PVAL", "RSID", "GENE"], ["has_trait"])
+            doc.sents, ["PVAL", "RSID", "GENE"], ["has_trait"])
         uncertain_sents = Interpreter._filter_sents_by_entity(doc.sents, ["PVAL", "RSID"])
         results, uncertain_results = [], []
         results = Utility.remove_duplicate_associations(self.calculate_sdp(phenotype_sents))
-        uncertain_results = Utility.remove_duplicate_associations(self.calculate_sdp(uncertain_sents, doc.user_data["top_phenotype"]))
+        uncertain_results = Utility.remove_duplicate_associations(
+            self.calculate_sdp(uncertain_sents, doc.user_data["top_phenotype"]))
         filtered_uncertain_results = []
         if results and uncertain_results:
             for association in results:
@@ -76,7 +79,7 @@ class GCInterpreter(Interpreter):
 
     def extract_relationships(self, doc):
         phenotype_sents = Interpreter._filter_sents_by_entity(
-            doc.sents,  ["PVAL", "RSID", "GENE"], ["has_trait"])
+            doc.sents, ["PVAL", "RSID", "GENE"], ["has_trait"])
         results = []
         for sent in phenotype_sents:
             for pval, marker, trait in self.gc_relations:
@@ -100,9 +103,6 @@ class GCInterpreter(Interpreter):
                 if entity_count_matched > 1:
                     results.append(new_assoc)
         return results
-
-
-
 
     def process_corpus(self, corpus, **kwargs):
         """[Applies tokenization, entity recognition and dependency parsing to the supplied corpus.]
@@ -281,7 +281,7 @@ def get_relation(relation, passage, nlp):
                            relation.significance.token.start_char + passage["offset"] == x.locations[0].offset][0]
     if relation.gene:
         gene_id = [x.id for x in passage['annotations'] if
-                     relation.gene.token.start_char + passage["offset"] == x.locations[0].offset][0]
+                   relation.gene.token.start_char + passage["offset"] == x.locations[0].offset][0]
     phenotype_node = BioC.BioCNode(refid=pheno_id, role="") if pheno_id else None
     marker_node = BioC.BioCNode(refid=marker_id, role="") if marker_id else None
     significance_node = BioC.BioCNode(refid=significance_id, role="") if significance_id else None
@@ -289,20 +289,23 @@ def get_relation(relation, passage, nlp):
     bioc_relation = None
     if phenotype_node and gene_node:
         bioc_relation = BioC.BioCRelation(id=F"R{nlp.r}",
-                                      infons={"type": "Gene_Trait", "annotator": "GWASMiner@le.ac.uk",
-                                              "updated_at": current_datetime},
-                                      nodes=[phenotype_node, gene_node])
+                                          infons={"type": "Gene_Trait", "annotator": "GWASMiner@le.ac.uk",
+                                                  "updated_at": current_datetime},
+                                          nodes=[phenotype_node, gene_node])
     elif phenotype_node and marker_node and significance_node:
         bioc_relation = BioC.BioCRelation(id=F"R{nlp.r}",
-                                          infons={"type": "GeneticVariant_Trait_Significance", "annotator": "GWASMiner@le.ac.uk",
+                                          infons={"type": "GeneticVariant_Trait_Significance",
+                                                  "annotator": "GWASMiner@le.ac.uk",
                                                   "updated_at": current_datetime},
                                           nodes=[phenotype_node, marker_node, significance_node])
     elif marker_node and significance_node:
         bioc_relation = BioC.BioCRelation(id=F"R{nlp.r}",
-                                          infons={"type": "GeneticVariant_Significance", "annotator": "GWASMiner@le.ac.uk",
+                                          infons={"type": "GeneticVariant_Significance",
+                                                  "annotator": "GWASMiner@le.ac.uk",
                                                   "updated_at": current_datetime},
                                           nodes=[marker_node, significance_node])
     return bioc_relation, nlp
+
 
 def process_study(nlp, study):
     if not study:
@@ -321,7 +324,7 @@ def process_study(nlp, study):
         # footnotes need to be excluded.
         if results_present and "section_title_1" in passage["infons"].keys() and \
                 passage["infons"]["section_title_1"].lower() not in ["abstract", "results",
-                                                                                 "discussion", "conclusion"]:
+                                                                     "discussion", "conclusion"]:
             continue
         passage_text = passage['text']
         doc = nlp.process_corpus(passage_text)
@@ -453,7 +456,8 @@ def get_catalog_relations(pmid):
     if response.status_code == 200:
         data = response.json()
         if len(data['_embedded']["studies"]) > 0:
-            associations = requests.get(F"https://www.ebi.ac.uk/gwas/rest/api/studies/{data['_embedded']['studies'][0]['accessionId']}/associations")
+            associations = requests.get(
+                F"https://www.ebi.ac.uk/gwas/rest/api/studies/{data['_embedded']['studies'][0]['accessionId']}/associations")
             if associations.status_code == 200:
                 associations = associations.json()
                 for association in associations["_embedded"]["associations"]:
@@ -471,14 +475,46 @@ def get_catalog_relations(pmid):
         return None
 
 
+from Bio import Entrez
+
+
+def get_current_pubmed_id(pmc_id):
+    # Set up Entrez with your email address
+    Entrez.email = ''
+
+    # Fetch the PubMed ID for the PMC ID
+    handle = Entrez.elink(dbfrom='pmc', db='pubmed', id=pmc_id)
+    record = Entrez.read(handle)
+
+    if record[0]['LinkSetDb']:
+        pubmed_id = record[0]['LinkSetDb'][0]['Link'][0]['Id']
+        return pubmed_id
+    else:
+        return None
+
+
+def download_bioc_articles(pubmedcentral_ids):
+    for id in pubmedcentral_ids:
+        id = id.replace("_tables", "")
+        try:
+            response = requests.get(
+                F"https://www.ncbi.nlm.nih.gov/research/bionlp/RESTful/pmcoa.cgi/BioC_json/{id}/ascii")
+            if response:
+                with open(F"BioC_Studies/{id}_bioc.json", "w", encoding="UTF-8") as f_out:
+                    f_out.write(response.content.decode("utf-8"))
+            else:
+                print(F"{id} failed to download.")
+        except Exception as ex:
+            print(F"{id} failed due to: {ex}")
+
 
 def main():
     # load bioc pmc ids
-    bioc_pmcids = [x.replace(".json", "").replace("_abbreviations", "") for x in listdir("BioC_Studies") if
+    bioc_pmcids = [x.replace(".json", "").replace("_abbreviations", "").replace("_bioc", "") for x in listdir("BioC_Studies") if
                    isfile(join("BioC_Studies", x))]
 
     # retrieve matching data.
-    gc_data = get_matching_data("GC_content_459.tsv", bioc_pmcids)
+    gc_data = get_matching_data("GC_content_766.tsv", bioc_pmcids)
 
     lexicon = Ontology.get_master_lexicon()
     nlp = GCInterpreter(lexicon)
@@ -486,10 +522,6 @@ def main():
     study_processing_times = []
     reached = False
     for pmc_id in gc_data.keys():
-        # if pmc_id != "PMC5612337" and not reached:
-        #     continue
-        # else:
-        #     reached = True
         gwas_catalog_data = get_catalog_relations(gc_data[pmc_id][0][3])
         # print(pmc_id)
         start_time = datetime.now()
@@ -504,17 +536,20 @@ def main():
             mesh_id = relation[2]
             new_pvals = generate_pval_regex_strings(relation[1])
             pvals.extend(new_pvals)
-            rsids.append(F"({rsid})") #(?:\[[a-zA-Z0-9]\])?")
+            rsids.append(F"({rsid})")
             mesh_terms.append(mesh_id)
             for x in new_pvals:
                 gc_relations.append([x, rsid, mesh_id])
-        for catalog_relation in gwas_catalog_data:
-            rsid = catalog_relation[0]
-            new_pvals = generate_pval_regex_strings(catalog_relation[1])
-            pvals.extend(new_pvals)
-            rsids.append(F"({rsid})")
-            for x in new_pvals:
-                gc_relations.append([x, rsid, mesh_id])
+            if len(gc_data[pmc_id]) > 10:
+                break
+        if gwas_catalog_data:
+            for catalog_relation in gwas_catalog_data:
+                rsid = catalog_relation[0]
+                new_pvals = generate_pval_regex_strings(catalog_relation[1])
+                pvals.extend(new_pvals)
+                rsids.append(F"({rsid})")
+                for x in new_pvals:
+                    gc_relations.append([x, rsid, mesh_id])
         nlp.set_ontology_terms([x for x in mesh_terms if x])
         nlp.pval_patterns = pvals
         nlp.rsid_patterns = rsids
