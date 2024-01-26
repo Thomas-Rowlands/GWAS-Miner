@@ -22,7 +22,6 @@ setuptools.setup(
        "svglib>=1.0.1",
        "reportlab>=3.5.49",
        "PyQt5>=5.15.0",
-        "bs4>=4.12.2",
         "bioc>=2.0.post5",
         "py2neo>=2021.2.3"
     ],
